@@ -1,0 +1,92 @@
+.management-form-title {
+  color: #244c50;
+  font-size: 15px;
+  padding-top: 10px;
+}
+.management-row-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
+}
+.management-row-actions .button {
+  padding: 7px 9px;
+}
+.management-row-actions .delete-action {
+  color: #9b3737;
+}
+.teacher-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  padding: 18px 0;
+}
+.teacher-profile-grid dt {
+  color: #596675;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.teacher-profile-grid dd {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.teacher-assignment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 15px;
+}
+.teacher-assignment-grid label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #dfe8e5;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.teacher-assignment-grid small {
+  display: block;
+  font-size: 11px;
+  color: #596675;
+  margin-top: 4px;
+}
+.teacher-assignment-grid input {
+  flex-shrink: 0;
+}
+.teacher-name-button {
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 0;
+  color: #263f54;
+}
+.teacher-name-button strong,
+.teacher-name-button small {
+  display: block;
+}
+.teacher-name-button small {
+  font-size: 11px;
+  color: #596675;
+  margin-top: 6px;
+}
+.teacher-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.teacher-directory .toolbar {
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .teacher-profile-grid,
+  .teacher-assignment-grid {
+    grid-template-columns: 1fr;
+  }
+  .profile-hero .management-row-actions {
+    flex-wrap: wrap;
+  }
+}

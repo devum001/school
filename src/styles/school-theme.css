@@ -1,0 +1,231 @@
+/* School identity: forest teal, warm gold, and calm paper surfaces. */
+:root {
+  --school-forest: #12373b;
+  --school-header: #19494d;
+  --school-raised: #244c50;
+  --school-gold: #e2c58a;
+  --school-gold-edge: #c5ad7c;
+  --school-header-height: 73px;
+  --school-text: #f4f8f7;
+  --school-muted: #b6cecc;
+  --school-border: #365b5e;
+  --navy: #19494d;
+}
+body {
+  background: #f3f6f6;
+}
+.sidebar {
+  background: var(--school-forest);
+  border-right: 0;
+}
+.sidebar::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--school-header-height) - 3px) 0 0 auto;
+  width: 3px;
+  background: var(--school-gold-edge);
+  pointer-events: none;
+}
+.sidebar::after,
+.topbar::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  opacity: 0;
+  filter: drop-shadow(0 0 4px #f4d58e);
+}
+.sidebar::after {
+  inset: calc(var(--school-header-height) - 3px) 0 0 auto;
+  width: 3px;
+  background-image: linear-gradient(
+    to bottom,
+    transparent,
+    #f4d58e 38%,
+    #fff8db 50%,
+    #f4d58e 62%,
+    transparent
+  );
+  background-size: 3px 90px;
+  animation: sidebar-gold-spark 6s ease-in-out infinite;
+}
+.sidebar .brand {
+  color: var(--school-text);
+}
+.sidebar .brand-mark {
+  background: var(--school-gold);
+  color: var(--school-forest);
+}
+.sidebar .brand-dot {
+  color: var(--school-gold);
+}
+.sidebar .school-switch {
+  background: var(--school-raised);
+  border-color: var(--school-border);
+  color: var(--school-muted);
+}
+.sidebar .school-initial {
+  background: #355b5c;
+  border-color: #567372;
+  color: #f0dba9;
+}
+.sidebar .school-switch strong {
+  color: var(--school-text);
+}
+.sidebar .school-switch small,
+.sidebar .nav-label {
+  color: var(--school-muted);
+}
+.sidebar .nav-link {
+  color: #d3e2e0;
+}
+.sidebar .nav-link:hover {
+  background: #1f464a;
+  color: white;
+}
+.sidebar .nav-link.active {
+  background: #2a5356;
+  color: #fff;
+  box-shadow: inset 3px 0 0 var(--school-gold);
+}
+.sidebar .nav-link.active svg {
+  color: #ecd39f;
+}
+.sidebar .nav-dot {
+  background: var(--school-gold);
+}
+.sidebar .nav-count {
+  background: #e2c58a;
+  color: #203b39;
+}
+.sidebar .sidebar-user {
+  background: transparent;
+  color: #f0f6f4;
+  border-top-color: #36565a;
+}
+.sidebar .sidebar-user small {
+  color: var(--school-muted);
+}
+.sidebar .avatar,
+.topbar .avatar {
+  background: #e4d7b8;
+  color: #26494a;
+}
+.topbar {
+  position: relative;
+  height: var(--school-header-height);
+  background: var(--school-header);
+  border-bottom: 3px solid var(--school-gold-edge);
+}
+.topbar::after {
+  inset: auto 0 -3px;
+  height: 3px;
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    #f4d58e 38%,
+    #fff8db 50%,
+    #f4d58e 62%,
+    transparent
+  );
+  background-size: 120px 3px;
+  animation: header-gold-spark 6s ease-in-out 0.6s infinite;
+}
+@keyframes sidebar-gold-spark {
+  0% {
+    background-position: 0 -90px;
+    opacity: 0;
+  }
+  12%,
+  48% {
+    opacity: 1;
+  }
+  62%,
+  100% {
+    background-position: 0 calc(100% + 90px);
+    opacity: 0;
+  }
+}
+@keyframes header-gold-spark {
+  0% {
+    background-position: -120px 0;
+    opacity: 0;
+  }
+  12%,
+  48% {
+    opacity: 1;
+  }
+  62%,
+  100% {
+    background-position: calc(100% + 120px) 0;
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar::after,
+  .topbar::after {
+    display: none;
+  }
+}
+@media (max-width: 800px) {
+  :root {
+    --school-header-height: 63px;
+  }
+}
+.topbar .breadcrumb {
+  color: #c4d9d7;
+}
+.topbar .breadcrumb strong {
+  color: #fff;
+}
+.topbar .slash {
+  color: #a5c2c1;
+}
+.topbar .global-search {
+  color: #cadddb;
+}
+.topbar .global-search input {
+  color: #fff;
+}
+.topbar .global-search input::placeholder {
+  color: #cadddb;
+}
+.topbar .global-search kbd {
+  border-color: #6c9192;
+  color: #d4e5e2;
+}
+.topbar .year-chip {
+  background: #2b595d;
+  border-color: #56797b;
+  color: #f1f6f4;
+}
+.topbar .year-chip > span {
+  background: var(--school-gold);
+}
+.topbar .icon-button {
+  color: #d5e5e1;
+}
+.topbar .icon-button:hover {
+  background: #305c60;
+  color: #fff;
+}
+.topbar .notification-bell i {
+  background: var(--school-gold);
+  border-color: var(--school-header);
+}
+.topbar :focus-visible,
+.sidebar :focus-visible {
+  outline-color: #efd59d;
+}
+.button.primary:hover {
+  background: #276267;
+}
+.message-bubble[lang='hi'] {
+  font-family: 'Noto Sans Devanagari', 'Nirmala UI', Mangal, sans-serif;
+  font-size: 14px;
+  line-height: 1.95;
+  white-space: pre-line;
+}
+.message-bubble > span {
+  white-space: normal;
+}

@@ -1,0 +1,173 @@
+.student-results-panel .panel-heading {
+  flex-wrap: wrap;
+  gap: 18px;
+}
+.student-results-panel .inline-actions {
+  flex-wrap: wrap;
+}
+.student-results-panel .inline-actions select {
+  max-width: 280px;
+}
+.student-exam-list {
+  padding: 0 22px 22px;
+  display: grid;
+  gap: 10px;
+}
+.student-exam-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 120px 100px 18px;
+  gap: 18px;
+  align-items: center;
+  text-align: left;
+  padding: 18px 20px;
+  border: 1px solid #e0e8e8;
+  border-radius: 9px;
+  background: #fff;
+  color: #243d50;
+}
+.student-exam-row:hover {
+  background: #f7faf9;
+  border-color: #98bab3;
+}
+.student-exam-row.selected {
+  background: #f0f7f5;
+  border-color: #88b5aa;
+  box-shadow: inset 3px 0 0 #2c7b69;
+}
+.student-exam-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: #477568;
+  background: #e8f0ed;
+}
+.student-exam-name strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.student-exam-name small {
+  display: block;
+  margin-top: 5px;
+  color: #5a6873;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.student-exam-name small span {
+  padding: 0 5px;
+}
+.student-exam-marks {
+  text-align: right;
+}
+.student-exam-marks small {
+  display: block;
+  color: #5a6873;
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+.student-exam-marks strong {
+  font-size: 15px;
+  white-space: nowrap;
+}
+.student-exam-percentage {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.student-exam-percentage > strong {
+  font-size: 21px;
+  color: #285e54;
+}
+.student-exam-chevron {
+  color: #64847b;
+}
+.button.whatsapp-share {
+  background: #176443;
+  border: 1px solid #176443;
+  color: #fff;
+}
+.button.whatsapp-share:hover {
+  background: #104d33;
+  color: #fff;
+}
+.share-report-controls {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 16px;
+}
+.share-report-controls input,
+.share-report-controls select {
+  width: 100%;
+  min-width: 0;
+}
+.share-report-help {
+  color: #586775;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 12px 0;
+}
+.report-message-preview {
+  background: #f0f7f3;
+  border: 1px solid #d3e5da;
+  border-radius: 10px;
+  padding: 22px;
+  font-family: 'Noto Sans Devanagari', 'Nirmala UI', Mangal, sans-serif;
+  font-size: 14px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 42vh;
+  overflow-y: auto;
+  color: #294c3c;
+  user-select: text;
+}
+@media (max-width: 700px) {
+  .student-exam-list {
+    padding: 0 14px 16px;
+  }
+  .student-exam-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px 16px;
+    padding: 16px;
+  }
+  .student-exam-icon,
+  .student-exam-chevron {
+    display: none;
+  }
+  .student-exam-name {
+    grid-column: 1 / -1;
+  }
+  .student-exam-marks {
+    text-align: left;
+  }
+  .student-exam-percentage {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .student-exam-percentage > strong {
+    font-size: 19px;
+  }
+  .student-results-panel .inline-actions {
+    width: 100%;
+  }
+  .student-results-panel .inline-actions select {
+    width: 100%;
+    max-width: none;
+  }
+  .share-report-controls {
+    grid-template-columns: 1fr;
+  }
+  .share-report-actions {
+    flex-wrap: wrap;
+  }
+  .share-report-actions > * {
+    justify-content: center;
+    width: 100%;
+  }
+}
