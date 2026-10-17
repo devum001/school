@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import { useFeedback } from '../../app/useFeedback';
 import { Button, Modal } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
-import { testKinds } from '../../lib/academics';
+import { examSections } from '../../lib/academicSheets';
+import { examClasses } from '../../lib/testScope';
+import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
 import type { Examination } from '../../types/domain';
 import { useDraftGuard } from './useDraftGuard';
+
 export default function TestDialog({
   classId,
   exam,
@@ -19,40 +21,43 @@ export default function TestDialog({
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
-  const state = useSchool();
-  const today = useToday();
-  const notify = useFeedback();
+  const state = useSchool(),
+    today = useToday(),
+    notify = useFeedback();
   const [name, setName] = useState(exam?.name ?? '');
-  const [kind, setKind] = useState<Examination['kind']>(exam?.kind ?? 'Daily test');
+  const [kind, setKind] = useState(exam?.kind ?? '');
   const [date, setDate] = useState(exam?.date ?? today);
-  const [schoolClass, setClass] = useState(exam?.classId ?? classId);
-  const [section, setSection] = useState(exam?.sectionId ?? '');
-  const [subjects, setSubjects] = useState(
-    exam?.subjects.map((s) => ({ name: s.name, maxMarks: String(s.maxMarks) })) ?? [
-      { name: '', maxMarks: '20' },
-    ],
+  const classes = orderedClasses(state.classes.filter((c) => c.schoolId === state.school.id));
+  const [selectedClasses, setSelectedClasses] = useState<string[]>(
+    exam ? examClasses(state, exam).map((c) => c.id) : classId ? [classId] : [],
   );
+  const [sections, setSections] = useState<string[]>(
+    exam ? examSections(state, exam, '').map((s) => s.id) : [],
+  );
+  const toggleClass = (id: string, checked: boolean) => {
+    setSelectedClasses((current) =>
+      checked ? [...current, id] : current.filter((value) => value !== id),
+    );
+    if (!checked)
+      setSections((current) =>
+        current.filter((value) => !state.sections.some((s) => s.id === value && s.classId === id)),
+      );
+  };
   const [error, setError] = useState('');
-  const [initial] = useState(() =>
-    JSON.stringify([name, kind, date, schoolClass, section, subjects]),
-  );
-  const locked = Boolean(exam && state.results.some((r) => r.examId === exam.id));
-  const guard = useDraftGuard(
-    initial !== JSON.stringify([name, kind, date, schoolClass, section, subjects]),
-    onClose,
-  );
-  const changeSubject = (index: number, key: 'name' | 'maxMarks', value: string) =>
-    setSubjects(subjects.map((s, i) => (i === index ? { ...s, [key]: value } : s)));
+  const value = JSON.stringify([name, kind, date, selectedClasses, sections]);
+  const [initial] = useState(value);
+  const guard = useDraftGuard(value !== initial, onClose);
   return (
     <Modal
       open
-      wide
       onClose={guard.confirming ? guard.keepEditing : guard.requestClose}
-      title={guard.confirming ? 'Discard test changes?' : exam ? 'Edit test' : 'Add a test'}
+      title={
+        guard.confirming ? 'Discard test changes?' : exam ? 'Edit Test / Exam' : 'Add Test / Exam'
+      }
       description={
         guard.confirming
           ? 'Your test details have not been saved.'
-          : 'Choose the class, date and maximum marks. Add student marks next.'
+          : 'Set up the test here. Enter maximum marks and student marks in its marks sheet.'
       }
     >
       {guard.confirming ? (
@@ -66,6 +71,9 @@ export default function TestDialog({
         </div>
       ) : (
         <form
+          onChange={() => {
+            if (error) setError('');
+          }}
           onSubmit={(event) => {
             event.preventDefault();
             try {
@@ -73,21 +81,20 @@ export default function TestDialog({
                 name,
                 kind,
                 date,
-                classId: schoolClass,
-                sectionId: section,
-                subjects: subjects.map((s) => ({ name: s.name, maxMarks: Number(s.maxMarks) })),
+                classId: selectedClasses.length === 1 ? selectedClasses[0] : '',
+                classIds: classes.filter((c) => selectedClasses.includes(c.id)).map((c) => c.id),
+                sectionIds: sections,
+                sectionId: '',
               };
-              if (exam) {
-                repository.updateTest(exam.id, input);
-                notify('Test updated. Percentages and rankings recalculated.');
-                onCreated(exam.id);
-              } else {
-                const id = repository.createTest(input);
-                notify('Test added. You can now enter marks.');
-                onCreated(id);
-              }
-            } catch (err) {
-              setError(err instanceof Error ? err.message : 'Unable to add this test.');
+              const id = exam?.id ?? '';
+              if (exam) repository.updateTest(id, input);
+              const savedId = exam ? id : repository.createTest(input);
+              notify(
+                exam ? 'Test details updated.' : 'Test created. Open its pencil to add marks.',
+              );
+              guard.complete(() => onCreated(savedId));
+            } catch (cause) {
+              setError(cause instanceof Error ? cause.message : 'Unable to save this test.');
             }
           }}
         >
@@ -96,23 +103,21 @@ export default function TestDialog({
             <input
               required
               maxLength={100}
-              placeholder="e.g. Mathematics · Chapter 4"
               value={name}
+              placeholder="e.g. Daily Practice"
               onChange={(e) => setName(e.target.value)}
             />
           </label>
           <div className="form-grid">
             <label className="field">
               Test type
-              <select
-                aria-label="Test type"
+              <input
+                required
+                maxLength={60}
                 value={kind}
-                onChange={(e) => setKind(e.target.value as Examination['kind'])}
-              >
-                {testKinds.map((k) => (
-                  <option key={k}>{k}</option>
-                ))}
-              </select>
+                placeholder="e.g. Weekly Practice"
+                onChange={(e) => setKind(e.target.value)}
+              />
             </label>
             <label className="field">
               Test date
@@ -120,102 +125,85 @@ export default function TestDialog({
                 required
                 type="date"
                 min={state.academicYear.start}
-                max={today < state.academicYear.end ? today : state.academicYear.end}
+                max={state.academicYear.end < today ? state.academicYear.end : today}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
             </label>
-            <label className="field">
-              Test class
-              <select
-                aria-label="Test class"
-                disabled={locked}
-                value={schoolClass}
-                onChange={(e) => {
-                  setClass(e.target.value);
-                  setSection('');
-                }}
-              >
-                {exam && !exam.classId && <option value="">All classes</option>}
-                {state.classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Test section
-              <select
-                aria-label="Test section"
-                disabled={locked}
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
-              >
-                <option value="">All sections</option>
-                {state.sections
-                  .filter((s) => s.classId === schoolClass)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      Section {s.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
           </div>
-          <div className="test-subject-heading">
-            <h3>Subjects & maximum marks</h3>
-            <span>Total: {subjects.reduce((n, s) => n + (Number(s.maxMarks) || 0), 0)} marks</span>
-          </div>
-          <p className="panel-note">
-            {locked
-              ? 'This test has recorded marks. Class, section and subject count are fixed. Subject names and maximums can be corrected; maximums must cover all saved scores.'
-              : 'Use one subject for a daily test, or add several for an examination.'}
-          </p>
-          {subjects.map((s, i) => (
-            <div className="test-subject-row" key={i}>
-              <label className="field">
-                Subject {i + 1}
-                <input
-                  required
-                  maxLength={60}
-                  placeholder="e.g. Mathematics"
-                  value={s.name}
-                  onChange={(e) => changeSubject(i, 'name', e.target.value)}
-                />
-              </label>
-              <label className="field">
-                Maximum marks {i + 1}
-                <input
-                  required
-                  type="number"
-                  min="0.5"
-                  max="10000"
-                  step="0.5"
-                  value={s.maxMarks}
-                  onChange={(e) => changeSubject(i, 'maxMarks', e.target.value)}
-                />
-              </label>
-              <Button
-                type="button"
-                variant="ghost"
-                aria-label={`Remove subject ${i + 1}`}
-                disabled={locked || subjects.length === 1}
-                onClick={() => setSubjects(subjects.filter((_, j) => i !== j))}
-              >
-                <Trash2 size={16} />
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={locked || subjects.length >= 12}
-            onClick={() => setSubjects([...subjects, { name: '', maxMarks: '100' }])}
-          >
-            <Plus size={15} />
-            Add subject
-          </Button>
+          <fieldset className="academic-class-choices">
+            <legend>Classes &amp; sections</legend>
+            <p>Select one or more classes, then choose their sections.</p>
+            {classes.map((schoolClass) => {
+              const selected = selectedClasses.includes(schoolClass.id);
+              const choices = state.sections.filter(
+                (s) => s.schoolId === state.school.id && s.classId === schoolClass.id,
+              );
+              return (
+                <div
+                  className={`academic-class-choice ${selected ? 'selected' : ''}`}
+                  key={schoolClass.id}
+                >
+                  <label className="academic-class-check">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${schoolClass.name}`}
+                      checked={selected}
+                      onChange={(e) => toggleClass(schoolClass.id, e.target.checked)}
+                    />
+                    <strong>{schoolClass.name}</strong>
+                    <small>
+                      {selected
+                        ? `${choices.filter((s) => sections.includes(s.id)).length} / ${choices.length} sections selected`
+                        : `${choices.length} sections`}
+                    </small>
+                  </label>
+                  {selected && (
+                    <div className="academic-class-sections">
+                      {choices.length ? (
+                        <>
+                          <label className="academic-all-sections">
+                            <input
+                              type="checkbox"
+                              aria-label={`All sections for ${schoolClass.name}`}
+                              checked={choices.every((s) => sections.includes(s.id))}
+                              onChange={(e) =>
+                                setSections((current) =>
+                                  e.target.checked
+                                    ? [...new Set([...current, ...choices.map((s) => s.id)])]
+                                    : current.filter((id) => !choices.some((s) => s.id === id)),
+                                )
+                              }
+                            />
+                            All sections
+                          </label>
+                          {choices.map((section) => (
+                            <label key={section.id}>
+                              <input
+                                type="checkbox"
+                                aria-label={`${schoolClass.name} ${sectionLabel(section.name)}`}
+                                checked={sections.includes(section.id)}
+                                onChange={(e) =>
+                                  setSections((current) =>
+                                    e.target.checked
+                                      ? [...current, section.id]
+                                      : current.filter((id) => id !== section.id),
+                                  )
+                                }
+                              />
+                              {sectionLabel(section.name)}
+                            </label>
+                          ))}
+                        </>
+                      ) : (
+                        <p>Add sections for this class in School Settings first.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </fieldset>
           {error && (
             <p className="form-error" role="alert">
               {error}
@@ -225,7 +213,7 @@ export default function TestDialog({
             <Button type="button" variant="secondary" onClick={guard.requestClose}>
               Cancel
             </Button>
-            <Button type="submit">{exam ? 'Save test' : 'Create test'}</Button>
+            <Button type="submit">{exam ? 'Save test' : 'Create Test'}</Button>
           </div>
         </form>
       )}

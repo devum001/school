@@ -1,3 +1,5 @@
+import { installmentName } from '../lib/feeLabels';
+import { renumberStudentRolls } from '../lib/studentNumbering';
 import type { DemoState } from '../types/domain';
 import { SCHOOL_ID } from '../lib/config';
 import { getSchoolDate, shiftCalendarDate } from '../lib/dates';
@@ -51,6 +53,13 @@ export function createSeed(anchorDate = getSchoolDate()): DemoState {
       name: 'Vidya Niketan Public School',
       city: 'Bengaluru, Karnataka',
       motto: 'Curiosity today. Possibility tomorrow.',
+      code: 'VNPS-2026',
+      board: 'CBSE (Central Board of Secondary Education)',
+      affiliationNumber: 'CBSE/AFF/1930482',
+      principal: 'Dr. Nandita Rao',
+      phone: '+91 80 2345 6789',
+      email: 'contact@vidyaniketan.edu.in',
+      website: 'www.vidyaniketan.edu.in',
     },
     academicYear: {
       id: 'ay-2026',
@@ -190,10 +199,10 @@ export function createSeed(anchorDate = getSchoolDate()): DemoState {
             id: `fee-${i}-${term}`,
             schoolId,
             enrollmentId,
-            label: `Term ${term + 1} · Tuition & activities`,
+            label: installmentName(term + 1),
             dueDate: ['2026-04-10', '2026-09-10', '2027-01-10'][term],
             amount: 1800000,
-            adjustment: i % 17 === 0 ? -100000 : 0,
+            adjustment: 0,
           });
         state.payments.push({
           id: `pay-${i}-1`,
@@ -308,5 +317,5 @@ export function createSeed(anchorDate = getSchoolDate()): DemoState {
       kind: 'attendance',
     },
   ];
-  return state;
+  return renumberStudentRolls(state);
 }

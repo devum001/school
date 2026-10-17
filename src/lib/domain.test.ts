@@ -97,9 +97,9 @@ describe('attendance', () => {
 describe('fee ledger', () => {
   it('derives totals from obligations plus adjustments minus payments', () => {
     const summary = feeSummary(createSeed(), 'enr-001');
-    expect(summary.total).toBe(5100000);
+    expect(summary.total).toBe(5400000);
     expect(summary.paid).toBe(1800000);
-    expect(summary.outstanding).toBe(3300000);
+    expect(summary.outstanding).toBe(3600000);
   });
   it('sums individual balances to the dashboard total', () => {
     const s = createSeed();
@@ -120,7 +120,7 @@ describe('fee ledger', () => {
     });
     expect(next.payments.length).toBe(s.payments.length + 1);
     expect(feeSummary(next).outstanding).toBe(feeSummary(s).outstanding - 100000);
-    expect(feeSummary(next, 'enr-001').outstanding).toBe(3200000);
+    expect(feeSummary(next, 'enr-001').outstanding).toBe(3500000);
   });
   it('rejects zero, negative, fractional-paise, excessive and nonfinite payments', () => {
     const s = createSeed();
@@ -160,7 +160,7 @@ describe('fee ledger', () => {
     const s = createSeed();
     const rows = installments(s, 'enr-001');
     expect(rows[0].outstanding).toBe(0);
-    expect(rows[1].paid).toBe(100000);
+    expect(rows[1].paid).toBe(0);
     expect(rows.reduce((sum, r) => sum + r.outstanding, 0)).toBe(
       feeSummary(s, 'enr-001').outstanding,
     );

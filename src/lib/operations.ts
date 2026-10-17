@@ -2,7 +2,8 @@ import { getSchoolDate } from './dates';
 import { z } from 'zod';
 import type { AttendanceStatus, DemoState, Payment } from '../types/domain';
 import { SCHOOL_ID, displayHindiDate } from './config';
-import { eligibleRecipients, feeSummary, roster } from './selectors';
+import { eligibleRecipients, roster } from './selectors';
+import { recordStudentPayment } from './financeTransactions';
 export const attendanceStatusSchema = z.enum(['present', 'absent', 'late', 'half-day', 'unmarked']);
 const dateSchema = z.iso
   .date()
@@ -62,26 +63,7 @@ export function recordPayment(
   state: DemoState,
   input: Omit<Payment, 'id' | 'schoolId'>,
 ): DemoState {
-  const payment = z
-    .object({
-      enrollmentId: z.string(),
-      amount: z.number().int().positive(),
-      date: dateSchema,
-      method: z.enum(['Bank transfer', 'Cash', 'UPI']),
-      reference: z.string().trim().min(1).max(80),
-    })
-    .parse(input);
-  if (!roster(state, true).some((r) => r.enrollment.id === payment.enrollmentId))
-    throw new Error('Student enrollment not found.');
-  if (payment.amount > feeSummary(state, payment.enrollmentId).outstanding)
-    throw new Error('Payment exceeds the outstanding balance.');
-  if (state.payments.some((p) => p.reference === payment.reference))
-    throw new Error('This payment reference already exists.');
-  return {
-    ...state,
-    payments: [...state.payments, { ...payment, id: id(), schoolId: SCHOOL_ID }],
-    activities: activity(state, 'Payment recorded', payment.reference, 'payment'),
-  };
+  return recordStudentPayment(state, input);
 }
 export const notificationMessage = (school: string, name: string, date: string) =>
   `आदरणीय अभिभावक,\n\nआपके बच्चे ${name} की उपस्थिति दिनांक ${displayHindiDate(date)} को ${school} में अनुपस्थित दर्ज की गई है। कृपया अनुपस्थिति का कारण विद्यालय कार्यालय को सूचित करें। यदि यह जानकारी सही नहीं है, तो कृपया कक्षा शिक्षक से संपर्क करें।\n\nधन्यवाद,\n${school}`;

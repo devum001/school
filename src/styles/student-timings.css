@@ -1,0 +1,590 @@
+.student-timings {
+  margin-top: 24px;
+  scroll-margin-top: 24px;
+}
+.student-timings:focus {
+  outline: none;
+}
+.student-timings .panel-heading {
+  padding: 22px 24px;
+}
+.student-timing-empty {
+  padding: 0 24px 24px;
+}
+.student-timing-empty p {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 500;
+}
+.student-timing-empty span {
+  display: block;
+  color: #52647a;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+.student-timing-list {
+  list-style: none;
+  padding: 0 24px 10px;
+  margin: 0;
+}
+.student-timing-list > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+}
+.student-timing-list h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.student-timing-list p {
+  font-size: 12px;
+  color: #52647a;
+  line-height: 1.7;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.student-timing-applies > span {
+  color: #52647a;
+  font-size: 11px;
+}
+.student-timing-actions {
+  display: flex;
+  gap: 4px;
+}
+.student-timing-actions .button {
+  padding: 6px 8px;
+  min-height: 30px;
+  font-size: 12px;
+}
+.student-timing-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.student-timing-form-grid .full {
+  grid-column: 1 / -1;
+}
+.student-timing-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+}
+.student-timing-field input,
+.student-timing-field select {
+  width: 100%;
+  min-width: 0;
+}
+.student-timing-picker {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0;
+  padding: 14px;
+}
+.student-timing-picker legend {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 5px;
+}
+.student-day-options,
+.student-section-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+}
+.student-day-options label,
+.student-section-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #334155;
+}
+.student-selection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.student-selection-actions .button,
+.student-class-picker-heading .button {
+  padding: 3px 6px;
+  min-height: 26px;
+  font-size: 11px;
+}
+.student-section-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 22px;
+}
+.student-class-picker-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  font-size: 12px;
+  color: #334155;
+}
+.attendance-timing-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 18px 26px;
+  border-bottom: 1px solid var(--border);
+  background: #f9fbfa;
+}
+.attendance-timing-context label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #52647a;
+  font-size: 11px;
+}
+.attendance-timing-context select,
+.attendance-timing-context input {
+  min-height: 32px;
+  font-size: 12px;
+  padding: 5px 8px;
+}
+.attendance-timing-context > p {
+  color: #52647a;
+  font-size: 11px;
+  line-height: 1.7;
+  margin-left: auto;
+}
+.student-timing-link {
+  color: var(--school-header);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.attendance-school-timing {
+  padding: 10px 22px;
+  color: #52647a;
+  font-size: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.class-section-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.class-section-actions .button {
+  padding: 3px 6px;
+  min-height: 28px;
+  font-size: 11px;
+}
+.class-timetable-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.class-timetable-context .student-timing-field {
+  flex: 1;
+  min-width: 180px;
+}
+.class-timetable-context p {
+  font-size: 12px;
+  color: #52647a;
+  padding-bottom: 8px;
+}
+.class-timetable-rows {
+  display: grid;
+  gap: 14px;
+  margin: 16px 0;
+}
+.class-timetable-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 165px 100px 100px auto;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.class-timetable-row-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  grid-column: 5;
+  grid-row: 1 / 3;
+}
+.timetable-teacher {
+  grid-column: 1 / 5;
+  max-width: 360px;
+}
+.class-timetable-row-actions .button {
+  padding: 6px;
+  min-width: 28px;
+  min-height: 32px;
+}
+.class-timetable-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+  align-items: flex-end;
+}
+.class-timetable-add .button {
+  font-size: 12px;
+  min-height: 32px;
+  padding: 5px 10px;
+}
+.class-timetable-note {
+  color: #52647a;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+@media (max-width: 600px) {
+  .student-timing-list > li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+  .student-timing-applies {
+    grid-column: 1 / -1;
+  }
+  .student-timing-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .student-timing-form-grid,
+  .student-section-picker {
+    grid-template-columns: 1fr;
+  }
+  .attendance-timing-context {
+    padding: 16px 18px;
+  }
+  .attendance-timing-context > p {
+    width: 100%;
+    margin-left: 0;
+  }
+  .class-timetable-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .class-timetable-row > .student-timing-field:first-child {
+    grid-column: 1 / -1;
+  }
+  .class-timetable-row-actions {
+    justify-content: flex-end;
+    grid-column: 2;
+    grid-row: auto;
+  }
+  .timetable-teacher {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+}
+.setup-stack {
+  display: grid;
+  gap: 24px;
+}
+.setup-stack > .student-timings {
+  margin-top: 0;
+}
+.setup-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.setup-toolbar .student-timing-field {
+  min-width: 160px;
+}
+.setup-toolbar > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 auto 10px 0;
+}
+.setup-toolbar .text-link {
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.setup-sections,
+.setup-students {
+  list-style: none;
+  padding: 0 24px;
+  margin: 0;
+}
+.setup-sections li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setup-sections h3,
+.timetable-event h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.setup-sections p,
+.setup-students p {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.setup-footnote {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 18px 24px;
+}
+.setup-students li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+  border-top: 1px solid var(--border);
+}
+.setup-students li > div {
+  flex: 1;
+  min-width: 0;
+}
+.student-list-number {
+  min-width: 24px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.student-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.student-import-actions .button {
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .class-students-panel .panel-heading { flex-direction: column; align-items: stretch; }
+  .class-students-panel .student-import-actions { justify-content: flex-start; }
+}
+.school-hours-fields {
+  margin: 24px 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  padding: 18px 0 0;
+}
+.school-hours-fields > legend {
+  font-size: 14px;
+  font-weight: 600;
+  padding-right: 12px;
+}
+.school-hours-fields > p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 16px;
+}
+.school-working-days {
+  border: 0;
+  margin: 18px 0 0;
+  padding: 0;
+}
+.school-working-days legend {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.import-summary {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 12px 0;
+}
+.import-errors {
+  font-size: 12px;
+  color: var(--school-header);
+  border-left: 3px solid var(--school-gold-edge);
+  padding: 12px;
+  margin-bottom: 16px;
+  background: var(--surface, #f6f8fa);
+}
+.import-errors ul {
+  padding-left: 20px;
+  margin-top: 8px;
+  list-style: disc;
+}
+.import-errors li {
+  margin-bottom: 4px;
+}
+.import-preview-scroll {
+  overflow-x: auto;
+  max-height: 350px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.import-preview {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.import-preview caption {
+  text-align: left;
+  padding: 10px;
+  font-weight: 600;
+}
+.import-preview th,
+.import-preview td {
+  padding: 10px;
+  text-align: left;
+  border-top: 1px solid var(--border);
+}
+.import-preview th {
+  background: var(--surface, #f6f8fa);
+}
+.timetable-days {
+  display: flex;
+  overflow-x: auto;
+  gap: 6px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.timetable-days button {
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 8px 15px;
+  min-height: 36px;
+  cursor: pointer;
+}
+.timetable-days button[aria-pressed='true'] {
+  background: var(--school-header);
+  color: var(--school-text);
+}
+.timetable-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px 8px;
+  font-size: 13px;
+  color: var(--school-header);
+}
+.timetable-summary > span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.school-day-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 8px 24px 24px;
+}
+.timetable-event {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.timetable-event time {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--school-header);
+}
+.timetable-event time span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.timetable-event small {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.timetable-event p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.timetable-duration {
+  font-size: 12px;
+  color: var(--muted);
+}
+.timetable-gap {
+  font-size: 11px;
+  line-height: 1.6;
+  padding: 10px 0;
+  color: var(--muted);
+  border-bottom: 1px dashed var(--border);
+}
+.timetable-import {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px 0;
+  border-block: 1px solid var(--border);
+}
+.timetable-import > label {
+  flex: 1;
+  min-width: 180px;
+}
+.timetable-import p {
+  width: 100%;
+  font-size: 11px;
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .setup-toolbar,
+  .timetable-days {
+    padding: 16px 18px;
+  }
+  .setup-toolbar .student-timing-field {
+    min-width: 0;
+    flex: 1;
+  }
+  .setup-toolbar > span {
+    width: 100%;
+  }
+  .setup-sections,
+  .setup-students,
+  .school-day-timeline {
+    padding-inline: 18px;
+  }
+  .setup-sections li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .setup-sections .student-timing-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+  .timetable-event {
+    grid-template-columns: 90px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .timetable-duration {
+    grid-column: 2;
+  }
+  .timetable-event h3,
+  .setup-students a {
+    overflow-wrap: anywhere;
+  }
+}

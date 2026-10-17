@@ -28,16 +28,27 @@ test('complete school presentation: attendance, simulation, profile, payments an
   await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Save attendance', exact: true }).click();
   await expect(page.getByText('Register up to date', { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Notify parents', exact: true }).click();
+  await page.getByRole('link', { name: 'Review notifications', exact: true }).click();
   await page.getByRole('button', { name: 'Select all', exact: true }).click();
-  await expect(page.getByText(/missing a contact$/)).toBeVisible();
-  await expect(page.locator('.message-bubble')).toContainText('आदरणीय अभिभावक');
-  await expect(page.locator('.message-bubble')).toContainText('11 अक्टूबर 2026');
-  await page.getByRole('button', { name: 'Review notification', exact: true }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'Confirm notifications', exact: true }).click();
-  await expect(page.getByText('Ready', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('Needs attention', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/missing a contact or active channel/)).toBeVisible();
+  await page.getByRole('button', { name: 'Review & Send', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Review notifications' })).toBeVisible();
+  await expect(page.locator('.communication-message-preview')).toContainText('was marked absent');
+  await page.getByRole('button', { name: 'Confirm demo send', exact: true }).click();
+  await expect(
+    page
+      .getByRole('region', { name: 'Notification history', exact: true })
+      .getByText('Delivered', { exact: true })
+      .first(),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('region', { name: 'Notification history', exact: true })
+      .getByText('Failed', { exact: true })
+      .first(),
+  ).toBeVisible();
+  await page.getByLabel('Type', { exact: true }).selectOption('Student Absent');
+  await page.getByLabel('Class', { exact: true }).selectOption('class-5');
   await page
     .getByRole('link', { name: /Ananya Sharma/ })
     .first()
@@ -57,7 +68,7 @@ test('complete school presentation: attendance, simulation, profile, payments an
   await expect(page.getByRole('dialog')).toContainText('Ananya Sharma');
   await page.getByRole('button', { name: 'Close', exact: true }).click();
   await page.getByRole('tab', { name: 'Documents', exact: true }).click();
-  await expect(page.getByText('Uploads coming soon')).toBeVisible();
+  await expect(page.getByLabel('Upload document')).toBeVisible();
   await page.reload();
   await page.getByRole('tab', { name: 'Fees', exact: true }).click();
   await expect(page.locator('.stat-value').filter({ hasText: '₹17,000' })).toBeVisible();
@@ -115,7 +126,7 @@ test('unmarked attendance and prior dates have explicit separate summaries', asy
   await page.getByLabel('Attendance date', { exact: true }).fill('2026-10-09');
   await expect(page.getByText('Register up to date', { exact: true })).toBeVisible();
 });
-test('reset restores modified records after confirmation', async ({ page }) => {
+test('backup preview preserves modified attendance records', async ({ page }) => {
   await page.goto('/attendance');
   await page
     .getByRole('group', { name: 'Aarav Sharma attendance' })
@@ -123,16 +134,14 @@ test('reset restores modified records after confirmation', async ({ page }) => {
     .click();
   await page.getByRole('button', { name: 'Save attendance', exact: true }).click();
   await page.getByRole('link', { name: 'School settings', exact: true }).click();
-  await page.getByRole('button', { name: 'Reset workspace data', exact: true }).click();
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: 'Reset workspace data', exact: true })
-    .click();
+  await page.getByRole('tab', { name: 'Data & Security', exact: true }).click();
+  await page.getByRole('button', { name: 'Create Backup Now', exact: true }).click();
+  await expect(page.getByText('Preview successful', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Attendance', exact: true }).click();
   await expect(
     page
       .getByRole('group', { name: 'Aarav Sharma attendance' })
-      .getByRole('button', { name: 'Present', exact: true }),
+      .getByRole('button', { name: 'Absent', exact: true }),
   ).toHaveAttribute('aria-pressed', 'true');
 });
 test('mobile navigation, profiles and tables remain within viewport', async ({ page }) => {
@@ -170,9 +179,12 @@ test('all routes render and desktop dashboard can be reviewed', async ({ page })
   ]) {
     await page.goto(path);
     await expect(page.locator('main h1')).toBeVisible();
-    await expect(page.locator('body')).not.toContainText(
-      /\b(demo|fictional|simulated|simulation|prototype)\b/i,
-    );
+    if (path === '/notifications')
+      await expect(page.getByRole('tab')).toHaveText(['Overview', 'Compose Notice', 'History']);
+    else
+      await expect(page.locator('body')).not.toContainText(
+        /\b(demo|fictional|simulated|simulation|prototype)\b/i,
+      );
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
@@ -192,8 +204,8 @@ test('current date defaults follow the India calendar and advance on a day chang
   await expect(page.getByLabel('Dashboard date')).toHaveValue('2026-10-11');
   await page.goto('/attendance');
   await expect(page.getByLabel('Attendance date', { exact: true })).toHaveValue('2026-10-11');
-  await page.goto('/notifications');
-  await expect(page.getByLabel('Notification attendance date')).toHaveValue('2026-10-11');
+  await page.goto('/notifications?tab=Overview');
+  await expect(page.getByLabel('Notification date')).toHaveValue('2026-10-11');
   await page.goto('/settings');
   await expect(page.locator('.detail-list')).toContainText('11 Oct 2026');
   await page.goto('/');
@@ -201,9 +213,9 @@ test('current date defaults follow the India calendar and advance on a day chang
   await page.clock.setFixedTime(new Date('2026-10-11T18:31:00Z'));
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await expect(page.getByLabel('Dashboard date')).toHaveValue('2026-10-12');
-  await expect(page.locator('.stat-card').filter({ hasText: 'Attending today' })).toContainText(
-    '122',
-  );
+  await expect(
+    page.locator('.stat-card').filter({ hasText: 'Student attending today' }),
+  ).toContainText('122');
   await page.getByLabel('Dashboard date').fill('2026-10-09');
   await page.clock.setFixedTime(new Date('2026-10-12T18:31:00Z'));
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
@@ -224,9 +236,9 @@ test('existing browser data keeps edits while today receives presentation attend
   );
   await page.goto('/');
   await expect(page.getByLabel('Dashboard date')).toHaveValue('2026-10-11');
-  await expect(page.locator('.stat-card').filter({ hasText: 'Attending today' })).toContainText(
-    '122',
-  );
+  await expect(
+    page.locator('.stat-card').filter({ hasText: 'Student attending today' }),
+  ).toContainText('122');
   await page.goto('/attendance?date=2026-10-10');
   await expect(
     page

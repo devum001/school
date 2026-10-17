@@ -1,3 +1,75 @@
+.student-academics-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+  color: var(--school-forest, var(--navy));
+}
+.student-test-context {
+  padding: 22px;
+}
+.student-test-context-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.student-test-context-heading h2 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--school-forest, var(--navy));
+}
+.student-test-context-heading p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.student-test-context-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(170px, 1fr) minmax(120px, auto);
+  align-items: center;
+  gap: 28px;
+}
+.student-test-selector {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+.student-test-selector > span,
+.student-selected-marks > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.student-test-selector select {
+  width: 100%;
+  min-width: 0;
+}
+.student-test-selector small,
+.student-selected-marks small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.student-selected-marks {
+  display: grid;
+  gap: 7px;
+}
+.student-selected-marks > strong {
+  font-size: 23px;
+  font-weight: 600;
+  color: var(--school-forest, var(--navy));
+}
+.student-selected-score {
+  display: grid;
+  justify-items: end;
+  gap: 9px;
+}
+.student-selected-score > strong {
+  font-size: 29px;
+  font-weight: 600;
+  color: var(--school-forest, var(--navy));
+}
 .student-results-panel .panel-heading {
   flex-wrap: wrap;
   gap: 18px;
@@ -127,6 +199,26 @@
   user-select: text;
 }
 @media (max-width: 700px) {
+  .student-test-context {
+    padding: 18px;
+  }
+  .student-test-context-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .student-test-context-body {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 20px 14px;
+  }
+  .student-test-selector {
+    grid-column: 1 / -1;
+  }
+  .student-selected-marks > strong {
+    font-size: 21px;
+  }
+  .student-selected-score > strong {
+    font-size: 25px;
+  }
   .student-exam-list {
     padding: 0 14px 16px;
   }

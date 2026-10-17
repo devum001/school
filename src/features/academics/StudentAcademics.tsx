@@ -1,50 +1,106 @@
-import { useState } from 'react';
-import { FileText, CalendarDays, ChevronRight, MessageCircle } from 'lucide-react';
+import { examIncludes } from '../../lib/academicSheets';
+import { resolvedResult } from '../../lib/classSubjects';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import {
+  FileText,
+  CalendarDays,
+  ChevronRight,
+  MessageCircle,
+  ArrowLeft,
+  Pencil,
+} from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { Badge, Button, EmptyState, Modal, Panel } from '../../components/ui/Primitives';
 import { resultSummary, roster } from '../../lib/selectors';
 import { displayDate } from '../../lib/config';
 import ShareReportDialog from './ShareReportDialog';
 import './student-academics.css';
+
+function classResultsPath(value: string | null) {
+  if (!value?.startsWith('/') || value.startsWith('//')) return null;
+  try {
+    const url = new URL(value, 'https://schoolwell.local');
+    return url.origin === 'https://schoolwell.local' && url.pathname === '/academics'
+      ? `${url.pathname}${url.search}`
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
   const state = useSchool();
-  const [requestedExamId, setExam] = useState('');
+  const location = useLocation();
+  const [params, setParams] = useSearchParams();
+  const requestedExamId = params.get('exam');
   const [report, setReport] = useState(false);
   const [sharing, setSharing] = useState(false);
   const row = roster(state, true).find((r) => r.enrollment.id === enrollmentId);
-  if (!row) return null;
   const exams = state.exams
     .filter(
       (e) =>
         e.schoolId === state.school.id &&
         e.academicYearId === state.academicYear.id &&
+        !!row &&
         (!e.classId || e.classId === row.enrollment.classId) &&
-        (!e.sectionId || e.sectionId === row.enrollment.sectionId),
+        examIncludes(e, row.enrollment.classId, row.enrollment.sectionId),
     )
     .sort((a, b) => b.date.localeCompare(a.date));
-  if (!exams.length)
-    return (
-      <EmptyState
-        title="No examinations yet"
-        description="Add a test in Academics to start tracking this student's results."
-      />
-    );
   const selected =
     exams.find((e) => e.id === requestedExamId) ??
     exams.find((e) =>
       state.results.some((r) => r.enrollmentId === enrollmentId && r.examId === e.id),
     ) ??
     exams[0];
+  useEffect(() => {
+    if (selected && params.get('exam') !== selected.id) {
+      const next = new URLSearchParams(params);
+      next.set('exam', selected.id);
+      setParams(next, { replace: true });
+    }
+  }, [params, selected, setParams]);
+  if (!row) return null;
+  const scopedParams = new URLSearchParams({
+    class: row.enrollment.classId,
+    section: row.enrollment.sectionId,
+  });
+  const academicsPath = `/academics?${scopedParams}`;
+  const backToResults = classResultsPath(params.get('from'));
+  if (!selected)
+    return (
+      <Panel className="student-results-panel">
+        <EmptyState
+          title="No tests for this student yet"
+          description="Create a test for this class or section in Academics. Saved marks will appear here."
+          action={
+            <Link className="button secondary" to={academicsPath}>
+              Open class tests
+            </Link>
+          }
+        />
+      </Panel>
+    );
   const examId = selected.id;
-  const result = state.results.find(
+  const returnParams = new URLSearchParams(params);
+  returnParams.set('tab', 'academics');
+  returnParams.set('exam', examId);
+  const manageParams = new URLSearchParams(scopedParams);
+  manageParams.set('test', examId);
+  manageParams.set('marks', '1');
+  manageParams.set('student', row.student.id);
+  manageParams.set('returnTo', `${location.pathname}?${returnParams}`);
+  const managePath = `/academics?${manageParams}`;
+  const selectExam = (id: string) => {
+    const next = new URLSearchParams(params);
+    next.set('exam', id);
+    setParams(next);
+  };
+  const recordedResult = state.results.find(
     (r) => r.schoolId === state.school.id && r.enrollmentId === enrollmentId && r.examId === examId,
   );
-  const previous = state.results.find(
-    (r) => r.enrollmentId === enrollmentId && r.examId === 'exam-unit',
-  );
-  const summary = result ? resultSummary(result) : null;
-  const comparison =
-    previous && summary ? summary.percentage - resultSummary(previous).percentage : 0;
+  const result = recordedResult ? resolvedResult(state, recordedResult) : undefined;
+  const summary = result && resultSummary(result).maximum ? resultSummary(result) : null;
   const marksTable =
     result && summary ? (
       <div className="table-wrap" role="region" aria-label="Subject marks" tabIndex={0}>
@@ -64,13 +120,23 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
                 <td>
                   <strong>{s.name}</strong>
                 </td>
-                <td>{s.marks}</td>
+                <td>{s.pending ? 'Pending' : result.absent || s.absent ? 'Absent' : s.marks}</td>
                 <td>{s.maxMarks}</td>
-                <td>{((s.marks / s.maxMarks) * 100).toFixed(1)}%</td>
                 <td>
-                  <div className="progress subject-progress">
-                    <span style={{ width: `${((s.marks / s.maxMarks) * 100).toFixed(1)}%` }} />
-                  </div>
+                  {s.pending || result.absent || s.absent
+                    ? '—'
+                    : `${((s.marks / s.maxMarks) * 100).toFixed(1)}%`}
+                </td>
+                <td>
+                  {s.pending ? (
+                    <Badge tone="amber">Pending</Badge>
+                  ) : result.absent || s.absent ? (
+                    <Badge tone="amber">Absent</Badge>
+                  ) : (
+                    <div className="progress subject-progress">
+                      <span style={{ width: `${((s.marks / s.maxMarks) * 100).toFixed(1)}%` }} />
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -78,9 +144,9 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
           <tfoot>
             <tr>
               <td>Total</td>
-              <td>{summary.marks}</td>
+              <td>{result.absent ? '—' : summary.marks}</td>
               <td>{summary.maximum}</td>
-              <td>{summary?.percentage ?? '—'}%</td>
+              <td>{result.absent ? '—' : `${summary.percentage}%`}</td>
               <td>{result.absent ? 'Absent' : `Grade ${summary.grade}`}</td>
             </tr>
           </tfoot>
@@ -94,39 +160,28 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
     );
   return (
     <>
-      <div className="academic-summary">
-        <div>
-          <Badge tone="blue">ACADEMIC PROGRESS</Badge>
-          <h2>Room to learn. Reasons to celebrate.</h2>
-          <p>
-            {state.exams.find((e) => e.id === examId)?.name} ·{' '}
-            {displayDate(state.exams.find((e) => e.id === examId)!.date)}
-          </p>
+      {backToResults && (
+        <Link className="student-academics-back" to={backToResults}>
+          <ArrowLeft size={15} /> Back to class results
+        </Link>
+      )}
+      <section className="panel student-test-context" aria-label="Selected test result">
+        <div className="student-test-context-heading">
+          <div>
+            <h2>Selected Test Result</h2>
+            <p>Results below belong to this test.</p>
+          </div>
+          <Link className="button secondary" to={managePath}>
+            <Pencil size={15} /> Manage marks
+          </Link>
         </div>
-        <div className="academic-score">
-          <strong>
-            {summary?.percentage ?? '—'}
-            {summary && <span>%</span>}
-          </strong>
-          <Badge tone={summary ? 'green' : 'amber'}>
-            {!summary ? 'Pending' : result?.absent ? 'Absent' : `Grade ${summary.grade}`}
-          </Badge>
-        </div>
-      </div>
-      <Panel
-        className="student-results-panel"
-        title="Subject-wise results"
-        subtitle={
-          examId === 'exam-midterm'
-            ? `${comparison >= 0 ? '+' : ''}${comparison.toFixed(1)} percentage points vs. Unit Assessment I`
-            : 'Marks and percentages use this test’s subject maximums'
-        }
-        action={
-          <div className="inline-actions">
+        <div className="student-test-context-body">
+          <label className="student-test-selector">
+            <span>Test</span>
             <select
               aria-label="Student examination"
               value={examId}
-              onChange={(e) => setExam(e.target.value)}
+              onChange={(e) => selectExam(e.target.value)}
             >
               {exams.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -134,14 +189,57 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
                 </option>
               ))}
             </select>
-            <Button variant="secondary" disabled={!result} onClick={() => setReport(true)}>
+            <small>
+              {displayDate(selected.date)} · {selected.kind}
+            </small>
+          </label>
+          <div className="student-selected-marks">
+            <span>Marks obtained</span>
+            <strong>
+              {!summary || result?.absent ? '—' : `${summary.marks} / ${summary.maximum}`}
+            </strong>
+            <small>
+              {result?.absent
+                ? 'No marks recorded for an absence'
+                : !summary
+                  ? 'Marks have not been entered yet'
+                  : result?.subjects.some((s) => s.pending)
+                    ? 'Provisional · Some subject marks are pending'
+                    : 'Across this test’s subjects'}
+            </small>
+          </div>
+          <div className="student-selected-score">
+            <strong>
+              {!summary ? 'Pending' : result?.absent ? 'Absent' : `${summary.percentage}%`}
+            </strong>
+            <Badge tone={!summary || result?.absent ? 'amber' : 'green'}>
+              {!summary
+                ? 'Awaiting marks'
+                : result?.absent
+                  ? 'Recorded absence'
+                  : `Grade ${summary.grade}`}
+            </Badge>
+          </div>
+        </div>
+      </section>
+      <Panel
+        className="student-results-panel"
+        title="Subject-wise results"
+        subtitle={
+          result?.absent
+            ? 'This student was recorded absent for the selected test.'
+            : 'Marks and percentages use this test’s subject maximums.'
+        }
+        action={
+          <div className="inline-actions">
+            <Button variant="secondary" disabled={!summary} onClick={() => setReport(true)}>
               <FileText size={15} />
               Report preview
             </Button>
             <Button
               variant="secondary"
               className="whatsapp-share"
-              disabled={!result}
+              disabled={!summary}
               onClick={() => setSharing(true)}
             >
               <MessageCircle size={15} />
@@ -163,11 +261,11 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
             const result = state.results.find(
               (r) => r.enrollmentId === enrollmentId && r.examId === e.id,
             );
-            const data = result ? resultSummary(result) : null;
+            const data = result && resultSummary(result).maximum ? resultSummary(result) : null;
             return (
               <button
                 key={e.id}
-                onClick={() => setExam(e.id)}
+                onClick={() => selectExam(e.id)}
                 aria-pressed={examId === e.id}
                 className={`student-exam-row ${examId === e.id ? 'selected' : ''}`}
               >
@@ -182,11 +280,13 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
                 </span>
                 <span className="student-exam-marks">
                   <small>Marks</small>
-                  <strong>{data ? `${data.marks} / ${data.maximum}` : '—'}</strong>
+                  <strong>
+                    {data && !result?.absent ? `${data.marks} / ${data.maximum}` : '—'}
+                  </strong>
                 </span>
                 <span className="student-exam-percentage">
-                  <strong>{data ? `${data.percentage}%` : '—'}</strong>
-                  <Badge tone={data ? 'green' : 'amber'}>
+                  <strong>{result?.absent ? 'Absent' : data ? `${data.percentage}%` : '—'}</strong>
+                  <Badge tone={data && !result?.absent ? 'green' : 'amber'}>
                     {!data ? 'Pending' : result?.absent ? 'Absent' : `Grade ${data.grade}`}
                   </Badge>
                 </span>
@@ -224,7 +324,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
           <Button
             variant="secondary"
             className="whatsapp-share"
-            disabled={!result}
+            disabled={!summary}
             onClick={() => {
               setReport(false);
               setSharing(true);

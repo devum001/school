@@ -11,15 +11,17 @@ test('student records can be added, edited and deleted without returning after r
   await page.goto('/students');
   await page.getByRole('button', { name: 'Add student', exact: true }).click();
   await page.getByLabel('Student name', { exact: true }).fill('Aditi Verma');
-  await page.getByLabel('Admission number', { exact: true }).fill('VN-NEW-001');
+  const admission = await page.getByLabel('Admission number', { exact: true }).inputValue();
   await page.getByLabel('Date of birth', { exact: true }).fill('2015-03-15');
   await page.getByLabel('Guardian name', { exact: true }).fill('Sunita Verma');
   await page.getByLabel('Parent mobile (optional)', { exact: true }).fill('9876543210');
+  await page.getByLabel('Total Fee', { exact: true }).fill('1000');
+  await page.getByLabel('Fee due date').fill('2026-10-20');
   await page.getByRole('button', { name: 'Save student', exact: true }).click();
-  await page.getByPlaceholder('Search name or admission number…').fill('VN-NEW-001');
+  await page.getByPlaceholder('Search name or admission number…').fill(admission);
   await expect(page.locator('tbody tr')).toHaveCount(1);
   await page.reload();
-  await page.getByPlaceholder('Search name or admission number…').fill('VN-NEW-001');
+  await page.getByPlaceholder('Search name or admission number…').fill(admission);
   await page.getByRole('button', { name: 'Edit Aditi Verma', exact: true }).click();
   await page.getByLabel('Student name', { exact: true }).fill('Aditi V. Verma');
   await page.getByRole('button', { name: 'Save student', exact: true }).click();
@@ -27,49 +29,40 @@ test('student records can be added, edited and deleted without returning after r
   await page.getByRole('tab', { name: 'Academics', exact: true }).click();
   await expect(page.getByText('Marks pending', { exact: true })).toBeVisible();
   await page.goto('/students');
-  await page.getByPlaceholder('Search name or admission number…').fill('VN-NEW-001');
+  await page.getByPlaceholder('Search name or admission number…').fill(admission);
   await page.getByRole('button', { name: 'Delete Aditi V. Verma', exact: true }).click();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.locator('tbody tr')).toHaveCount(1);
   await page.getByRole('button', { name: 'Delete Aditi V. Verma', exact: true }).click();
   await page.getByRole('button', { name: 'Delete permanently', exact: true }).click();
   await page.reload();
-  await page.getByPlaceholder('Search name or admission number…').fill('VN-NEW-001');
+  await page.getByPlaceholder('Search name or admission number…').fill(admission);
   await expect(page.locator('tbody tr')).toHaveCount(0);
 });
 
-test('teacher assignments, inactive status and deletion persist', async ({ page }) => {
+test('teaching staff opens a simple profile and shared edits persist', async ({ page }) => {
   await page.goto('/teachers');
-  await page.getByRole('button', { name: 'Add teacher', exact: true }).click();
-  await page.getByLabel('Teacher name', { exact: true }).fill('Kavya Mehra');
-  await page.getByLabel('Staff ID', { exact: true }).fill('VN-T099');
-  await page.getByLabel('Teaching subject', { exact: true }).fill('Mathematics');
-  await page.getByLabel('Assign Grade 5 · Section A', { exact: true }).check();
-  await expect(page.getByRole('dialog')).toContainText('replace the current class teacher in 1');
-  await page.getByRole('button', { name: 'Save teacher', exact: true }).click();
+  await page.getByRole('link', { name: 'Add teaching staff', exact: true }).click();
+  await page.getByLabel('Staff name', { exact: true }).fill('Kavya Mehra');
+  await page.getByLabel('Designation', { exact: true }).fill('Teacher');
+  await page.getByLabel('Basic Salary (₹)', { exact: true }).fill('30000');
+  await page.getByRole('button', { name: 'Save staff', exact: true }).click();
+  await page.goto('/teachers');
+  await page.getByPlaceholder('Search teacher name or designation…').fill('Kavya Mehra');
+  await page.getByRole('link', { name: /Kavya Mehra/ }).click();
+  await expect(page.getByRole('tab')).toHaveText(['Overview', 'Documents']);
+  await expect(page.getByText('Assigned Classes', { exact: true })).toHaveCount(0);
+  await page.getByRole('link', { name: 'View in Staff & HR →', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit staff Kavya Mehra', exact: true }).click();
+  await page.getByLabel('Staff status').selectOption('inactive');
+  await page.getByRole('button', { name: 'Save staff', exact: true }).click();
+  await page.goto('/teachers');
+  await page.getByPlaceholder('Search teacher name or designation…').fill('Kavya Mehra');
+  await expect(page.locator('tbody')).toContainText('Inactive');
   await page.reload();
-  await page.getByPlaceholder('Search teacher, staff ID or subject…').fill('VN-T099');
-  await expect(page.locator('tbody tr')).toContainText('Grade 5');
-  await page.goto('/classes');
-  await expect(page.getByText('Kavya Mehra', { exact: true })).toBeVisible();
-  await page.goto('/teachers');
-  await page.getByPlaceholder('Search teacher, staff ID or subject…').fill('VN-T099');
-  await page.getByRole('button', { name: 'Edit Kavya Mehra', exact: true }).click();
-  await page.getByLabel('Teacher status', { exact: true }).selectOption('inactive');
-  await expect(page.getByLabel('Assign Grade 5 · Section A', { exact: true })).not.toBeChecked();
-  await page.getByRole('button', { name: 'Save teacher', exact: true }).click();
-  await expect(page.locator('tbody tr')).toContainText('Inactive');
-  await page.goto('/classes');
-  await expect(page.getByText('Class teacher not assigned', { exact: true })).toBeVisible();
-  await page.goto('/teachers');
-  await page.getByPlaceholder('Search teacher, staff ID or subject…').fill('VN-T099');
-  await page.getByRole('button', { name: 'Delete Kavya Mehra', exact: true }).click();
-  await page.getByRole('button', { name: 'Delete permanently', exact: true }).click();
-  await page.reload();
-  await page.getByPlaceholder('Search teacher, staff ID or subject…').fill('VN-T099');
-  await expect(page.getByText('No teachers found', { exact: true })).toBeVisible();
+  await page.getByPlaceholder('Search teacher name or designation…').fill('Kavya Mehra');
+  await expect(page.locator('tbody')).toContainText('Inactive');
 });
-
 test('editing maximum marks updates results and deleting a test removes its history', async ({
   page,
 }) => {
@@ -108,7 +101,7 @@ test('management pages and forms are accessible and fit mobile', async ({ page }
   await expect(page.getByRole('heading', { name: 'Teachers', exact: true })).toBeVisible();
   await audit();
   await page.screenshot({ path: '/tmp/schoolwell-teachers.png', fullPage: true });
-  await page.getByRole('button', { name: 'Add teacher', exact: true }).click();
+  await page.getByRole('link', { name: 'Add teaching staff', exact: true }).click();
   await audit();
   await page.setViewportSize({ width: 390, height: 844 });
   await audit();

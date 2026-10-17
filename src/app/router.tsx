@@ -6,11 +6,14 @@ const Dashboard = lazy(() => import('../features/dashboard/DashboardPage'));
 const Students = lazy(() => import('../features/students/StudentsPage'));
 const Profile = lazy(() => import('../features/students/StudentProfilePage'));
 const Teachers = lazy(() => import('../features/teachers/TeachersPage'));
+const TeacherProfile = lazy(() => import('../features/teachers/TeacherProfilePage'));
+const Staff = lazy(() => import('../features/teachers/StaffHRPage'));
 const Classes = lazy(() => import('../features/classes/ClassesPage'));
 const Attendance = lazy(() => import('../features/attendance/AttendancePage'));
-const Fees = lazy(() => import('../features/fees/FeesPage'));
+const StaffAttendance = lazy(() => import('../features/attendance/StaffAttendancePage'));
+const Fees = lazy(() => import('../features/fees/FinanceWorkspace'));
 const Academics = lazy(() => import('../features/academics/AcademicsPage'));
-const Notifications = lazy(() => import('../features/notifications/NotificationsPage'));
+const Notifications = lazy(() => import('../features/notifications/CommunicationWorkspace'));
 const Settings = lazy(() => import('../features/settings/SettingsPage'));
 export const router = createBrowserRouter([
   {
@@ -25,7 +28,10 @@ export const router = createBrowserRouter([
           { path: 'students/:studentId', element: <Profile /> },
           { path: 'classes', element: <Classes /> },
           { path: 'teachers', element: <Teachers /> },
+          { path: 'teachers/:teacherId', element: <TeacherProfile /> },
+          { path: 'staff', element: <Staff /> },
           { path: 'attendance', element: <Attendance /> },
+          { path: 'attendance/staff', element: <StaffAttendance /> },
           { path: 'fees', element: <Fees /> },
           { path: 'academics', element: <Academics /> },
           { path: 'notifications', element: <Notifications /> },

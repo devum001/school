@@ -31,13 +31,15 @@ body {
 }
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 button,
 a,
 input,
-select {
+select,
+textarea {
   -webkit-tap-highlight-color: transparent;
 }
 button,
@@ -68,7 +70,8 @@ a:focus-visible {
   outline-offset: 3px;
 }
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: 2px solid #86abc6;
   outline-offset: 1px;
 }
@@ -95,7 +98,8 @@ h3 {
   font-weight: 600;
 }
 input,
-select {
+select,
+textarea {
   border: 1px solid #dfe5ec;
   background: white;
   border-radius: var(--radius-control);
@@ -107,7 +111,13 @@ select {
 select {
   padding-right: 27px;
 }
-input::placeholder {
+textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+}
+input::placeholder,
+textarea::placeholder {
   color: #5c636c;
 }
 input[type='checkbox'] {

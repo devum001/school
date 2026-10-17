@@ -1,4 +1,5 @@
 import { useSchool } from '../../app/useSchool';
+import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
 export function ClassFilters({
   classId,
   sectionId,
@@ -19,7 +20,7 @@ export function ClassFilters({
         <span>Class</span>
         <select aria-label="Class" value={classId} onChange={(e) => onClassChange(e.target.value)}>
           {allowAll && <option value="">All classes</option>}
-          {state.classes.map((c) => (
+          {orderedClasses(state.classes).map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
@@ -40,7 +41,7 @@ export function ClassFilters({
               .map((s) => (
                 <option key={s.id} value={s.id}>
                   {!classId ? `${state.classes.find((c) => c.id === s.classId)?.name} · ` : ''}
-                  Section {s.name}
+                  {sectionLabel(s.name)}
                 </option>
               ))}
           </select>

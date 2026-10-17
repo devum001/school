@@ -1,0 +1,300 @@
+.staff-department-table {
+  overflow-x: auto;
+  margin: 0 24px 24px;
+}
+.staff-department-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.staff-department-table th,
+.staff-department-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.staff-department-table thead th {
+  font-weight: 500;
+  color: var(--muted);
+}
+.staff-department-link {
+  color: var(--school-header);
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  cursor: pointer;
+  font-weight: 600;
+  text-align: left;
+}
+.staff-department-detail {
+  padding: 0 24px 24px;
+}
+.staff-department-heading,
+.staff-designation-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 12px;
+}
+.staff-department-heading > div {
+  flex: 1;
+}
+.staff-department-heading h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.staff-department-heading p {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.staff-designation-heading {
+  justify-content: space-between;
+}
+.staff-designation-heading h4 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.staff-designations {
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.staff-designations li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.staff-designations li > span {
+  flex: 1;
+  font-size: 13px;
+}
+.staff-designations .button {
+  min-height: 30px;
+  padding: 5px 8px;
+}
+.staff-directory-list {
+  margin: 0;
+  padding: 0 24px 20px;
+  list-style: none;
+}
+.staff-directory-list li {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+.staff-directory-list li > div {
+  flex: 1;
+  min-width: 0;
+}
+.staff-directory-list strong {
+  font-size: 13px;
+}
+.staff-directory-list p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.staff-directory-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 20px 24px;
+}
+.staff-directory-toolbar > .search-input {
+  flex: 1;
+  min-width: 160px;
+}
+.staff-directory-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+.staff-cycle-note {
+  margin: 0 24px 16px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.staff-payroll-table {
+  margin: 0 24px 24px;
+  overflow-x: auto;
+}
+.staff-payroll-table table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  text-align: left;
+}
+.staff-payroll-table th,
+.staff-payroll-table td {
+  padding: 18px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  font-size: 13px;
+}
+.staff-payroll-table thead th {
+  font-weight: 600;
+  background: var(--surface-muted, #f8faf9);
+}
+.staff-payroll-table tbody th {
+  width: 30%;
+  font-weight: 500;
+}
+.staff-payroll-table td {
+  width: 20%;
+}
+.staff-payroll-table td:last-child {
+  width: 10%;
+  white-space: nowrap;
+}
+.staff-payroll-table small,
+.staff-payroll-person p {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+  margin-top: 6px;
+  font-weight: 400;
+}
+.staff-payroll-person {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.staff-payroll-person strong {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .staff-cycle-note {
+    margin-inline: 16px;
+  }
+  .staff-payroll-table {
+    margin-inline: 16px;
+  }
+}
+.department-staff-list {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+}
+.department-staff-list li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+}
+.department-staff-list li > div {
+  flex: 1;
+  min-width: 0;
+}
+.department-staff-list strong {
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.department-staff-list p {
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.staff-salary-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px 0;
+  border-block: 1px solid var(--border);
+  font-size: 13px;
+}
+.staff-salary-preview strong {
+  font-size: 18px;
+  color: var(--school-header);
+}
+.school-finance-panel {
+  margin-bottom: 24px;
+}
+.school-finance-values {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 4px 24px 16px;
+  gap: 18px;
+}
+.school-finance-values dt {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.school-finance-values dd {
+  margin: 6px 0 0;
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--school-header);
+  overflow-wrap: anywhere;
+}
+.school-finance-note {
+  padding: 0 24px 20px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.staff-department-table tbody tr:last-child th {
+  border-bottom: 0;
+}
+@media (max-width: 900px) {
+  .school-finance-values {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .school-finance-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-inline: 18px;
+  }
+  .school-finance-panel .panel-heading {
+    flex-wrap: wrap;
+  }
+  .school-finance-note {
+    padding-inline: 18px;
+  }
+}
+@media (max-width: 600px) {
+  .staff-departments-panel .panel-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .staff-departments-panel .panel-heading > .button {
+    align-self: flex-start;
+  }
+  .staff-department-table {
+    margin-inline: 16px;
+  }
+  .staff-department-table th,
+  .staff-department-table td {
+    padding: 14px 6px;
+    font-size: 12px;
+  }
+  .staff-department-detail {
+    padding-inline: 16px;
+  }
+  .staff-department-heading {
+    flex-wrap: wrap;
+  }
+  .staff-directory-toolbar,
+  .staff-directory-list {
+    padding-inline: 16px;
+  }
+  .staff-directory-list li {
+    gap: 10px;
+  }
+}

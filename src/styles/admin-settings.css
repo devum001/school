@@ -1,0 +1,210 @@
+.admin-settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.admin-settings-stack > .panel {
+  margin: 0;
+}
+.admin-detail-list {
+  margin: 16px 0 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.admin-detail-list dt {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.admin-detail-list dd {
+  margin: 0;
+  font-weight: 600;
+}
+.admin-preview-note {
+  background: #f5f8fa;
+  border-left: 3px solid var(--school-forest);
+  padding: 12px 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.admin-control-row,
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+.admin-control-row {
+  margin: 20px 0;
+  align-items: flex-end;
+}
+.admin-control-row .field {
+  margin: 0;
+  min-width: 200px;
+}
+.admin-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  min-height: 44px;
+}
+.admin-toggle input {
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  position: relative;
+  background: #cbd5e1;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.admin-toggle input::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+}
+.admin-toggle input:checked {
+  background: var(--school-forest);
+}
+.admin-toggle input:checked::after {
+  transform: translateX(20px);
+}
+.admin-toggle input:focus-visible {
+  outline: 2px solid var(--school-forest);
+  outline-offset: 3px;
+}
+.dashboard-followup {
+  margin-bottom: 24px;
+}
+.admin-actions {
+  gap: 12px;
+}
+.admin-save {
+  display: flex;
+  justify-content: flex-end;
+}
+.export-option {
+  padding: 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.export-option:last-child {
+  border-bottom: 0;
+}
+.export-option strong {
+  font-size: 14px;
+}
+.session-list {
+  margin: 16px 0 24px;
+}
+.session-list > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+}
+.admin-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px 24px;
+}
+.admin-filter-bar .field {
+  flex: 1 1 180px;
+  margin: 0;
+}
+.audit-time {
+  display: block;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.pending-alert-focus {
+  scroll-margin-top: 20px;
+}
+.pending-alert-focus:focus {
+  outline: 2px solid var(--school-forest);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+.dashboard-classroom,
+.dashboard-absence {
+  margin-bottom: 24px;
+}
+.leave-followup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding: 0 24px 24px;
+}
+.leave-followup-grid h3 {
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+.leave-followup-grid p,
+.followup-person span,
+.followup-person small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.followup-person {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.followup-person strong {
+  font-size: 14px;
+}
+.hr-tabs a[role='tab'] {
+  padding: 16px 4px;
+  margin-right: 26px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.hr-tabs a[aria-selected='true'] {
+  color: var(--school-forest);
+  font-weight: 600;
+  border-bottom-color: var(--school-forest);
+}
+#attendance-register-content > .panel {
+  margin-bottom: 24px;
+}
+@media (max-width: 640px) {
+  .admin-detail-list,
+  .leave-followup-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-control-row > *,
+  .admin-save .button {
+    width: 100%;
+  }
+  .admin-control-row .field {
+    min-width: 0;
+  }
+  .admin-actions .button {
+    flex: 1 1 auto;
+  }
+  .export-option .admin-actions {
+    width: 100%;
+  }
+  .admin-filter-bar {
+    padding: 16px;
+  }
+}

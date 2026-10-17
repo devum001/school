@@ -5,6 +5,7 @@ import { ArrowRight, BookOpen, Users, CalendarCheck } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { Avatar, Badge, PageHeading, SearchInput } from '../../components/ui/Primitives';
 import { roster, attendanceSummary, statusFor } from '../../lib/selectors';
+import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
 export default function ClassesPage() {
   const state = useSchool();
   const today = useToday();
@@ -32,7 +33,7 @@ export default function ClassesPage() {
         <Badge tone="blue">{state.academicYear.name}</Badge>
       </div>
       <div className="classes-grid">
-        {state.classes
+        {orderedClasses(state.classes)
           .filter((c) =>
             `${c.name} ${state.sections
               .filter((s) => s.classId === c.id)
@@ -48,7 +49,8 @@ export default function ClassesPage() {
                 <div>
                   <h2>{c.name}</h2>
                   <p>
-                    2 sections · {rows.filter((r) => r.enrollment.classId === c.id).length} students
+                    {state.sections.filter((s) => s.classId === c.id).length} sections ·{' '}
+                    {rows.filter((r) => r.enrollment.classId === c.id).length} students
                   </p>
                 </div>
                 <Link to={`/students?class=${c.id}`} aria-label={`View ${c.name} students`}>
@@ -67,7 +69,7 @@ export default function ClassesPage() {
                     <div className="section-card" key={s.id}>
                       <div className="split-line">
                         <Link className="text-link" to={`/students?class=${c.id}&section=${s.id}`}>
-                          Section {s.name} <ArrowRight size={13} />
+                          {sectionLabel(s.name)} <ArrowRight size={13} />
                         </Link>
                         <Badge>{sectionRows.length} students</Badge>
                       </div>
