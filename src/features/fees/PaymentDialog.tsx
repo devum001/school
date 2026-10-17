@@ -1,19 +1,26 @@
+import FeeProgressSummary from './FeeProgressSummary';
 import { useToday } from '../../app/useToday';
 import { useState } from 'react';
-import { Receipt, CheckCircle2 } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Badge, Button, Modal } from '../../components/ui/Primitives';
-import { feeSummary, roster } from '../../lib/selectors';
-import { money, displayDate } from '../../lib/config';
+import { Button, Modal } from '../../components/ui/Primitives';
+import { feeSummary, installments, roster } from '../../lib/selectors';
+import { money } from '../../lib/config';
 import { repository } from '../../lib/repository';
 import type { Payment } from '../../types/domain';
+import GeneratedDocumentPreview from '../../components/shared/GeneratedDocumentPreview';
+import { feeReceiptFor } from '../../lib/documentData';
+import { PAYMENT_METHODS } from '../../lib/ledgerSchemas';
+import { useDraftGuard } from '../academics/useDraftGuard';
+import '../../styles/ledgers.css';
 export default function PaymentDialog({
   enrollmentId,
   onClose,
+  installmentId: initialInstallmentId,
 }: {
   enrollmentId: string;
   onClose: () => void;
+  installmentId?: string;
 }) {
   const state = useSchool();
   const today = useToday();
@@ -21,22 +28,38 @@ export default function PaymentDialog({
   const row = roster(state, true).find((r) => r.enrollment.id === enrollmentId);
   const balance = feeSummary(state, enrollmentId);
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState<Payment['method']>('Bank transfer');
-  const [reference, setReference] = useState(
-    () => `WBA-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
-  );
+  const [method, setMethod] = useState<Payment['method']>('Cash');
+  const [reference, setReference] = useState('');
+  const [date, setDate] = useState(today),
+    [installmentId, setInstallmentId] = useState(initialInstallmentId ?? '');
   const [error, setError] = useState('');
   const [receipt, setReceipt] = useState<Payment | null>(null);
+  const pending = installments(state, enrollmentId).filter((item) => item.outstanding > 0);
+  const available = installmentId
+    ? (pending.find((item) => item.id === installmentId)?.outstanding ?? 0)
+    : balance.outstanding;
+  const guard = useDraftGuard(
+    !receipt && Boolean(amount || reference || date !== today || method !== 'Cash'),
+    onClose,
+  );
   if (!row) return null;
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const paise = Math.round(Number(amount) * 100);
-    if (!Number.isFinite(paise) || paise <= 0 || paise > balance.outstanding) {
+    if (receipt) return;
+    if (!Number.isFinite(paise) || paise <= 0 || paise > available) {
       setError('Enter a positive amount within the outstanding balance.');
       return;
     }
     try {
-      repository.recordPayment({ enrollmentId, amount: paise, date: today, method, reference });
+      repository.recordPayment({
+        enrollmentId,
+        amount: paise,
+        date,
+        method,
+        reference,
+        installmentId: installmentId || undefined,
+      });
       setReceipt(repository.getSnapshot().payments.at(-1) ?? null);
       notify('Payment recorded. All fee balances have been updated.');
     } catch (err) {
@@ -46,82 +69,76 @@ export default function PaymentDialog({
   return (
     <Modal
       open
-      onClose={onClose}
-      title={receipt ? 'Payment recorded' : 'Record a payment'}
+      onClose={guard.confirming ? guard.keepEditing : guard.requestClose}
+      title={
+        guard.confirming
+          ? 'Discard payment details?'
+          : receipt
+            ? 'Payment Successful'
+            : 'Record Payment'
+      }
       description={
         receipt
           ? 'Payment details and updated fee balance.'
           : `${row.student.name} · ${row.className}, Section ${row.sectionName}`
       }
     >
-      {receipt ? (
+      {guard.confirming ? (
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={guard.keepEditing}>
+            Keep editing
+          </Button>
+          <Button variant="danger" onClick={guard.discard}>
+            Discard changes
+          </Button>
+        </div>
+      ) : receipt ? (
         <>
-          <div className="receipt printable">
-            <div className="receipt-top">
-              <Receipt size={28} />
-              <Badge tone="green">
-                <CheckCircle2 size={13} />
-                Payment recorded
-              </Badge>
-            </div>
-            <h2>{state.school.name}</h2>
-            <p>PAYMENT RECEIPT</p>
-            <dl>
-              <div>
-                <dt>Student</dt>
-                <dd>{row.student.name}</dd>
-              </div>
-              <div>
-                <dt>Admission number</dt>
-                <dd>{row.student.admissionNumber}</dd>
-              </div>
-              <div>
-                <dt>Date</dt>
-                <dd>{displayDate(receipt.date)}</dd>
-              </div>
-              <div>
-                <dt>Reference</dt>
-                <dd>{receipt.reference}</dd>
-              </div>
-              <div>
-                <dt>Method</dt>
-                <dd>{receipt.method}</dd>
-              </div>
-              <div className="receipt-total">
-                <dt>Amount recorded</dt>
-                <dd>{money(receipt.amount)}</dd>
-              </div>
-              <div>
-                <dt>Remaining balance</dt>
-                <dd>{money(balance.outstanding)}</dd>
-              </div>
-            </dl>
-            <p>Please retain this acknowledgement for your records.</p>
-          </div>
+          <GeneratedDocumentPreview data={feeReceiptFor(state, receipt)} />
+          <p className="panel-note">Pending amount: {money(balance.outstanding)}</p>
           <div className="modal-actions">
-            <Button variant="secondary" onClick={() => window.print()}>
-              Print receipt
-            </Button>
             <Button onClick={onClose}>Done</Button>
           </div>
         </>
       ) : (
         <form onSubmit={submit}>
-          <div className="payment-balance">
-            <span>Outstanding balance</span>
-            <strong>{money(balance.outstanding)}</strong>
-          </div>
+          <FeeProgressSummary enrollmentId={enrollmentId} />
+          {installmentId && (
+            <div className="payment-balance">
+              <span>Selected installment balance</span>
+              <strong>{money(available)}</strong>
+            </div>
+          )}
           <div className="form-grid">
+            <label className="field">
+              Student
+              <input readOnly value={row.student.name} />
+            </label>
+            <label className="field">
+              Apply payment to
+              <select
+                aria-label="Apply payment to"
+                value={installmentId}
+                onChange={(e) => setInstallmentId(e.target.value)}
+              >
+                <option value="">Pending installments — earliest first</option>
+                {pending.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label} · {money(item.outstanding)}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="field">
               Amount (₹)
               <input
                 autoFocus
                 aria-label="Payment amount"
                 required
-                type="number"
-                step="0.01"
-                min="0.01"
-                max={balance.outstanding / 100}
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]+([.][0-9]{1,2})?"
+
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="Enter amount"
@@ -130,27 +147,39 @@ export default function PaymentDialog({
             <label className="field">
               Payment method
               <select
+                aria-label="Payment method"
                 value={method}
                 onChange={(e) => setMethod(e.target.value as Payment['method'])}
               >
-                <option>Bank transfer</option>
-                <option>Cash</option>
-                <option>UPI</option>
+                {PAYMENT_METHODS.filter((value) => value !== 'Bank transfer').map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
               </select>
             </label>
             <label className="field span-two">
-              Payment reference
+              Payment reference (optional)
               <input
-                required
+                aria-label="Payment reference"
                 maxLength={80}
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
               />
             </label>
+            <label className="field">
+              Payment date
+              <input
+                aria-label="Payment date"
+                required
+                type="date"
+                min={state.academicYear.start}
+                max={today}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </label>
           </div>
           <div className="info-banner">
-            Payment date: {displayDate(today)}. Please verify the amount and reference before
-            saving.
+            Verify the amount, date and payment mode before confirming.
           </div>
           {error && (
             <p className="form-error" role="alert">
@@ -158,13 +187,10 @@ export default function PaymentDialog({
             </p>
           )}
           <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={guard.requestClose}>
               Cancel
             </Button>
-            <Button type="submit">
-              <Receipt size={16} />
-              Confirm payment
-            </Button>
+            <Button type="submit">Confirm payment</Button>
           </div>
         </form>
       )}

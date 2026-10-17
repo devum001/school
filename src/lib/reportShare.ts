@@ -1,3 +1,5 @@
+import { examIncludes } from './academicSheets';
+import { subjectName } from './classSubjects';
 import type { DemoState, Examination, RosterEntry } from '../types/domain';
 import { displayHindiDate } from './config';
 import { resultSummary } from './selectors';
@@ -24,7 +26,7 @@ export function studentReportMessage(
         exam.schoolId === state.school.id &&
         exam.academicYearId === row.enrollment.academicYearId &&
         (!exam.classId || exam.classId === row.enrollment.classId) &&
-        (!exam.sectionId || exam.sectionId === row.enrollment.sectionId),
+        examIncludes(exam, row.enrollment.classId, row.enrollment.sectionId),
     )
     .flatMap((exam) => {
       const result = state.results.find(
@@ -33,7 +35,7 @@ export function studentReportMessage(
           r.enrollmentId === row.enrollment.id &&
           r.examId === exam.id,
       );
-      if (!result) return [];
+      if (!result || !resultSummary(result).maximum) return [];
       const summary = resultSummary(result);
       return [
         {
@@ -43,7 +45,10 @@ export function studentReportMessage(
             `दिनांक: ${displayHindiDate(exam.date)}`,
             ...(result.absent
               ? ['स्थिति: अनुपस्थित']
-              : result.subjects.map((s) => `${s.name}: ${s.marks} / ${s.maxMarks}`)),
+              : result.subjects.map(
+                  (s) =>
+                    `${subjectName(state, row.enrollment.classId, s)}: ${s.pending ? 'लंबित' : s.absent ? 'अनुपस्थित' : `${s.marks} / ${s.maxMarks}`}`,
+                )),
             `कुल अंक: ${summary.marks} / ${summary.maximum}`,
             `प्रतिशत: ${summary.percentage}%${result.absent ? '' : ` · ग्रेड: ${summary.grade}`}`,
           ].join('\n'),
@@ -60,7 +65,7 @@ export function studentReportMessage(
     ...reports.map((r) => r.text),
     ...(reports.length > 1
       ? [
-          `*समग्र परिणाम*: ${marks} / ${maximum} (${((marks / maximum) * 100).toFixed(1)}%)\nकेवल दर्ज परिणाम शामिल हैं; लंबित अंक शामिल नहीं हैं।`,
+          `*समग्र परिणाम*: ${marks} / ${maximum} (${((maximum ? marks / maximum : 0) * 100).toFixed(1)}%)\nकेवल दर्ज परिणाम शामिल हैं; लंबित अंक शामिल नहीं हैं।`,
         ]
       : []),
     'कृपया प्रगति पर चर्चा के लिए कक्षा शिक्षक से संपर्क करें।\nधन्यवाद।',
@@ -81,7 +86,7 @@ export function testAbsenceMessage(state: DemoState, row: RosterEntry, exam: Exa
     exam.schoolId !== state.school.id ||
     exam.academicYearId !== row.enrollment.academicYearId ||
     (exam.classId && exam.classId !== row.enrollment.classId) ||
-    (exam.sectionId && exam.sectionId !== row.enrollment.sectionId)
+    !examIncludes(exam, row.enrollment.classId, row.enrollment.sectionId)
   )
     return '';
   const absent = state.results.some(
@@ -92,11 +97,12 @@ export function testAbsenceMessage(state: DemoState, row: RosterEntry, exam: Exa
       result.absent,
   );
   if (!absent) return '';
-  const kind = {
+  const kinds: Record<string, string> = {
     'Daily test': 'दैनिक परीक्षा',
     'Monthly test': 'मासिक परीक्षा',
     'Pre-board': 'प्री-बोर्ड परीक्षा',
     'Term exam': 'सत्र परीक्षा',
-  }[exam.kind];
+  };
+  const kind = kinds[exam.kind] ?? exam.kind;
   return `*${state.school.name}*\n\nआदरणीय अभिभावक,\n\nआपके बच्चे ${row.student.name} को दिनांक ${displayHindiDate(exam.date)} को आयोजित ${kind} में अनुपस्थित दर्ज किया गया है।\n\nपरीक्षा: ${exam.name}\nकक्षा: ${row.className} · अनुभाग: ${row.sectionName}\nरोल नंबर: ${row.enrollment.rollNumber}\n\nकृपया अनुपस्थिति का कारण कक्षा शिक्षक को बताएं और अगली प्रक्रिया की जानकारी प्राप्त करें। यदि यह जानकारी सही नहीं है, तो विद्यालय कार्यालय से संपर्क करें।\n\nधन्यवाद,\n${state.school.name}`;
 }

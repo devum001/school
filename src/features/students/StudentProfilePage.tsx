@@ -8,7 +8,6 @@ import {
   CalendarCheck,
   Wallet,
   Award,
-  FileText,
   MapPin,
   Users,
   CalendarDays,
@@ -21,6 +20,8 @@ import { displayDate, money } from '../../lib/config';
 import { StudentFees } from '../fees/StudentFees';
 import { StudentAcademics } from '../academics/StudentAcademics';
 import { StudentAttendance } from './StudentAttendance';
+import EntityDocuments from '../../components/shared/EntityDocuments';
+import '../../styles/ledgers.css';
 const tabs = ['overview', 'attendance', 'fees', 'academics', 'documents'];
 export default function StudentProfilePage() {
   const state = useSchool();
@@ -129,7 +130,13 @@ export default function StudentProfilePage() {
             aria-controls={`panel-${t}`}
             key={t}
             className={tab === t ? 'active' : ''}
-            onClick={() => setParams({ tab: t })}
+            onClick={() =>
+              setParams((previous) => {
+                const next = new URLSearchParams(previous);
+                next.set('tab', t);
+                return next;
+              })
+            }
           >
             {t[0].toUpperCase() + t.slice(1)}
           </button>
@@ -264,22 +271,7 @@ export default function StudentProfilePage() {
         {tab === 'attendance' && <StudentAttendance enrollmentId={enrollment.id} />}{' '}
         {tab === 'fees' && <StudentFees enrollmentId={enrollment.id} />}{' '}
         {tab === 'academics' && <StudentAcademics enrollmentId={enrollment.id} />}{' '}
-        {tab === 'documents' && (
-          <Panel>
-            <div className="documents-empty">
-              <span className="document-illustration">
-                <FileText size={46} />
-              </span>
-              <h2>A home for important documents</h2>
-              <p>
-                Admission forms, certificates, and reports will live here.
-                <br />
-                Document uploads will be available soon.
-              </p>
-              <Badge>Uploads coming soon</Badge>
-            </div>
-          </Panel>
-        )}
+        {tab === 'documents' && <EntityDocuments ownerKind="student" ownerId={student.id} />}
       </div>
     </>
   );

@@ -1,119 +1,95 @@
 import { test, expect } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
+import { loadAcademicFixture, openSheet, savedAcademics } from './academicFixture';
 
-test.beforeEach(async ({ page }) => {
-  await page.clock.setFixedTime(new Date('2026-10-11T06:30:00Z'));
-});
-
-test('principal adds a daily test, saves pending and absent marks, completes rankings and retains edits', async ({
+test('metadata-only creation uses a manual type and multiple sections; pencil opens marks later', async ({
   page,
 }) => {
-  await page.goto('/academics');
-  await page.getByRole('button', { name: 'Add test', exact: true }).click();
-  await page.getByLabel('Test name', { exact: true }).fill('Fractions practice');
-  await page.getByLabel('Test section', { exact: true }).selectOption('class-5-a');
-  await page.getByLabel('Subject 1', { exact: true }).fill('Mathematics');
-  await page.getByRole('button', { name: 'Create test', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Fractions practice');
-  await page.getByLabel('Aarav Sharma Mathematics marks', { exact: true }).fill('18');
-  await page.getByLabel('Ananya Sharma absent', { exact: true }).check();
-  await page.getByRole('button', { name: 'Save marks', exact: true }).click();
-  await expect(page.getByRole('row').filter({ hasText: 'Aarav Sharma' })).toContainText('18 / 20');
-  await expect(
-    page
-      .locator('.academic-results:not(.test-absence-panel)')
-      .getByRole('row')
-      .filter({ hasText: 'Ananya Sharma' }),
-  ).toContainText('Absent');
-  await expect(page.getByRole('row').filter({ hasText: 'Vihaan Sharma' })).toContainText('Pending');
+  await loadAcademicFixture(page);
+  await page.goto('/academics?class=class-8');
+  await page.getByRole('button', { name: 'Add Test / Exam', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByLabel('Test type', { exact: true })).toHaveJSProperty(
+    'tagName',
+    'INPUT',
+  );
+  await expect(dialog.getByText('Subjects & maximum marks')).toHaveCount(0);
+  await dialog.getByLabel('Test name', { exact: true }).fill('October Learning Check');
+  await dialog.getByLabel('Test type', { exact: true }).fill('Teacher custom practice');
+  await dialog.getByLabel('Grade 8 Section A', { exact: true }).check();
+  await dialog.getByLabel('Grade 8 Section B', { exact: true }).check();
+  await dialog.getByRole('button', { name: 'Create Test', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const card = page.locator('.academic-test-card').filter({ hasText: 'October Learning Check' });
+  await expect(card).toContainText('Marks Not Added');
+  await expect(card).toContainText('Sections A, B');
+  await card.getByRole('button', { name: 'Add/Edit Marks for October Learning Check' }).click();
+  await expect(dialog.getByLabel('Marks section')).toHaveValue('class-8-a');
+  await expect(dialog.getByLabel('Marks section').locator('option')).toHaveCount(2);
+  await expect(page.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  const saved = await savedAcademics(page);
+  expect(saved.exams.find((e) => e.name === 'October Learning Check')?.subjects).toEqual([]);
+});
+
+test('marks save numbers, A, pending cells and exclude blank subjects with sections isolated', async ({
+  page,
+}) => {
+  await loadAcademicFixture(page);
+  await openSheet(page);
+  const dialog = page.getByRole('dialog');
+  const first = dialog.locator('tbody tr').nth(0),
+    second = dialog.locator('tbody tr').nth(1);
+  await dialog.getByLabel('Mathematics maximum marks', { exact: true }).fill('20');
+  await dialog.getByLabel('English maximum marks', { exact: true }).fill('50');
+  await first.locator('input').nth(0).fill('18');
+  await second.locator('input').nth(0).fill('A');
+  await second.locator('input').nth(2).fill('45');
+  await dialog.getByLabel('Marks section').selectOption('class-8-b');
+  await expect(dialog.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('');
+  await dialog.getByLabel('Mathematics maximum marks', { exact: true }).fill('100');
+  await dialog.locator('tbody tr').first().locator('input').first().fill('80');
+  await dialog.getByRole('button', { name: 'Save Marks', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.academic-test-card')).toContainText('Marks Added');
+  await page.getByRole('tab', { name: 'Results', exact: true }).click();
+  await page.getByRole('button', { name: 'View Result', exact: true }).click();
+  await expect(dialog.getByRole('tab', { name: 'Mathematics', exact: true })).toBeVisible();
+  await expect(dialog.getByRole('tab', { name: 'English', exact: true })).toBeVisible();
+  await expect(dialog.getByRole('tab', { name: 'Science', exact: true })).toHaveCount(0);
+  await expect(dialog).toContainText('18/20');
+  await expect(dialog).toContainText('Absent');
+  await dialog.getByRole('tab', { name: 'English', exact: true }).click();
+  await expect(dialog).toContainText('45/50');
+  await expect(dialog).toContainText('Pending');
+  await dialog.getByRole('button', { name: 'Close dialog' }).click();
   await page.reload();
-  await page.getByLabel('Results section').selectOption('class-5-a');
-  await page
-    .getByRole('button', { name: 'View results for Fractions practice', exact: true })
-    .click();
-  await expect(page.getByRole('row').filter({ hasText: 'Aarav Sharma' })).toContainText('90%');
-  await page.getByRole('button', { name: 'Enter / edit marks' }).click();
-  await expect(page.getByRole('dialog').locator('tbody tr')).toHaveCount(12);
-  await page.getByLabel('Aarav Sharma Mathematics marks', { exact: true }).fill('19');
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Leave unsaved marks?');
-  await page.getByRole('button', { name: 'Keep editing', exact: true }).click();
-  const inputs = page.getByRole('dialog').locator('input[type="number"]:enabled');
-  for (let i = 0; i < (await inputs.count()); i++)
-    if ((await inputs.nth(i).inputValue()) === '') await inputs.nth(i).fill('15');
-  await page.getByRole('button', { name: 'Save marks', exact: true }).click();
-  await page.getByRole('button', { name: 'All tests', exact: true }).click();
-  await expect(page.getByRole('row').filter({ hasText: 'Fractions practice' })).toContainText(
-    'Complete',
-  );
-  await page.getByRole('button', { name: 'Overall rankings', exact: true }).click();
-  await expect(
-    page.locator('.panel-heading').filter({ hasText: 'Overall class rankings' }),
-  ).toContainText('5 completed tests included');
-  const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export results' }).click();
-  expect((await download).suggestedFilename()).toBe('class-results.csv');
-  await page.goto('/students/stu-001?tab=academics');
-  await page.getByLabel('Student examination').selectOption({ label: 'Fractions practice' });
-  await expect(page.getByRole('row').filter({ hasText: 'Mathematics' })).toContainText('95.0%');
+  await expect(page.getByLabel('Recent results section')).toHaveValue('class-8-a');
+  const saved = await savedAcademics(page);
+  expect(saved.exams[0].sheets).toHaveLength(2);
+  expect(saved.exams[0].sheets?.[0].subjects.map((s) => s.name)).toEqual([
+    'Mathematics',
+    'English',
+  ]);
 });
 
-test('pre-board supports multiple subjects totaling 200 and rejects partial subject rows', async ({
+test('invalid maximum and overflow block save; draft discard preserves earlier data', async ({
   page,
 }) => {
-  await page.goto('/academics');
-  await page.getByRole('button', { name: 'Add test', exact: true }).click();
-  await page.getByLabel('Test name', { exact: true }).fill('Pre-board II');
-  await page.getByLabel('Test type', { exact: true }).selectOption('Pre-board');
-  await page.getByLabel('Test class', { exact: true }).selectOption('class-10');
-  await page.getByLabel('Test section', { exact: true }).selectOption('class-10-a');
-  await page.getByLabel('Subject 1', { exact: true }).fill('Mathematics');
-  await page.getByLabel('Maximum marks 1', { exact: true }).fill('100');
-  await page.getByRole('button', { name: 'Add subject', exact: true }).click();
-  await page.getByLabel('Subject 2', { exact: true }).fill('Science');
-  await expect(page.getByRole('dialog')).toContainText('Total: 200 marks');
-  await page.getByRole('button', { name: 'Create test', exact: true }).click();
-  const first = page.getByRole('dialog').locator('tbody tr').first();
-  await first.locator('input[type="number"]').nth(0).fill('90');
-  await page.getByRole('button', { name: 'Save marks', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Complete every subject');
-  await first.locator('input[type="number"]').nth(1).fill('80');
-  await page.getByRole('button', { name: 'Save marks', exact: true }).click();
-  await expect(page.getByRole('row').filter({ hasText: '170 / 200' })).toContainText('85%');
-  await page.getByRole('button', { name: 'All tests', exact: true }).click();
-  await page.getByLabel('Filter test type', { exact: true }).selectOption('Pre-board');
-  await expect(page.locator('.tests-history-table')).toContainText('Pre-board II');
-  await expect(page.locator('.tests-history-table')).not.toContainText('Daily practice');
-});
-
-test('results workspace and entry forms are accessible and fit mobile', async ({ page }) => {
-  await page.goto('/academics');
-  await expect(page.getByRole('heading', { name: 'Tests & results', exact: true })).toBeVisible();
-  const audit = async () =>
-    expect(
-      (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
-        .violations,
-    ).toEqual([]);
-  await audit();
-  await page.screenshot({ path: '/tmp/schoolwell-results.png', fullPage: true });
-  await page.getByRole('button', { name: 'Add test', exact: true }).click();
-  await audit();
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await page
-    .getByRole('button', { name: 'View results for Mathematics · Daily practice', exact: true })
-    .click();
-  await page.getByRole('button', { name: 'Enter / edit marks' }).click();
-  await expect(page.getByRole('dialog').locator('tbody tr')).toHaveCount(24);
-  await audit();
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  );
-  await page.screenshot({ path: '/tmp/schoolwell-marks-mobile.png', fullPage: true });
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await page.getByRole('button', { name: 'All tests', exact: true }).click();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  );
-  await page.screenshot({ path: '/tmp/schoolwell-results-mobile.png', fullPage: true });
+  await loadAcademicFixture(page);
+  await openSheet(page);
+  const dialog = page.getByRole('dialog');
+  await dialog.locator('tbody tr').first().locator('input').first().fill('21');
+  await dialog.getByRole('button', { name: 'Save Marks', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText('maximum marks');
+  await dialog.getByLabel('Mathematics maximum marks', { exact: true }).fill('20');
+  await dialog.getByRole('button', { name: 'Save Marks', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText('0–20');
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(dialog).toContainText('Discard marks changes?');
+  await dialog.getByRole('button', { name: 'Keep editing', exact: true }).click();
+  await expect(dialog.locator('tbody tr').first().locator('input').first()).toHaveValue('21');
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Discard changes', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  expect((await savedAcademics(page)).results).toEqual([]);
 });

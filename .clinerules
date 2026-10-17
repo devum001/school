@@ -1,0 +1,18 @@
+# Schoolwell — Roo Code / Cline Rules
+
+You are working on Schoolwell — an Indian school management system (frontend only).
+
+## STRICT RULES
+1. Do NOT change folder structure or architecture
+2. Do NOT rewrite entire files — surgical diffs only
+3. Do NOT use TypeScript `any` — project is strict mode
+4. Do NOT install packages without approval
+5. Do NOT create backend/API code — another dev handles that
+6. Do NOT change state management (useSyncExternalStore pattern)
+7. All mutations go through repository.ts ONLY
+8. Use existing UI Primitives from components/ui/Primitives.tsx
+9. Use CSS custom properties (--school-forest, --school-gold, etc.)
+10. All 48 tests must continue passing after changes
+
+## MASTER INSTRUCTIONS
+Read FRONTEND_AI_INSTRUCTIONS.md and PROJECT_RULES.md at project root for full architecture and implementation standards. Every frontend change must follow the guidelines in FRONTEND_AI_INSTRUCTIONS.md.

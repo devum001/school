@@ -4,21 +4,23 @@ import { Link } from 'react-router-dom';
 import {
   Users,
   UserCheck,
-  Wallet,
   CalendarDays,
   ArrowUpRight,
   ArrowRight,
   CheckCheck,
-  Clock3,
-  CircleAlert,
   BookOpen,
   GraduationCap,
 } from 'lucide-react';
 import { AttendanceTrend } from './AttendanceTrend';
 import { useSchool } from '../../app/useSchool';
-import { attendanceSummary, feeSummary, roster, statusFor } from '../../lib/selectors';
-import { displayDate, shortMoney, money } from '../../lib/config';
+import { attendanceSummary, roster, statusFor } from '../../lib/selectors';
+import { displayDate } from '../../lib/config';
 import { Avatar, Badge, PageHeading, Panel, StatCard } from '../../components/ui/Primitives';
+import { staffDirectory } from '../../lib/staffStructure';
+import { staffStatusFor } from '../../lib/staffAttendance';
+import { defaultStaffPayroll } from '../../lib/settings';
+import { prolongedAbsences } from '../../lib/attendanceFollowup';
+import '../../styles/admin-settings.css';
 export default function DashboardPage() {
   const state = useSchool();
   const today = useToday();
@@ -26,7 +28,14 @@ export default function DashboardPage() {
   const date = selectedDate ?? today;
   const rows = roster(state);
   const attendance = attendanceSummary(rows.map((r) => statusFor(state, r.enrollment.id, date)));
-  const fees = feeSummary(state);
+  const config = state.staffPayroll ?? defaultStaffPayroll;
+  const staff = staffDirectory(state, config).filter(
+    (member) => member.status === 'active' && member.joinedOn <= date,
+  );
+  const staffAttendance = attendanceSummary(
+    staff.map((member) => staffStatusFor(state, member.id, date)),
+  );
+  const followup = prolongedAbsences(state, date);
   const absent = rows.filter((r) => statusFor(state, r.enrollment.id, date) === 'absent');
   const trend = [...new Set(state.attendance.map((r) => r.date))]
     .filter((d) => d <= date)
@@ -40,7 +49,6 @@ export default function DashboardPage() {
       attendance: attendanceSummary(rows.map((r) => statusFor(state, r.enrollment.id, d)))
         .percentage,
     }));
-  const collected = fees.total ? Math.round((fees.paid / fees.total) * 100) : 0;
   return (
     <>
       <PageHeading
@@ -69,13 +77,6 @@ export default function DashboardPage() {
           </>
         }
       />
-      <div className="context-strip">
-        <span>
-          <span className="live-dot" /> Academic year {state.academicYear.name}
-        </span>
-        <span>Attendance date · {displayDate(date)}</span>
-        <Badge tone="blue">Principal’s workspace</Badge>
-      </div>
       <div className="stats-grid">
         <StatCard
           label="Enrolled students"
@@ -96,7 +97,7 @@ export default function DashboardPage() {
           href="/teachers"
         />
         <StatCard
-          label="Attending today"
+          label="Student attending today"
           value={
             <>
               {attendance.attended}
@@ -114,12 +115,17 @@ export default function DashboardPage() {
           href={`/attendance?date=${date}`}
         />
         <StatCard
-          label="Fees collected · this year"
-          value={shortMoney(fees.paid)}
-          detail={`${collected}% of annual obligations`}
-          icon={<Wallet size={19} />}
-          tone="amber"
-          href="/fees"
+          label="Staff attending today"
+          value={
+            <>
+              {staffAttendance.attended}
+              <small> / {staffAttendance.total}</small>
+            </>
+          }
+          detail={`${staffAttendance.percentage}% of marked · ${staffAttendance.unmarked} unmarked`}
+          icon={<UserCheck size={19} />}
+          tone="green"
+          href={`/attendance/staff?date=${date}`}
         />
       </div>
       <div className="dashboard-main">
@@ -150,7 +156,7 @@ export default function DashboardPage() {
                 {attendance.present} / {attendance.late} / {attendance['half-day']}
               </strong>
             </Link>
-            <Link to={`/notifications?date=${date}`}>
+            <Link to={`/notifications?date=${date}&event=Student+Absent&focus=pending`}>
               <span>
                 <i className="legend-dot amber" />
                 Absent
@@ -170,7 +176,7 @@ export default function DashboardPage() {
           </Link>
         </Panel>
       </div>
-      <div className="dashboard-secondary">
+      <div className="dashboard-classroom">
         <Panel
           title="Classroom pulse"
           subtitle="Attendance by class · selected day"
@@ -212,44 +218,65 @@ export default function DashboardPage() {
             Attending / marked · Unmarked students are excluded from the rate.
           </div>
         </Panel>
-        <Panel
-          title="Fees, in focus"
-          subtitle="Annual obligations · all enrolled records"
-          action={<Wallet size={18} className="muted" />}
-        >
-          <div className="fee-focus">
-            <span>Outstanding balance</span>
-            <strong>{shortMoney(fees.outstanding)}</strong>
-            <p>Includes future installments</p>
-            <div className="progress thick">
-              <span style={{ width: `${collected}%` }} />
-            </div>
-            <div className="split-line">
-              <span>{collected}% collected</span>
-              <span>{money(fees.total)} total</span>
-            </div>
-            <div className="fee-focus-bottom">
-              <span>
-                <i className="legend-dot green" />
-                Collected <b>{shortMoney(fees.paid)}</b>
-              </span>
-              <span>
-                <i className="legend-dot gray" />
-                Outstanding <b>{shortMoney(fees.outstanding)}</b>
-              </span>
-            </div>
-            <Link className="button secondary full-width" to="/fees">
-              View fee management <ArrowRight size={16} />
-            </Link>
-          </div>
-        </Panel>
       </div>
-      <div className="dashboard-bottom">
+      <Panel
+        className="dashboard-followup"
+        title="Leave follow-up"
+        subtitle="Absent for more than 3 consecutive working days. Weekly offs are skipped; unmarked days are not counted."
+      >
+        <div className="leave-followup-grid">
+          <section aria-label="Students on prolonged leave">
+            <h3>Students ({followup.students.length})</h3>
+            {followup.students.length ? (
+              followup.students.map(({ row, count, first }) => (
+                <Link
+                  key={row.enrollment.id}
+                  className="followup-person"
+                  to={`/students/${row.student.id}?tab=attendance`}
+                >
+                  <strong>{row.student.name}</strong>
+                  <span>
+                    {row.className} · {row.sectionName}
+                  </span>
+                  <small>
+                    {count} days · since {displayDate(first)}
+                  </small>
+                </Link>
+              ))
+            ) : (
+              <p>No students absent for more than 3 working days.</p>
+            )}
+          </section>
+          <section aria-label="Teachers on prolonged leave">
+            <h3>Teachers ({followup.teachers.length})</h3>
+            {followup.teachers.length ? (
+              followup.teachers.map(({ member, count, first }) => (
+                <Link
+                  key={member.id}
+                  className="followup-person"
+                  to={`/staff?tab=Attendance&staff=${member.id}&date=${date}`}
+                >
+                  <strong>{member.name}</strong>
+                  <small>
+                    {count} days · since {displayDate(first)}
+                  </small>
+                </Link>
+              ))
+            ) : (
+              <p>No teachers absent for more than 3 working days.</p>
+            )}
+          </section>
+        </div>
+      </Panel>
+      <div className="dashboard-absence">
         <Panel
           title="A little attention goes a long way"
           subtitle={`${absent.length} absent students · ${displayDate(date)}`}
           action={
-            <Link className="text-link" to={`/notifications?date=${date}`}>
+            <Link
+              className="text-link"
+              to={`/notifications?date=${date}&event=Student+Absent&focus=pending`}
+            >
               Notify parents <ArrowUpRight size={14} />
             </Link>
           }
@@ -297,34 +324,12 @@ export default function DashboardPage() {
               <p className="panel-note">No students marked absent for this date.</p>
             )}
           </div>
-          <Link className="panel-bottom-link" to={`/notifications?date=${date}`}>
+          <Link
+            className="panel-bottom-link"
+            to={`/notifications?date=${date}&event=Student+Absent&focus=pending`}
+          >
             View all absent students <ArrowRight size={16} />
           </Link>
-        </Panel>
-        <Panel title="Around the school" subtitle="Recent workspace activity">
-          <div className="activity-list">
-            {state.activities.slice(0, 4).map((a) => (
-              <div className="activity-item" key={a.id}>
-                <span className={`activity-icon ${a.kind === 'payment' ? 'green' : 'blue'}`}>
-                  {a.kind === 'payment' ? (
-                    <Wallet size={15} />
-                  ) : a.kind === 'notification' ? (
-                    <CircleAlert size={15} />
-                  ) : (
-                    <CheckCheck size={15} />
-                  )}
-                </span>
-                <div>
-                  <strong>{a.text}</strong>
-                  <p>{a.detail}</p>
-                  <small>
-                    <Clock3 size={11} />
-                    {displayDate(a.date)}
-                  </small>
-                </div>
-              </div>
-            ))}
-          </div>
         </Panel>
       </div>
     </>

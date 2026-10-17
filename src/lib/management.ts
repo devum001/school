@@ -2,6 +2,14 @@ import { z } from 'zod';
 import type { DemoState, Student, Teacher } from '../types/domain';
 import { getSchoolDate } from './dates';
 import { whatsappPhone } from './reportShare';
+import { saveFeePlan } from './feePlans';
+import type { FeePlanInput } from '../types/ledger';
+import { imageDataSchema } from './ledgerSchemas';
+import {
+  admissionSequenceKey,
+  nextAdmissionNumber,
+  renumberStudentRolls,
+} from './studentNumbering';
 
 const text = z.string().trim().min(1).max(100);
 export const studentSchema = z.object({
@@ -27,13 +35,14 @@ export const teacherSchema = z.object({
   id: z.string(),
   schoolId: z.string(),
   name: text,
-  subject: text,
+  subject: z.string().max(100),
   staffId: text,
   status: z.enum(['active', 'inactive']),
   email: z.string(),
   phone: z.string(),
   qualification: z.string().max(150),
   joinedOn: z.iso.date(),
+  photoDataUrl: imageDataSchema.optional(),
 });
 export const sectionSchema = z.object({
   id: z.string(),
@@ -50,11 +59,15 @@ export const obligationSchema = z.object({
   dueDate: z.iso.date(),
   amount: z.number().int(),
   adjustment: z.number().int(),
+  installmentNumber: z.number().int().positive().optional(),
+  installmentCount: z.number().int().positive().optional(),
+  feeKind: z.enum(['One Time', 'Installments']).optional(),
 });
 export type StudentInput = Omit<Student, 'id' | 'schoolId'> & {
   classId: string;
   sectionId: string;
   rollNumber: number;
+  feePlan?: FeePlanInput;
 };
 export type TeacherInput = Omit<Teacher, 'id' | 'schoolId'> & { sectionIds: string[] };
 
@@ -79,6 +92,8 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
   if (studentId && !existing) throw new Error('Student not found.');
   const parsed = studentSchema.safeParse({
     ...input,
+    admissionNumber:
+      existing?.admissionNumber ?? (input.admissionNumber.trim() || nextAdmissionNumber(state)),
     id: existing?.id ?? crypto.randomUUID(),
     schoolId: state.school.id,
   });
@@ -112,25 +127,12 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
     !state.classes.some((c) => c.id === input.classId && c.schoolId === state.school.id)
   )
     throw new Error('Choose a valid class and section.');
-  if (!Number.isInteger(input.rollNumber) || input.rollNumber < 1)
-    throw new Error('Roll number must be a positive whole number.');
   const enrollment = state.enrollments.find(
     (e) =>
       e.studentId === student.id &&
       e.schoolId === state.school.id &&
       e.academicYearId === state.academicYear.id,
   );
-  if (
-    state.enrollments.some(
-      (e) =>
-        e.schoolId === state.school.id &&
-        e.academicYearId === state.academicYear.id &&
-        e.id !== enrollment?.id &&
-        e.sectionId === section.id &&
-        e.rollNumber === input.rollNumber,
-    )
-  )
-    throw new Error('This roll number is already assigned in the section.');
   if (
     enrollment &&
     (enrollment.classId !== input.classId || enrollment.sectionId !== input.sectionId) &&
@@ -146,10 +148,17 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
     academicYearId: state.academicYear.id,
     classId: input.classId,
     sectionId: section.id,
-    rollNumber: input.rollNumber,
+    rollNumber: 1,
   };
-  return {
+  const next: DemoState = {
     ...state,
+    studentAdmissionSequences: {
+      ...state.studentAdmissionSequences,
+      [admissionSequenceKey(state)]: Math.max(
+        state.studentAdmissionSequences?.[admissionSequenceKey(state)] ?? 0,
+        Number(nextAdmissionNumber(state).split('-').at(-1)) - (existing ? 1 : 0),
+      ),
+    },
     students: existing
       ? state.students.map((s) => (s.id === student.id ? student : s))
       : [...state.students, student],
@@ -157,6 +166,8 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
       ? state.enrollments.map((e) => (e.id === enrollment.id ? nextEnrollment : e))
       : [...state.enrollments, nextEnrollment],
   };
+  const numbered = renumberStudentRolls(next);
+  return input.feePlan ? saveFeePlan(numbered, nextEnrollment.id, input.feePlan) : numbered;
 }
 export function deleteStudent(state: DemoState, studentId: string): DemoState {
   if (!state.students.some((s) => s.schoolId === state.school.id && s.id === studentId))
@@ -166,9 +177,20 @@ export function deleteStudent(state: DemoState, studentId: string): DemoState {
       .filter((e) => e.schoolId === state.school.id && e.studentId === studentId)
       .map((e) => e.id),
   );
+  if (
+    state.payments.some(
+      (payment) =>
+        payment.schoolId === state.school.id &&
+        ids.has(payment.enrollmentId) &&
+        payment.receiptNumber,
+    )
+  )
+    throw new Error(
+      'This student has recorded receipts. Mark the student inactive to keep payment history.',
+    );
   const retained = <T extends { schoolId: string; enrollmentId: string }>(records: T[]) =>
     records.filter((r) => r.schoolId !== state.school.id || !ids.has(r.enrollmentId));
-  return {
+  return renumberStudentRolls({
     ...state,
     students: state.students.filter((s) => s.id !== studentId || s.schoolId !== state.school.id),
     enrollments: state.enrollments.filter((e) => !ids.has(e.id)),
@@ -176,8 +198,17 @@ export function deleteStudent(state: DemoState, studentId: string): DemoState {
     results: retained(state.results),
     obligations: retained(state.obligations),
     payments: retained(state.payments),
+    feePlans: state.feePlans?.filter(
+      (plan) => plan.schoolId !== state.school.id || !ids.has(plan.enrollmentId),
+    ),
+    documents: state.documents?.filter(
+      (document) =>
+        document.schoolId !== state.school.id ||
+        document.ownerKind !== 'student' ||
+        document.ownerId !== studentId,
+    ),
     notifications: retained(state.notifications),
-  };
+  });
 }
 export function saveTeacher(state: DemoState, input: TeacherInput, teacherId?: string): DemoState {
   const existing = teacherId

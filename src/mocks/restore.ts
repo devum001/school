@@ -1,3 +1,6 @@
+import { recordDocumentData } from '../lib/recordedDocuments';
+import { renumberStudentRolls } from '../lib/studentNumbering';
+import { removeLegacyFeeAdjustments } from '../lib/feePlans';
 import type { AttendanceRecord, DemoState } from '../types/domain';
 
 export type SavedSchoolState = Pick<
@@ -7,7 +10,33 @@ export type SavedSchoolState = Pick<
   Partial<
     Pick<
       DemoState,
-      'exams' | 'results' | 'students' | 'enrollments' | 'teachers' | 'sections' | 'obligations'
+      | 'exams'
+      | 'preferences'
+      | 'security'
+      | 'auditLog'
+      | 'communication'
+      | 'staffAccess'
+      | 'feePlans'
+      | 'salaryPayments'
+      | 'documents'
+      | 'documentTemplates'
+      | 'results'
+      | 'students'
+      | 'studentAdmissionSequences'
+      | 'enrollments'
+      | 'teachers'
+      | 'sections'
+      | 'classes'
+      | 'obligations'
+      | 'school'
+      | 'attendancePolicy'
+      | 'staffPayroll'
+      | 'staffMembers'
+      | 'staffCycleInputs'
+      | 'staffAttendance'
+      | 'studentTimings'
+      | 'schoolHours'
+      | 'classTimetables'
     >
   >;
 
@@ -26,21 +55,32 @@ export function mergeAttendance(
 export function restoreSchoolState(fresh: DemoState, saved: SavedSchoolState): DemoState {
   const enrollments = saved.enrollments ?? fresh.enrollments;
   const ids = new Set(enrollments.map((e) => e.id));
-  return {
-    ...fresh,
-    ...saved,
-    students: saved.students ?? fresh.students,
-    enrollments,
-    teachers: saved.teachers ?? fresh.teachers,
-    sections: saved.sections ?? fresh.sections,
-    obligations: saved.obligations ?? fresh.obligations,
-    exams: saved.exams ?? fresh.exams,
-    results: saved.results ?? fresh.results,
-    attendance: mergeAttendance(fresh.attendance, saved.attendance).filter((r) =>
-      ids.has(r.enrollmentId),
-    ),
-    activities: saved.activities.map(
-      (activity) => fresh.activities.find((a) => a.id === activity.id) ?? activity,
-    ),
-  };
+  return renumberStudentRolls(
+    removeLegacyFeeAdjustments({
+      ...fresh,
+      ...saved,
+      school: { ...fresh.school, ...saved.school },
+      students: saved.students ?? fresh.students,
+      payments: saved.payments.map((payment) =>
+        payment.document ? { ...payment, document: recordDocumentData(payment.document) } : payment,
+      ),
+      salaryPayments: (saved.salaryPayments ?? fresh.salaryPayments)?.map((payment) => ({
+        ...payment,
+        document: recordDocumentData(payment.document),
+      })),
+      enrollments,
+      teachers: saved.teachers ?? fresh.teachers,
+      sections: saved.sections ?? fresh.sections,
+      classes: saved.classes ?? fresh.classes,
+      obligations: saved.obligations ?? fresh.obligations,
+      exams: saved.exams ?? fresh.exams,
+      results: saved.results ?? fresh.results,
+      attendance: mergeAttendance(fresh.attendance, saved.attendance).filter((r) =>
+        ids.has(r.enrollmentId),
+      ),
+      activities: saved.activities.map(
+        (activity) => fresh.activities.find((a) => a.id === activity.id) ?? activity,
+      ),
+    }),
+  );
 }

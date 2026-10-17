@@ -1,0 +1,115 @@
+.staff-access-settings {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.staff-access-settings > .panel {
+  margin: 0;
+}
+.access-role-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+}
+.access-role-toolbar > .field {
+  width: min(320px, 100%);
+}
+.access-role-actions {
+  display: flex;
+  gap: 8px;
+}
+.access-cell-note {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 5px;
+  color: var(--muted);
+}
+.access-note {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 16px 0 0;
+}
+.access-permission-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+.access-login-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.access-section-list {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 20px 0;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.access-section-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.access-preview {
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+  padding-top: 20px;
+  font-size: 13px;
+}
+.access-preview h3 {
+  font-size: 15px;
+}
+.access-preview dl {
+  margin: 12px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 24px;
+}
+.access-preview dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.access-preview dd {
+  margin: 0;
+  font-weight: 600;
+}
+.access-preview ul {
+  padding-left: 20px;
+  line-height: 1.8;
+}
+@media (max-width: 640px) {
+  .access-role-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .access-permission-fields,
+  .access-section-list,
+  .access-preview dl {
+    grid-template-columns: 1fr;
+  }
+}
+
+.access-staff-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: end;
+}
+@media (max-width: 640px) {
+  .access-staff-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

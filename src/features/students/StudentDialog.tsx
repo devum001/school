@@ -5,13 +5,21 @@ import { useFeedback } from '../../app/useFeedback';
 import { Button, Modal } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import { studentRecordCounts, type StudentInput } from '../../lib/management';
+import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
 import { useDraftGuard } from '../academics/useDraftGuard';
 import '../../styles/management.css';
+import { currentFeePlan } from '../../lib/feePlans';
+import FeePlanEditor from './FeePlanEditor';
+import { feePlanDraft, feePlanInput } from '../../lib/feePlanDraft';
+import { nextAdmissionNumber, studentRollPreview } from '../../lib/studentNumbering';
+import { communicationError } from '../../lib/communication';
 export default function StudentDialog({
   studentId,
+  initialSectionId,
   onClose,
 }: {
   studentId?: string;
+  initialSectionId?: string;
   onClose: () => void;
 }) {
   const state = useSchool();
@@ -21,11 +29,6 @@ export default function StudentDialog({
   const enrollment = state.enrollments.find(
     (e) => e.studentId === studentId && e.academicYearId === state.academicYear.id,
   );
-  const nextRoll = (section: string) =>
-    Math.max(
-      0,
-      ...state.enrollments.filter((e) => e.sectionId === section).map((e) => e.rollNumber),
-    ) + 1;
   const [initial] = useState<StudentInput>(() => ({
     name: student?.name ?? '',
     admissionNumber: student?.admissionNumber ?? '',
@@ -33,16 +36,30 @@ export default function StudentDialog({
     birthDate: student?.birthDate ?? '',
     address: student?.address ?? '',
     guardian: student?.guardian ?? { name: '', relation: 'Parent', contact: null },
-    classId: enrollment?.classId ?? state.classes[0].id,
-    sectionId: enrollment?.sectionId ?? state.sections[0].id,
-    rollNumber: enrollment?.rollNumber ?? nextRoll(state.sections[0].id),
+    classId:
+      enrollment?.classId ??
+      state.sections.find((s) => s.id === initialSectionId)?.classId ??
+      state.classes[0]?.id ??
+      '',
+    sectionId: enrollment?.sectionId ?? initialSectionId ?? state.sections[0]?.id ?? '',
+    rollNumber: enrollment?.rollNumber ?? 1,
   }));
   const [draft, setDraft] = useState(initial);
+  const admission = student?.admissionNumber ?? nextAdmissionNumber(state);
+  const roll = studentRollPreview(state, { ...draft, id: studentId, admissionNumber: admission });
+  const [initialFees] = useState(() =>
+    feePlanDraft(enrollment ? currentFeePlan(state, enrollment.id) : undefined),
+  );
+  const [fees, setFees] = useState(initialFees);
+  const feesChanged = JSON.stringify(fees) !== JSON.stringify(initialFees);
   const [error, setError] = useState('');
   const locked = Boolean(
     student && Object.values(studentRecordCounts(state, student.id)).some(Boolean),
   );
-  const guard = useDraftGuard(JSON.stringify(initial) !== JSON.stringify(draft), onClose);
+  const guard = useDraftGuard(
+    JSON.stringify(initial) !== JSON.stringify(draft) || feesChanged,
+    onClose,
+  );
   const field = (key: keyof StudentInput, value: string | number) =>
     setDraft({ ...draft, [key]: value });
   return (
@@ -73,11 +90,19 @@ export default function StudentDialog({
           onSubmit={(event) => {
             event.preventDefault();
             try {
-              repository.saveStudent(draft, studentId);
+              repository.saveStudent(
+                {
+                  ...draft,
+                  admissionNumber: student?.admissionNumber ?? '',
+                  rollNumber: roll,
+                  feePlan: !student || feesChanged ? feePlanInput(fees) : undefined,
+                },
+                studentId,
+              );
               notify(student ? 'Student updated.' : 'Student added to the directory.');
               onClose();
             } catch (err) {
-              setError(err instanceof Error ? err.message : 'Unable to save student.');
+              setError(communicationError(err));
             }
           }}
         >
@@ -94,12 +119,7 @@ export default function StudentDialog({
             </label>
             <label className="field">
               Admission number
-              <input
-                required
-                maxLength={100}
-                value={draft.admissionNumber}
-                onChange={(e) => field('admissionNumber', e.target.value)}
-              />
+              <input readOnly value={admission} />
             </label>
             <label className="field">
               Date of birth
@@ -129,16 +149,16 @@ export default function StudentDialog({
                 disabled={locked}
                 value={draft.classId}
                 onChange={(e) => {
-                  const sectionId = state.sections.find((s) => s.classId === e.target.value)!.id;
+                  const sectionId =
+                    state.sections.find((s) => s.classId === e.target.value)?.id ?? '';
                   setDraft({
                     ...draft,
                     classId: e.target.value,
                     sectionId,
-                    rollNumber: nextRoll(sectionId),
                   });
                 }}
               >
-                {state.classes.map((c) => (
+                {orderedClasses(state.classes).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
@@ -155,35 +175,30 @@ export default function StudentDialog({
                   setDraft({
                     ...draft,
                     sectionId: e.target.value,
-                    rollNumber: nextRoll(e.target.value),
                   })
                 }
               >
+                {!state.sections.some((s) => s.classId === draft.classId) && (
+                  <option value="">Add a section in School Settings first</option>
+                )}
                 {state.sections
                   .filter((s) => s.classId === draft.classId)
                   .map((s) => (
                     <option key={s.id} value={s.id}>
-                      Section {s.name}
+                      {sectionLabel(s.name)}
                     </option>
                   ))}
               </select>
             </label>
             <label className="field">
               Roll number
-              <input
-                required
-                type="number"
-                min="1"
-                step="1"
-                value={draft.rollNumber || ''}
-                onChange={(e) => field('rollNumber', Number(e.target.value))}
-              />
+              <input readOnly value={draft.name.trim() ? roll : 'Assigned by name'} />
             </label>
           </div>
           {locked && (
             <p className="panel-note">
               Class and section are fixed for this enrollment because it has saved records. Name,
-              contact, roll number and status can still be updated.
+              contact and status can still be updated.
             </p>
           )}
           <h3 className="management-form-title">Parent / guardian</h3>
@@ -227,6 +242,7 @@ export default function StudentDialog({
             <label className="field span-two">
               Address (optional)
               <textarea
+                aria-label="Address (optional)"
                 rows={2}
                 maxLength={500}
                 value={draft.address}
@@ -236,8 +252,12 @@ export default function StudentDialog({
           </div>
           <p className="panel-note">
             Inactive students retain their records and leave active attendance and test registers.
-            Fee obligations are managed separately.
           </p>
+          <FeePlanEditor
+            value={fees}
+            onChange={setFees}
+            required={!student || !!initialFees.totalFee || feesChanged}
+          />
           {error && (
             <p className="form-error" role="alert">
               {error}

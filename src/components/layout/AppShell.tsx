@@ -1,15 +1,14 @@
 import { useToday } from '../../app/useToday';
 import { displayDate } from '../../lib/config';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
-  BookOpen,
+  Bell,
   CalendarCheck,
   Wallet,
   GraduationCap,
-  Bell,
   Settings,
   ChevronsUpDown,
   ArrowUpRight,
@@ -20,25 +19,57 @@ import {
   ShieldCheck,
   CircleHelp,
 } from 'lucide-react';
+import { schoolLogoFor } from '../../lib/schoolBranding';
 import { useSchool } from '../../app/useSchool';
 import { Avatar, Button, Modal } from '../ui/Primitives';
+import TopbarControls from './TopbarControls';
+import { notificationAttention } from '../../lib/communicationOverview';
+import { preferencesFor } from '../../lib/adminSettings';
+const hindiLabels: Record<string, string> = {
+  Overview: 'अवलोकन',
+  Students: 'विद्यार्थी',
+  Teachers: 'शिक्षक',
+  'Staff & HR': 'स्टाफ एवं एचआर',
+  Attendance: 'उपस्थिति',
+  Finance: 'वित्त',
+  Academics: 'अकादमिक',
+  Notifications: 'सूचनाएँ',
+  'School settings': 'स्कूल सेटिंग्स',
+};
 const navigation = [
   { to: '/', label: 'Overview', icon: LayoutDashboard },
   { to: '/students', label: 'Students', icon: Users },
   { to: '/teachers', label: 'Teachers', icon: GraduationCap },
-  { to: '/classes', label: 'Classes & sections', icon: BookOpen },
+  { to: '/staff', label: 'Staff & HR', icon: Users },
   { to: '/attendance', label: 'Attendance', icon: CalendarCheck },
-  { to: '/fees', label: 'Fee management', icon: Wallet },
+  { to: '/fees', label: 'Finance', icon: Wallet },
   { to: '/academics', label: 'Academics', icon: GraduationCap },
 ];
 export default function AppShell() {
   const state = useSchool();
+  const schoolLogo = schoolLogoFor(state);
   const today = useToday();
+  const attention = notificationAttention(state);
   const [mobile, setMobile] = useState(false);
   const [help, setHelp] = useState(false);
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const preferences = preferencesFor(state),
+    initialNavigation = useRef(false);
+  const label = (value: string) =>
+    preferences.language === 'Hindi' ? (hindiLabels[value] ?? value) : value;
+  useEffect(() => {
+    document.documentElement.lang = preferences.language === 'Hindi' ? 'hi' : 'en';
+  }, [preferences.language]);
+  useEffect(() => {
+    if (initialNavigation.current) return;
+    initialNavigation.current = true;
+    if (location.pathname === '/' && preferences.landingPage !== 'Dashboard')
+      navigate(preferences.landingPage === 'Students' ? '/students' : '/attendance', {
+        replace: true,
+      });
+  }, [preferences.landingPage, location.pathname, navigate]);
   const current = [
     ...navigation,
     { to: '/notifications', label: 'Notifications' },
@@ -56,7 +87,7 @@ export default function AppShell() {
       <aside className={`sidebar ${mobile ? 'mobile-open' : ''}`}>
         <Link to="/" className="brand" onClick={() => setMobile(false)}>
           <span className="brand-mark">
-            <GraduationCap size={23} />
+            <GraduationCap size={23} aria-hidden="true" />
           </span>
           schoolwell<span className="brand-dot">.</span>
         </Link>
@@ -67,7 +98,13 @@ export default function AppShell() {
             setMobile(false);
           }}
         >
-          <span className="school-initial">{state.school.name[0]}</span>
+          <span className="school-initial">
+            {schoolLogo ? (
+              <img src={schoolLogo} alt="Workspace school logo" />
+            ) : (
+              state.school.name[0]
+            )}
+          </span>
           <span>
             <strong>{state.school.name}</strong>
             <small>School workspace</small>
@@ -85,7 +122,7 @@ export default function AppShell() {
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >
               <n.icon size={19} />
-              <span>{n.label}</span>
+              <span>{label(n.label)}</span>
               {n.to === '/attendance' && <span className="nav-dot" />}
             </NavLink>
           ))}
@@ -94,14 +131,12 @@ export default function AppShell() {
         <nav aria-label="Administration">
           <NavLink className="nav-link" to="/notifications" onClick={() => setMobile(false)}>
             <Bell size={19} />
-            Notifications
-            {state.notifications.length > 0 && (
-              <span className="nav-count">{state.notifications.length}</span>
-            )}
+            {label('Notifications')}
+            {attention.count > 0 && <span className="nav-count">{attention.count}</span>}
           </NavLink>
           <NavLink className="nav-link" to="/settings" onClick={() => setMobile(false)}>
             <Settings size={19} />
-            School settings
+            {label('School settings')}
           </NavLink>
         </nav>
         <div className="sidebar-bottom">
@@ -127,7 +162,7 @@ export default function AppShell() {
             </button>
             <span>Workspace</span>
             <span className="slash">/</span>
-            <strong>{current?.label ?? 'Student profile'}</strong>
+            <strong>{label(current?.label ?? 'Student profile')}</strong>
           </div>
           <div className="header-actions">
             <form
@@ -145,21 +180,8 @@ export default function AppShell() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
-              <kbd>↵</kbd>
             </form>
-            <span className="year-chip">
-              <span />
-              {state.academicYear.name}
-              <ChevronDown size={12} />
-            </span>
-            <Link
-              to="/notifications"
-              className="icon-button notification-bell"
-              aria-label="Notification history"
-            >
-              <Bell size={19} />
-              {state.notifications.length > 0 && <i />}
-            </Link>
+            <TopbarControls />
             <Link to="/settings" aria-label="Account settings">
               <Avatar name="Nandita Rao" />
             </Link>
@@ -188,7 +210,7 @@ export default function AppShell() {
         <ol className="guide-list">
           <li>Review the dashboard for today, {displayDate(today)}.</li>
           <li>Open Grade 5, Section A in Attendance. Change a student to Absent and save.</li>
-          <li>Open Notify parents, select recipients, and preview a parent attendance notice.</li>
+          <li>Open Review notifications, select students, and preview an attendance notice.</li>
           <li>Review the notification, then open a student's profile to explore all five tabs.</li>
           <li>Record a payment and see balances update across the workspace.</li>
           <li>Return to Overview. Review your school settings when needed.</li>

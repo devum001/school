@@ -1,0 +1,388 @@
+import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Wallet, Receipt, ArrowDownLeft, Scale, Download } from 'lucide-react';
+import { useSchool } from '../../app/useSchool';
+import { useToday } from '../../app/useToday';
+import {
+  Button,
+  EmptyState,
+  Modal,
+  PageHeading,
+  Panel,
+  SearchInput,
+  StatCard,
+} from '../../components/ui/Primitives';
+import GeneratedDocumentPreview from '../../components/shared/GeneratedDocumentPreview';
+import { money, displayDate } from '../../lib/config';
+import { feeSummary } from '../../lib/selectors';
+import { defaultStaffPayroll } from '../../lib/settings';
+import { currentPayrollMonth, payrollCycle } from '../../lib/staffPayroll';
+import { salaryMonthSchema } from '../../lib/staffSalary';
+import { schoolMonthlyFinance } from '../../lib/schoolFinance';
+import { financeEntries } from '../../lib/financeLedger';
+import { downloadCsv } from '../../lib/download';
+import { tabKeyboard } from '../../lib/tabKeyboard';
+import type { GeneratedDocument } from '../../types/ledger';
+import FeesPage from './FeesPage';
+import StaffPage from '../teachers/StaffPage';
+import '../../styles/ledgers.css';
+const tabs = ['Overview', 'Student Fees', 'Salary Expenses', 'Transactions'] as const;
+export default function FinanceWorkspace() {
+  const state = useSchool(),
+    today = useToday(),
+    [params, setParams] = useSearchParams(),
+    config = state.staffPayroll ?? defaultStaffPayroll;
+  const requested = params.get('month'),
+    month = salaryMonthSchema.safeParse(requested).success
+      ? requested!
+      : currentPayrollMonth(today, config.payroll.paymentDay),
+    cycle = payrollCycle(month, config.payroll.paymentDay);
+  const tab = tabs.find((value) => value === params.get('tab')) ?? 'Overview';
+  const period = params.get('period') === 'cycle' ? 'cycle' : 'year';
+  const range =
+    period === 'cycle' ? cycle : { start: state.academicYear.start, end: state.academicYear.end };
+  const finance = schoolMonthlyFinance(state, config, cycle.end > today ? today : cycle.end, month);
+  const entries = financeEntries(state, range.start, range.end, today),
+    fees = feeSummary(state);
+  const income = entries.reduce((sum, entry) => sum + entry.income, 0),
+    expenses = entries.reduce((sum, entry) => sum + entry.expense, 0),
+    netRevenue = income - expenses;
+  const [query, setQuery] = useState(''),
+    [type, setType] = useState(''),
+    [page, setPage] = useState(1),
+    [document, setDocument] = useState<GeneratedDocument | null>(null);
+  const filtered = entries.filter(
+    (entry) =>
+      (!type || entry.type === type) &&
+      `${entry.name} ${entry.reference} ${entry.number}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
+  const pages = Math.max(1, Math.ceil(filtered.length / 20)),
+    current = Math.min(page, pages);
+  const update = (key: string, value: string) =>
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set(key, value);
+      return next;
+    });
+  return (
+    <div className="ledger-stack finance-workspace">
+      <PageHeading
+        title="Finance"
+        description="Student fee collections, staff salary expenses and your school's balance."
+      />
+      <div className="hr-tabs" role="tablist" aria-label="Finance">
+        {tabs.map((value, index) => (
+          <button
+            key={value}
+            id={`finance-tab-${index}`}
+            role="tab"
+            aria-controls="finance-panel"
+            aria-selected={value === tab}
+            tabIndex={value === tab ? 0 : -1}
+            onClick={() => update('tab', value)}
+            onKeyDown={(e) =>
+              tabKeyboard(
+                e,
+                index,
+                tabs,
+                (value) => update('tab', value),
+                (_, i) => `finance-tab-${i}`,
+              )
+            }
+          >
+            {value}
+          </button>
+        ))}
+      </div>
+      {(tab === 'Overview' || tab === 'Transactions') && (
+        <div className="finance-period">
+          <label className="field">
+            Period
+            <select
+              aria-label="Finance period"
+              value={period}
+              onChange={(e) => update('period', e.target.value)}
+            >
+              <option value="year">Academic Year</option>
+              <option value="cycle">Monthly Cycle</option>
+            </select>
+          </label>
+          {period === 'cycle' && (
+            <label className="field">
+              Finance cycle month
+              <input
+                aria-label="Finance cycle month"
+                type="month"
+                value={month}
+                onChange={(e) => {
+                  if (salaryMonthSchema.safeParse(e.target.value).success)
+                    update('month', e.target.value);
+                }}
+              />
+            </label>
+          )}
+          <p>
+            {displayDate(range.start)} – {displayDate(range.end > today ? today : range.end)}
+          </p>
+        </div>
+      )}
+      <div id="finance-panel" role="tabpanel" aria-labelledby={`finance-tab-${tabs.indexOf(tab)}`}>
+        {tab === 'Overview' && (
+          <div className="ledger-stack">
+            <div className="stats-grid four finance-summary">
+              <StatCard
+                label="Student Fee Collections"
+                value={money(income)}
+                detail="Recorded student fee collections"
+                icon={<Receipt size={18} />}
+                tone="green"
+              />
+              <StatCard
+                label="Salary Expenses"
+                value={money(expenses)}
+                detail="Recorded salary payments"
+                icon={<ArrowDownLeft size={18} />}
+                tone="amber"
+              />
+              <StatCard
+                label="Net Revenue"
+                value={money(netRevenue)}
+                detail="Revenue minus paid salaries"
+                icon={<Scale size={18} />}
+              />
+              <StatCard
+                label="Pending Student Fees"
+                value={money(fees.outstanding)}
+                detail="All current fee plans, including future dues"
+                icon={<Wallet size={18} />}
+              />
+            </div>
+            <Panel
+              title="Salary Overview"
+              action={
+                <Button variant="secondary" onClick={() => update('tab', 'Salary Expenses')}>
+                  Manage Staff Salaries
+                </Button>
+              }
+            >
+              <div className="finance-period panel-padding">
+                <label className="field">
+                  Salary cycle month
+                  <input
+                    aria-label="Overview salary cycle month"
+                    type="month"
+                    value={month}
+                    onChange={(e) => {
+                      if (salaryMonthSchema.safeParse(e.target.value).success)
+                        update('month', e.target.value);
+                    }}
+                  />
+                </label>
+                <p>
+                  {displayDate(cycle.start)} – {displayDate(cycle.end)}
+                </p>
+              </div>
+              <dl className="school-finance-values finance-salary-values" data-month={month}>
+                {[
+                  ['Gross monthly salaries', finance.grossSalary],
+                  ['Salary deductions', finance.deductions],
+                  ['Net monthly salaries', finance.netSalary],
+                ].map(([label, value]) => (
+                  <div key={String(label)}>
+                    <dt>{label}</dt>
+                    <dd>{money(Number(value))}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="school-finance-note panel-padding">
+                {finance.configuredCount} active staff with salary configured
+                {finance.unconfiguredCount
+                  ? ` · ${finance.unconfiguredCount} salaries not set`
+                  : ''}
+                .
+              </p>
+            </Panel>
+            <Panel title="Recent transactions">
+              <div
+                className="table-wrap"
+                role="region"
+                aria-label="Recent finance transactions"
+                tabIndex={0}
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Person</th>
+                      <th>Type</th>
+                      <th>Date</th>
+                      <th>Income</th>
+                      <th>Expense</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entries.slice(0, 8).map((entry) => (
+                      <tr key={entry.id}>
+                        <th scope="row">{entry.name}</th>
+                        <td>{entry.type}</td>
+                        <td>{displayDate(entry.date)}</td>
+                        <td>{entry.income ? money(entry.income) : '—'}</td>
+                        <td>{entry.expense ? money(entry.expense) : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {!entries.length && (
+                <EmptyState
+                  title="No payments in this period"
+                  description="Record student or salary payments to update this summary."
+                />
+              )}
+            </Panel>
+          </div>
+        )}
+        {tab === 'Student Fees' && <FeesPage embedded />}
+        {tab === 'Salary Expenses' && <StaffPage embedded />}
+        {tab === 'Transactions' && (
+          <Panel
+            title="Transactions"
+            action={
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  downloadCsv(
+                    'finance-transactions.csv',
+                    [
+                      'Type',
+                      'Name',
+                      'Date',
+                      'Mode',
+                      'Reference',
+                      'Document',
+                      'Income INR',
+                      'Expense INR',
+                    ],
+                    filtered.map((e) => [
+                      e.type,
+                      e.name,
+                      e.date,
+                      e.method,
+                      e.reference,
+                      e.number,
+                      e.income / 100,
+                      e.expense / 100,
+                    ]),
+                  )
+                }
+              >
+                <Download size={16} />
+                Export Transactions
+              </Button>
+            }
+          >
+            <div className="toolbar">
+              <SearchInput
+                value={query}
+                onChange={(value) => {
+                  setQuery(value);
+                  setPage(1);
+                }}
+                placeholder="Search person, reference or document…"
+              />
+              <select
+                aria-label="Transaction type"
+                value={type}
+                onChange={(e) => {
+                  setType(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">All transactions</option>
+                <option>Fee Payment</option>
+                <option>Salary Payment</option>
+              </select>
+            </div>
+            <div
+              className="table-wrap"
+              role="region"
+              aria-label="Finance transactions"
+              tabIndex={0}
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th>Person</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Mode</th>
+                    <th>Reference</th>
+                    <th>Income</th>
+                    <th>Expense</th>
+                    <th>Document</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.slice((current - 1) * 20, current * 20).map((entry) => (
+                    <tr key={entry.id}>
+                      <th scope="row">{entry.name}</th>
+                      <td>{entry.type}</td>
+                      <td>{displayDate(entry.date)}</td>
+                      <td>{entry.method}</td>
+                      <td>{entry.reference || '—'}</td>
+                      <td>{entry.income ? money(entry.income) : '—'}</td>
+                      <td>{entry.expense ? money(entry.expense) : '—'}</td>
+                      <td>
+                        <button className="text-link" onClick={() => setDocument(entry.document)}>
+                          {entry.number}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!filtered.length && <EmptyState title="No matching transactions" />}
+            <div className="pagination">
+              <span>{filtered.length} transactions</span>
+              <Button
+                variant="secondary"
+                disabled={current === 1}
+                onClick={() => setPage(current - 1)}
+              >
+                Previous
+              </Button>
+              <span>
+                {current} / {pages}
+              </span>
+              <Button
+                variant="secondary"
+                disabled={current === pages}
+                onClick={() => setPage(current + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </Panel>
+        )}
+      </div>
+      <p className="panel-note">
+        Amounts are in INR. Fee plans and pending salaries are tracked separately from received or
+        paid amounts.
+      </p>
+      <Modal
+        open={!!document}
+        wide
+        title={document?.kind ?? 'Payment document'}
+        description={document?.recipientName ?? ''}
+        onClose={() => setDocument(null)}
+      >
+        {document && <GeneratedDocumentPreview data={document} />}
+      </Modal>
+      <Link className="text-link" to="/settings?tab=Staff+%26+Payroll">
+        Salary rules & settings →
+      </Link>
+    </div>
+  );
+}

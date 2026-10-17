@@ -1,3 +1,4 @@
+import { examIncludes, validateTestScope } from './testScope';
 import { z } from 'zod';
 import type { DemoState, Examination, ExamResult, RosterEntry } from '../types/domain';
 import { roster, resultSummary } from './selectors';
@@ -5,6 +6,7 @@ import { getSchoolDate } from './dates';
 
 export const testKinds = ['Daily test', 'Monthly test', 'Pre-board', 'Term exam'] as const;
 const subjectSchema = z.object({
+  subjectId: z.string().optional(),
   name: z.string().trim().min(1).max(60),
   maxMarks: z.number().finite().positive().max(10000),
 });
@@ -14,10 +16,13 @@ export const examinationSchema = z.object({
   academicYearId: z.string(),
   name: z.string().trim().min(1).max(100),
   date: z.iso.date(),
-  kind: z.enum(testKinds),
+  kind: z.string().trim().min(1).max(60),
   classId: z.string(),
   sectionId: z.string(),
-  subjects: z.array(subjectSchema).min(1).max(12),
+  classIds: z.array(z.string()).optional(),
+  sectionIds: z.array(z.string()).optional(),
+  sheets: z.array(z.object({ sectionId: z.string(), subjects: z.array(subjectSchema) })).optional(),
+  subjects: z.array(subjectSchema).max(30),
 });
 export const examResultSchema = z.object({
   schoolId: z.string(),
@@ -27,20 +32,25 @@ export const examResultSchema = z.object({
   subjects: z
     .array(
       subjectSchema
-        .extend({ marks: z.number().finite().nonnegative() })
+        .extend({
+          marks: z.number().finite().nonnegative(),
+          absent: z.boolean().optional(),
+          pending: z.boolean().optional(),
+        })
         .refine((s) => s.marks <= s.maxMarks),
     )
     .min(1),
 });
-export type NewTest = Omit<Examination, 'id' | 'schoolId' | 'academicYearId'>;
+export type NewTest = Omit<
+  Examination,
+  'id' | 'schoolId' | 'academicYearId' | 'subjects' | 'sectionId'
+> & { subjects?: Examination['subjects']; sectionId?: string };
 export type MarksEntry = { enrollmentId: string; marks: number[] | null; absent: boolean };
 
 export function testRoster(state: DemoState, exam: Examination): RosterEntry[] {
   if (exam.schoolId !== state.school.id || exam.academicYearId !== state.academicYear.id) return [];
-  return roster(state).filter(
-    (r) =>
-      (!exam.classId || r.enrollment.classId === exam.classId) &&
-      (!exam.sectionId || r.enrollment.sectionId === exam.sectionId),
+  return roster(state).filter((r) =>
+    examIncludes(exam, r.enrollment.classId, r.enrollment.sectionId),
   );
 }
 export function testResults(
@@ -75,6 +85,8 @@ export function testParticipation(
 
 export function createTest(state: DemoState, input: NewTest): DemoState {
   const parsed = examinationSchema.safeParse({
+    subjects: [],
+    sectionId: '',
     ...input,
     id: crypto.randomUUID(),
     schoolId: state.school.id,
@@ -82,17 +94,14 @@ export function createTest(state: DemoState, input: NewTest): DemoState {
   });
   if (!parsed.success)
     throw new Error('Enter a test name, a valid date, and a positive maximum for each subject.');
-  const exam = parsed.data;
-  if (!state.classes.some((c) => c.schoolId === state.school.id && c.id === exam.classId))
-    throw new Error('Choose a class for this test.');
-  if (
-    exam.sectionId &&
-    !state.sections.some(
-      (s) =>
-        s.schoolId === state.school.id && s.id === exam.sectionId && s.classId === exam.classId,
-    )
-  )
-    throw new Error('Choose a section in this class.');
+  const exam = parsed.data.classIds
+    ? {
+        ...parsed.data,
+        classId: parsed.data.classIds.length === 1 ? parsed.data.classIds[0] : '',
+        sectionId: '',
+      }
+    : parsed.data;
+  validateTestScope(state, exam, true);
   if (
     exam.date < state.academicYear.start ||
     exam.date > state.academicYear.end ||
@@ -205,58 +214,69 @@ export function updateTest(state: DemoState, examId: string, input: NewTest): De
   );
   if (!existing) throw new Error('Test not found.');
   const parsed = examinationSchema.safeParse({
+    ...existing,
     ...input,
     id: existing.id,
     schoolId: state.school.id,
     academicYearId: state.academicYear.id,
   });
   if (!parsed.success) throw new Error('Enter valid test details and positive maximum marks.');
-  const exam = parsed.data;
+  const exam = parsed.data.classIds
+    ? {
+        ...parsed.data,
+        classId: parsed.data.classIds.length === 1 ? parsed.data.classIds[0] : '',
+        sectionId: '',
+      }
+    : parsed.data;
+  validateTestScope(state, exam, false);
   if (
     exam.date < state.academicYear.start ||
     exam.date > state.academicYear.end ||
     exam.date > getSchoolDate()
   )
     throw new Error('Choose a date in this academic year, up to today.');
-  if (
-    exam.classId &&
-    !state.classes.some((c) => c.id === exam.classId && c.schoolId === state.school.id)
-  )
-    throw new Error('Choose a valid class.');
-  if (
-    exam.sectionId &&
-    !state.sections.some(
-      (s) =>
-        s.id === exam.sectionId && s.classId === exam.classId && s.schoolId === state.school.id,
-    )
-  )
-    throw new Error('Choose a valid class section.');
   if (new Set(exam.subjects.map((s) => s.name.toLowerCase())).size !== exam.subjects.length)
     throw new Error('Each subject should have a different name.');
   const recorded = state.results.filter(
     (r) => r.schoolId === state.school.id && r.examId === examId,
   );
-  if (
-    recorded.length &&
-    (exam.classId !== existing.classId ||
-      exam.sectionId !== existing.sectionId ||
-      exam.subjects.length !== existing.subjects.length)
-  )
+  const allowed = new Set(
+    state.enrollments
+      .filter(
+        (e) =>
+          e.schoolId === state.school.id &&
+          e.academicYearId === state.academicYear.id &&
+          examIncludes(exam, e.classId, e.sectionId),
+      )
+      .map((e) => e.id),
+  );
+  if (input.subjects && recorded.length && exam.subjects.length !== existing.subjects.length)
+    throw new Error('Keep the legacy subject count unchanged after marks are recorded.');
+  if (recorded.some((r) => !allowed.has(r.enrollmentId)))
     throw new Error(
-      'Keep the class, section and subject count unchanged after marks are recorded.',
+      'This change would remove students with saved marks. Keep their class and sections unchanged, or clear those marks first.',
     );
   if (
-    recorded.some((r) => r.subjects.some((subject, i) => subject.marks > exam.subjects[i].maxMarks))
+    input.subjects &&
+    recorded.some((r) =>
+      r.subjects.some(
+        (subject, i) => exam.subjects[i] && subject.marks > exam.subjects[i].maxMarks,
+      ),
+    )
   )
-    throw new Error(
-      'A maximum cannot be lower than marks already recorded. Correct those marks first.',
-    );
+    throw new Error('A maximum cannot be lower than marks already recorded.');
   return {
     ...state,
     exams: state.exams.map((e) => (e.id === examId ? exam : e)),
     results: state.results.map((r) =>
       r.schoolId === state.school.id && r.examId === examId
-        ? { ...r, subjects: r.subjects.map((s, i) => ({ ...s, ...exam.subjects[i] })) }
+        ? {
+            ...r,
+            subjects: r.subjects.map((s, i) => ({
+              ...s,
+              ...(input.subjects ? exam.subjects[i] : {}),
+            })),
+          }
         : r,
     ),
   };

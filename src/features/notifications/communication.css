@@ -1,0 +1,386 @@
+.communication-workspace,
+.communication-settings {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.communication-workspace .page-heading {
+  margin-bottom: 0;
+}
+.communication-tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.communication-tabs button {
+  padding: 12px 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.communication-tabs button[aria-selected='true'] {
+  color: var(--school-header);
+  border-bottom-color: var(--school-forest);
+}
+.communication-demo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.communication-workspace [role='tabpanel'] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  min-width: 0;
+}
+.communication-workspace .pending-alert-focus {
+  min-width: 0;
+}
+.communication-overview-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.communication-overview-heading h2 {
+  font-size: 18px;
+}
+.communication-overview-heading span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.communication-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.communication-stat {
+  padding: 22px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--school-header);
+}
+.communication-stat strong {
+  font-size: 30px;
+  line-height: 1.2;
+}
+.communication-stat span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.communication-stat.failed strong {
+  color: var(--danger, #b43c37);
+}
+.communication-stats > .panel,
+.communication-event-groups > .panel,
+.communication-settings > .panel,
+.communication-workspace [role='tabpanel'] > .panel {
+  margin: 0;
+}
+.communication-compose textarea,
+.communication-drawer-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--school-header);
+  background: white;
+  resize: vertical;
+}
+.communication-action-list {
+  padding: 0 24px 20px;
+}
+.communication-action-list > div {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.communication-action-list .button {
+  flex-shrink: 0;
+}
+.communication-event-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.communication-event-list,
+.communication-template-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 24px 20px;
+}
+.communication-event-list li,
+.communication-template-list li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding: 14px 0;
+  font-size: 13px;
+}
+.communication-event-list li > div,
+.communication-template-list li > div {
+  flex: 1;
+  min-width: 0;
+}
+.communication-event-list small,
+.communication-template-list p {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.communication-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+  padding: 18px 24px;
+}
+.communication-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+}
+.communication-cell-note {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+.communication-queue-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-top: 1px solid var(--border);
+}
+.communication-queue-actions span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.communication-note {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  padding: 0 24px 18px;
+}
+.communication-note code {
+  white-space: nowrap;
+  font-size: 11px;
+}
+.modal .communication-note {
+  padding: 14px 0;
+}
+.communication-message-preview {
+  background: var(--surface-muted, #f6faf8);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.communication-message-preview p {
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+.communication-compose {
+  padding: 0 24px 24px;
+}
+.communication-compose > .field {
+  margin-block: 20px;
+}
+.communication-checks,
+.communication-students {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin: 16px 0;
+}
+.communication-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+}
+.communication-checks legend,
+.communication-students legend {
+  font-size: 13px;
+  font-weight: 600;
+  padding-inline: 4px;
+}
+.communication-checks label,
+.communication-student-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.communication-checks input,
+.communication-student-options input {
+  width: auto;
+}
+.communication-student-options {
+  display: grid;
+  gap: 12px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-block: 14px;
+}
+.communication-students > p {
+  font-size: 12px;
+  color: var(--muted);
+}
+.communication-channels {
+  padding: 0 24px 20px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.communication-channels > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 10px;
+}
+.communication-channels strong {
+  font-size: 13px;
+}
+.communication-channels p {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.communication-channels .toggle {
+  flex-shrink: 0;
+}
+.communication-channels .toggle {
+  width: 40px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--border);
+  padding: 3px;
+}
+.communication-channels .toggle span {
+  display: block;
+  height: 16px;
+  width: 16px;
+  background: white;
+  border-radius: 50%;
+}
+.communication-channels .toggle.checked {
+  background: var(--school-header);
+}
+.communication-channels .toggle.checked span {
+  margin-left: 16px;
+}
+.communication-switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  font-size: 13px;
+}
+.communication-switch-row input {
+  width: auto;
+}
+.modal:has(.communication-drawer-form) {
+  left: auto;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  transform: none;
+  width: min(480px, 100vw);
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 16px 0 0 16px;
+}
+@media (max-width: 1100px) {
+  .communication-channels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .communication-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .communication-event-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .communication-action-list > div,
+  .communication-queue-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .communication-event-list li {
+    flex-wrap: wrap;
+  }
+  .communication-event-list li > div {
+    min-width: 140px;
+  }
+  .communication-tabs {
+    gap: 24px;
+  }
+  .communication-demo {
+    align-items: flex-start;
+  }
+  .communication-overview-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@media (max-width: 480px) {
+  .communication-channels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .communication-stat {
+    padding: 16px;
+  }
+  .communication-event-list,
+  .communication-template-list,
+  .communication-action-list,
+  .communication-compose {
+    padding-inline: 16px;
+  }
+  .communication-filters {
+    padding-inline: 16px;
+  }
+}
+
+.communication-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 24px;
+  font-size: 12px;
+  color: var(--muted);
+}

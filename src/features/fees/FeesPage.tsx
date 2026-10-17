@@ -1,5 +1,9 @@
+import { feeProgress } from '../../lib/feeProgress';
+import InstallmentSchedule from './InstallmentSchedule';
+import FeeProgressSummary from './FeeProgressSummary';
+import './fee-progress.css';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Wallet,
   Receipt,
@@ -17,6 +21,7 @@ import {
   EmptyState,
   PageHeading,
   Panel,
+  Modal,
   SearchInput,
   StatCard,
 } from '../../components/ui/Primitives';
@@ -25,17 +30,21 @@ import { feeSummary, roster } from '../../lib/selectors';
 import { displayDate, money, shortMoney } from '../../lib/config';
 import { downloadCsv } from '../../lib/download';
 import PaymentDialog from './PaymentDialog';
-export default function FeesPage() {
+import StudentReceiptsDialog from './StudentReceiptsDialog';
+export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
   const state = useSchool();
+  const [urlParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [classId, setClass] = useState('');
   const [status, setStatus] = useState('');
   const [selected, setSelected] = useState('');
+  const [viewingPlan, setViewingPlan] = useState('');
+  const [viewingReceipts, setViewingReceipts] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState('balances');
+  const [tab, setTab] = useState(urlParams.get('feesView') === 'history' ? 'history' : 'balances');
   const total = feeSummary(state);
   const rows = roster(state, true)
-    .map((r) => ({ ...r, fees: feeSummary(state, r.enrollment.id) }))
+    .map((r) => ({ ...r, fees: feeProgress(state, r.enrollment.id) }))
     .filter(
       (r) =>
         (!classId || r.enrollment.classId === classId) &&
@@ -50,39 +59,38 @@ export default function FeesPage() {
     .filter((p) => rows.some((r) => r.enrollment.id === p.enrollmentId))
     .slice()
     .reverse();
+  const exportBalances = () =>
+    downloadCsv(
+      'school-fee-balances.csv',
+      ['Student', 'Admission', 'Obligation INR', 'Paid INR', 'Outstanding INR'],
+      rows.map((row) => [
+        row.student.name,
+        row.student.admissionNumber,
+        row.fees.total / 100,
+        row.fees.paid / 100,
+        row.fees.outstanding / 100,
+      ]),
+    );
   return (
     <>
-      <PageHeading
-        eyebrow="HEALTHY FINANCES. STRONGER SCHOOLS."
-        title="Fee management"
-        description="Keep every obligation, payment, and balance in perspective."
-        actions={
-          <Button
-            variant="secondary"
-            onClick={() =>
-              downloadCsv(
-                'vidya-niketan-fees.csv',
-                ['Student', 'Admission', 'Obligation INR', 'Paid INR', 'Outstanding INR'],
-                rows.map((r) => [
-                  r.student.name,
-                  r.student.admissionNumber,
-                  r.fees.total / 100,
-                  r.fees.paid / 100,
-                  r.fees.outstanding / 100,
-                ]),
-              )
-            }
-          >
-            <Download size={16} />
-            Export balances
-          </Button>
-        }
-      />
+      {!embedded && (
+        <PageHeading
+          eyebrow="HEALTHY FINANCES. STRONGER SCHOOLS."
+          title="Student Fees"
+          description="Keep every obligation, payment, and balance in perspective."
+          actions={
+            <Button variant="secondary" onClick={exportBalances}>
+              <Download size={16} />
+              Export balances
+            </Button>
+          }
+        />
+      )}
       <div className="stats-grid three">
         <StatCard
           label="Annual fee obligations"
+          detail={null}
           value={shortMoney(total.total)}
-          detail="Includes scholarship adjustments"
           icon={<Receipt size={19} />}
         />
         <StatCard
@@ -110,6 +118,12 @@ export default function FeesPage() {
       </div>
       <Panel>
         <div className="toolbar">
+          {embedded && (
+            <Button variant="secondary" onClick={exportBalances}>
+              <Download size={16} />
+              Export balances
+            </Button>
+          )}
           <SearchInput
             value={query}
             onChange={(v) => {
@@ -146,9 +160,10 @@ export default function FeesPage() {
                   <tr>
                     <th>Student</th>
                     <th>Class</th>
-                    <th>Annual obligation</th>
+                    <th>Total fee</th>
+                    <th>Installments</th>
                     <th>Paid</th>
-                    <th>Outstanding</th>
+                    <th>Remaining amount</th>
                     <th>Status</th>
                     <th />
                   </tr>
@@ -169,23 +184,61 @@ export default function FeesPage() {
                         {r.className} · {r.sectionName}
                       </td>
                       <td>{money(r.fees.total)}</td>
+                      <td className="fee-progress-cell">
+                        <strong>
+                          {!r.fees.count
+                            ? 'Not configured'
+                            : r.fees.kind === 'One Time'
+                              ? 'One Time'
+                              : `${r.fees.count} total`}
+                        </strong>
+                        {r.fees.count > 0 && r.fees.kind !== 'One Time' && (
+                          <span>
+                            {r.fees.completed} paid · {r.fees.remaining} remaining
+                            {r.fees.partial ? ` (${r.fees.partial} part paid)` : ''}
+                          </span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          aria-label={`View installments for ${r.student.name}`}
+                          onClick={() => setViewingPlan(r.enrollment.id)}
+                        >
+                          View details
+                        </Button>
+                      </td>
                       <td>{money(r.fees.paid)}</td>
                       <td>
                         <strong>{money(r.fees.outstanding)}</strong>
                       </td>
                       <td>
                         <Badge tone={r.fees.outstanding ? 'amber' : 'green'}>
-                          {r.fees.outstanding ? 'Part paid' : 'Fully paid'}
+                          {!r.fees.count
+                            ? 'Not configured'
+                            : !r.fees.outstanding
+                              ? 'Fully paid'
+                              : r.fees.paid
+                                ? 'Part paid'
+                                : 'Pending'}
                         </Badge>
                       </td>
                       <td>
-                        <Button
-                          variant="ghost"
-                          disabled={!r.fees.outstanding}
-                          onClick={() => setSelected(r.enrollment.id)}
-                        >
-                          Record payment <ArrowUpRight size={14} />
-                        </Button>
+                        <div className="fee-row-actions">
+                          <Button
+                            variant="ghost"
+                            disabled={!r.fees.outstanding}
+                            onClick={() => setSelected(r.enrollment.id)}
+                          >
+                            Record payment <ArrowUpRight size={14} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            disabled={!r.fees.payments.length}
+                            aria-label={`View receipts for ${r.student.name}`}
+                            onClick={() => setViewingReceipts(r.enrollment.id)}
+                          >
+                            View receipts
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -258,6 +311,35 @@ export default function FeesPage() {
       <p className="panel-note">
         All amounts are in INR. Recorded payments are retained in the transaction history.
       </p>
+      {viewingPlan && (
+        <Modal
+          open
+          wide
+          title="Fee installments"
+          description={rows.find((r) => r.enrollment.id === viewingPlan)?.student.name ?? ''}
+          onClose={() => setViewingPlan('')}
+        >
+          <FeeProgressSummary enrollmentId={viewingPlan} />
+          <InstallmentSchedule
+            enrollmentId={viewingPlan}
+            onRecordPayment={() => {
+              setSelected(viewingPlan);
+              setViewingPlan('');
+            }}
+          />
+          <div className="modal-actions">
+            <Button variant="secondary" onClick={() => setViewingPlan('')}>
+              Close
+            </Button>
+          </div>
+        </Modal>
+      )}
+      {viewingReceipts && (
+        <StudentReceiptsDialog
+          enrollmentId={viewingReceipts}
+          onClose={() => setViewingReceipts('')}
+        />
+      )}
       {selected && <PaymentDialog enrollmentId={selected} onClose={() => setSelected('')} />}
     </>
   );
