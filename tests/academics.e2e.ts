@@ -52,6 +52,7 @@ test('marks save numbers, A, pending cells and exclude blank subjects with secti
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.academic-test-card')).toContainText('Marks Added');
   await page.getByRole('tab', { name: 'Results', exact: true }).click();
+  await page.getByRole('tab', { name: 'Recent Results', exact: true }).click();
   await page.getByRole('button', { name: 'View Result', exact: true }).click();
   await expect(dialog.getByRole('tab', { name: 'Mathematics', exact: true })).toBeVisible();
   await expect(dialog.getByRole('tab', { name: 'English', exact: true })).toBeVisible();

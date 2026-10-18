@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Modal } from '../../components/ui/Primitives';
+import { PickerInput, Button, Modal } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import { examSections } from '../../lib/academicSheets';
 import { examClasses } from '../../lib/testScope';
@@ -121,7 +121,7 @@ export default function TestDialog({
             </label>
             <label className="field">
               Test date
-              <input
+              <PickerInput
                 required
                 type="date"
                 min={state.academicYear.start}

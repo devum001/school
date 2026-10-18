@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Send, CheckCircle2 } from 'lucide-react';
-import { Button, Panel } from '../../components/ui/Primitives';
+import { CheckCircle2 } from 'lucide-react';
+import { Button, Panel, AppIcon } from '../../components/ui/Primitives';
 import { notificationMessage } from '../../lib/operations';
 import type { RosterEntry } from '../../types/domain';
 export function NotificationPreview({
@@ -59,10 +59,9 @@ export function NotificationPreview({
           </span>
         </div>
         <Button className="full-width" disabled={!eligible.length} onClick={onReview}>
-          <Send size={16} />
+          <AppIcon name="send" size={16} />
           Review notification
         </Button>
-        <p className="fine-print">Messages are prepared in Hindi for parents and guardians.</p>
       </div>
     </Panel>
   );

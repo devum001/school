@@ -11,10 +11,11 @@ test('leaderboard scope is independent of recent section/month and full rankings
   const podium = page.locator('.academic-podium');
   await expect(podium).toContainText('90.0');
   const original = await podium.textContent();
+  await page.getByRole('tab', { name: 'Recent Results', exact: true }).click();
   await page.getByLabel('Results month', { exact: true }).fill('2026-09');
   await expect(page.getByRole('heading', { name: 'No results for this month' })).toBeVisible();
-  await expect(podium).toHaveText(original!);
   await page.getByLabel('Recent results section').selectOption('class-8-b');
+  await page.getByRole('tab', { name: 'Overall Leaderboard', exact: true }).click();
   await expect(podium).toHaveText(original!);
   await page.getByRole('button', { name: 'View All Students' }).click();
   const dialog = page.getByRole('dialog');

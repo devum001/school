@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { CheckCircle2, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { AppIcon } from '../components/ui/Primitives';
 import { FeedbackContext } from './useFeedback';
 export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState<{ id: number; text: string } | null>(null);
@@ -16,7 +17,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       {children}
       {message && (
         <div className="toast" role="status">
-          <CheckCircle2 size={19} />
+          <AppIcon name="verified" size={20} />
           <span>{message.text}</span>
           <button aria-label="Dismiss notification" onClick={() => setMessage(null)}>
             <X size={16} />

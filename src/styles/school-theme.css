@@ -1,9 +1,10 @@
-/* School identity: forest teal, warm gold, and calm paper surfaces. */
+/* Forest identity with a neutral surface hierarchy; gold stays in brand details. */
 :root {
   --school-forest: #12373b;
   --school-header: #19494d;
   --school-raised: #244c50;
   --school-gold: #e2c58a;
+  --school-tab-selected: #bddfc9;
   --school-gold-edge: #c5ad7c;
   --school-header-height: 73px;
   --school-text: #f4f8f7;
@@ -12,7 +13,7 @@
   --navy: #19494d;
 }
 body {
-  background: #f3f6f6;
+  background: var(--surface-canvas);
 }
 .sidebar {
   background: var(--school-forest);
@@ -53,8 +54,9 @@ body {
   color: var(--school-text);
 }
 .sidebar .brand-mark {
-  background: var(--school-gold);
-  color: var(--school-forest);
+  background: transparent;
+  color: var(--school-gold);
+  border-radius: 0;
 }
 .sidebar .brand-dot {
   color: var(--school-gold);
@@ -65,9 +67,17 @@ body {
   color: var(--school-muted);
 }
 .sidebar .school-initial {
-  background: #355b5c;
-  border-color: #567372;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   color: #f0dba9;
+}
+/* Decorative glyphs retain their alignment and tone without surrounding tiles. */
+.workspace main :is(.stat-icon, .class-icon, .activity-icon, .banner-icon) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 .sidebar .school-switch strong {
   color: var(--school-text);
@@ -216,6 +226,14 @@ body {
 .topbar :focus-visible,
 .sidebar :focus-visible {
   outline-color: #efd59d;
+}
+.button.secondary {
+  background: var(--surface-panel);
+  border-color: var(--border);
+  color: var(--school-forest);
+}
+.button.secondary:hover {
+  background: #e7eeea;
 }
 .button.primary:hover {
   background: #276267;

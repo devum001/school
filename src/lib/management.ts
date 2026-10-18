@@ -5,11 +5,6 @@ import { whatsappPhone } from './reportShare';
 import { saveFeePlan } from './feePlans';
 import type { FeePlanInput } from '../types/ledger';
 import { imageDataSchema } from './ledgerSchemas';
-import {
-  admissionSequenceKey,
-  nextAdmissionNumber,
-  renumberStudentRolls,
-} from './studentNumbering';
 
 const text = z.string().trim().min(1).max(100);
 export const studentSchema = z.object({
@@ -92,8 +87,7 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
   if (studentId && !existing) throw new Error('Student not found.');
   const parsed = studentSchema.safeParse({
     ...input,
-    admissionNumber:
-      existing?.admissionNumber ?? (input.admissionNumber.trim() || nextAdmissionNumber(state)),
+    admissionNumber: input.admissionNumber,
     id: existing?.id ?? crypto.randomUUID(),
     schoolId: state.school.id,
   });
@@ -141,6 +135,19 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
     throw new Error(
       'This enrollment has saved records. Its class and section must stay unchanged to preserve history.',
     );
+  if (!Number.isSafeInteger(input.rollNumber) || input.rollNumber <= 0)
+    throw new Error('Enter a positive whole roll number.');
+  if (
+    state.enrollments.some(
+      (entry) =>
+        entry.schoolId === state.school.id &&
+        entry.academicYearId === state.academicYear.id &&
+        entry.sectionId === section.id &&
+        entry.studentId !== student.id &&
+        entry.rollNumber === input.rollNumber,
+    )
+  )
+    throw new Error('This roll number is already in use in the selected section.');
   const nextEnrollment = {
     id: enrollment?.id ?? crypto.randomUUID(),
     schoolId: state.school.id,
@@ -148,17 +155,10 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
     academicYearId: state.academicYear.id,
     classId: input.classId,
     sectionId: section.id,
-    rollNumber: 1,
+    rollNumber: input.rollNumber,
   };
   const next: DemoState = {
     ...state,
-    studentAdmissionSequences: {
-      ...state.studentAdmissionSequences,
-      [admissionSequenceKey(state)]: Math.max(
-        state.studentAdmissionSequences?.[admissionSequenceKey(state)] ?? 0,
-        Number(nextAdmissionNumber(state).split('-').at(-1)) - (existing ? 1 : 0),
-      ),
-    },
     students: existing
       ? state.students.map((s) => (s.id === student.id ? student : s))
       : [...state.students, student],
@@ -166,8 +166,7 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
       ? state.enrollments.map((e) => (e.id === enrollment.id ? nextEnrollment : e))
       : [...state.enrollments, nextEnrollment],
   };
-  const numbered = renumberStudentRolls(next);
-  return input.feePlan ? saveFeePlan(numbered, nextEnrollment.id, input.feePlan) : numbered;
+  return input.feePlan ? saveFeePlan(next, nextEnrollment.id, input.feePlan) : next;
 }
 export function deleteStudent(state: DemoState, studentId: string): DemoState {
   if (!state.students.some((s) => s.schoolId === state.school.id && s.id === studentId))
@@ -190,7 +189,7 @@ export function deleteStudent(state: DemoState, studentId: string): DemoState {
     );
   const retained = <T extends { schoolId: string; enrollmentId: string }>(records: T[]) =>
     records.filter((r) => r.schoolId !== state.school.id || !ids.has(r.enrollmentId));
-  return renumberStudentRolls({
+  return {
     ...state,
     students: state.students.filter((s) => s.id !== studentId || s.schoolId !== state.school.id),
     enrollments: state.enrollments.filter((e) => !ids.has(e.id)),
@@ -208,7 +207,7 @@ export function deleteStudent(state: DemoState, studentId: string): DemoState {
         document.ownerId !== studentId,
     ),
     notifications: retained(state.notifications),
-  });
+  };
 }
 export function saveTeacher(state: DemoState, input: TeacherInput, teacherId?: string): DemoState {
   const existing = teacherId

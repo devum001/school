@@ -1,8 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { Pencil } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Badge, Button, Modal, Panel } from '../../components/ui/Primitives';
+import { AppIcon, Badge, Button, Modal, Panel } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import { attendancePolicySchema, defaultAttendancePolicy } from '../../lib/settings';
 import type { AttendancePolicy } from '../../types/domain';
@@ -106,7 +105,7 @@ export default function AttendanceSettings() {
               setEditing(group);
             }}
           >
-            <Pencil size={14} />
+            <AppIcon name="edit" size={14} />
             Edit
           </Button>
           <Switch label={switchLabel} checked={policy[flag]} onChange={() => toggle(flag)} />
@@ -151,10 +150,6 @@ export default function AttendanceSettings() {
           </p>
         </section>
       </Panel>
-      <p className="attendance-rules-footnote">
-        Demo preferences only. Attendance and eligibility are not changed automatically. No messages
-        are sent.
-      </p>
       {saveError && (
         <p className="form-error" role="alert">
           {saveError}
@@ -164,7 +159,7 @@ export default function AttendanceSettings() {
         open={editing !== null}
         onClose={() => setEditing(null)}
         title={editing ? `Edit ${editGroups[editing].title}` : 'Edit attendance settings'}
-        description="Save policy preferences for this demo workspace. Automatic rule processing is not connected."
+        description="Save attendance policy preferences."
       >
         {editing && (
           <form
@@ -230,7 +225,9 @@ export default function AttendanceSettings() {
               <Button type="button" variant="secondary" onClick={() => setEditing(null)}>
                 Cancel
               </Button>
-              <Button type="submit">Save details</Button>
+              <Button type="submit">
+                <AppIcon name="save" size={16} /> Save details
+              </Button>
             </div>
           </form>
         )}

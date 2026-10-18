@@ -1,10 +1,11 @@
 import { useToday } from '../../app/useToday';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Send, MessageSquare, ShieldCheck, CheckCircle2, AlertCircle, History } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
 import {
+  PickerInput,
   Avatar,
   Badge,
   Button,
@@ -12,6 +13,7 @@ import {
   Modal,
   PageHeading,
   Panel,
+  AppIcon,
 } from '../../components/ui/Primitives';
 import { ClassFilters } from '../../components/shared/ClassFilters';
 import { eligibleRecipients, roster, statusFor } from '../../lib/selectors';
@@ -59,28 +61,26 @@ export default function NotificationsPage() {
   return (
     <>
       <PageHeading
-        eyebrow="KEEP FAMILIES IN THE LOOP"
         title="Parent notifications"
-        description="Thoughtful communication starts with the right information."
         actions={
           <Badge tone="amber">
-            <ShieldCheck size={14} />
+            <AppIcon name="security" size={14} />
             Attendance notices
           </Badge>
         }
       />
       <div className="tabs">
         <button className={tab === 'compose' ? 'active' : ''} onClick={() => setTab('compose')}>
-          <MessageSquare size={16} />
+          <AppIcon name="send" size={16} />
           Compose notice
         </button>
         <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
-          <History size={16} />
+          <AppIcon name="inbox" size={16} />
           Notification history <span>{state.notifications.length}</span>
         </button>
       </div>
       <div className="info-banner">
-        <ShieldCheck size={18} />
+        <AppIcon name="security" size={18} />
         <span>
           Select absent students, review the Hindi message, and confirm the recipients. Students
           without a parent contact are excluded.
@@ -91,7 +91,7 @@ export default function NotificationsPage() {
           <div className="toolbar standalone">
             <label className="filter-label">
               <span>Attendance date</span>
-              <input
+              <PickerInput
                 type="date"
                 aria-label="Notification attendance date"
                 value={date}
@@ -263,7 +263,7 @@ export default function NotificationsPage() {
             Cancel
           </Button>
           <Button onClick={dispatch}>
-            <Send size={16} />
+            <AppIcon name="send" size={16} />
             Confirm notifications
           </Button>
         </div>

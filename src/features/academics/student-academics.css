@@ -94,7 +94,7 @@
   text-align: left;
   padding: 18px 20px;
   border: 1px solid #e0e8e8;
-  border-radius: 9px;
+  border-radius: var(--radius);
   background: #fff;
   color: #243d50;
 }
@@ -186,7 +186,7 @@
 .report-message-preview {
   background: #f0f7f3;
   border: 1px solid #d3e5da;
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 22px;
   font-family: 'Noto Sans Devanagari', 'Nirmala UI', Mangal, sans-serif;
   font-size: 14px;

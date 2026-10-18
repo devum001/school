@@ -1,11 +1,12 @@
+import SectionNavigation from '../../components/shared/SectionNavigation';
+import { useSettingsSection } from './useSettingsSection';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { documentTemplatesFor } from '../../lib/documentData';
 import { TEMPLATE_LABELS } from '../../lib/documentRendering';
-import { Clock3, Pencil, Wallet, type LucideIcon } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Badge, Button, Panel } from '../../components/ui/Primitives';
+import { AppIcon, type IconName, Badge, Button, Panel } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import { defaultStaffPayroll } from '../../lib/settings';
 import StaffPayrollDialog, { type StaffSettingsGroup } from './StaffPayrollDialog';
@@ -18,13 +19,13 @@ function formatTime(value: string) {
 function SetupSection({
   title,
   subtitle,
-  Icon,
+  icon,
   onEdit,
   children,
 }: {
   title: string;
   subtitle: string;
-  Icon: LucideIcon;
+  icon: IconName;
   onEdit: () => void;
   children: ReactNode;
 }) {
@@ -32,7 +33,7 @@ function SetupSection({
     <Panel className="settings-policy-section">
       <div className="settings-policy-header">
         <span className="settings-policy-icon">
-          <Icon size={21} />
+          <AppIcon name={icon} size={28} />
         </span>
         <div>
           <div className="settings-policy-heading">
@@ -46,7 +47,7 @@ function SetupSection({
           aria-label={`Edit ${title}`}
           onClick={onEdit}
         >
-          <Pencil size={14} />
+          <AppIcon name="edit" size={14} />
           Edit Details
         </Button>
       </div>
@@ -93,6 +94,11 @@ function AutoRule({
   );
 }
 export default function StaffPayrollSettings() {
+  const { section, navigation } = useSettingsSection([
+    { id: 'departments', label: 'Departments' },
+    { id: 'work', label: 'Work & Leave' },
+    { id: 'payroll', label: 'Payroll' },
+  ]);
   const state = useSchool();
   const config = state.staffPayroll ?? defaultStaffPayroll;
   const notify = useFeedback();
@@ -126,123 +132,124 @@ export default function StaffPayrollSettings() {
   const { work, payroll } = config;
   return (
     <div className="settings-attendance-stack staff-settings-stack">
-      <StaffDepartments />
-      <SetupSection
-        title="Work & Leave Rules"
-        subtitle="Set default work timing and simple leave rules."
-        Icon={Clock3}
-        onEdit={() => setEditing('work')}
-      >
-        <div className="settings-policy-grid">
-          <div className="settings-policy-card">
-            <div className="settings-policy-card-title">
-              <h3>Default Work Rules</h3>
-            </div>
-            <dl className="staff-rule-list">
-              <Rule label="Default Work Timing">
-                {formatTime(work.start)} – {formatTime(work.end)}
-              </Rule>
-              <Rule label="Weekly Off">{work.weeklyOff}</Rule>
-              <Rule label="Late After">{formatTime(work.lateAfter)}</Rule>
-              <Rule label="Half Day Rule">
-                Minimum {Math.floor(work.halfDayMinutes / 60)}h {work.halfDayMinutes % 60}m
-              </Rule>
-            </dl>
-          </div>
-          <div className="settings-policy-card">
-            <div className="settings-policy-card-title">
-              <h3>Leave Types & Limits</h3>
-            </div>
-            <p className="staff-rule-caption">Days per academic year</p>
-            <dl className="staff-rule-list">
-              {(
-                [
-                  ['casual', 'Casual'],
-                  ['sick', 'Sick'],
-                  ['paid', 'Paid'],
-                  ['unpaid', 'Unpaid'],
-                ] as const
-              ).map(([key, label]) => (
-                <Rule key={key} label={label}>
-                  {work.leaveLimits[key] === null ? 'No limit' : `${work.leaveLimits[key]} days`}
+      <SectionNavigation {...navigation} label="Settings features" />
+      {section === 'departments' && <StaffDepartments />}
+      {section === 'work' && (
+        <SetupSection
+          title="Work & Leave Rules"
+          subtitle="Set default work timing and simple leave rules."
+          icon="attendance"
+          onEdit={() => setEditing('work')}
+        >
+          <div className="settings-policy-grid">
+            <div className="settings-policy-card">
+              <div className="settings-policy-card-title">
+                <h3>Default Work Rules</h3>
+              </div>
+              <dl className="staff-rule-list">
+                <Rule label="Default Work Timing">
+                  {formatTime(work.start)} – {formatTime(work.end)}
                 </Rule>
-              ))}
-            </dl>
-          </div>
-          <div className="settings-policy-card">
-            <div className="settings-policy-card-title">
-              <h3>Unpaid Leave Deduction</h3>
+                <Rule label="Weekly Off">{work.weeklyOff}</Rule>
+                <Rule label="Late After">{formatTime(work.lateAfter)}</Rule>
+                <Rule label="Half Day Rule">
+                  Minimum {Math.floor(work.halfDayMinutes / 60)}h {work.halfDayMinutes % 60}m
+                </Rule>
+              </dl>
             </div>
-            <p className="staff-rule-description">One day’s salary per unpaid leave day.</p>
-            <AutoRule
-              label="Automatic Leave Deduction"
-              checked={work.autoLeaveDeduction}
-              onToggle={() => toggle('work')}
-            />
-          </div>
-        </div>
-      </SetupSection>
-      <SetupSection
-        title="Payroll Settings"
-        subtitle="Configure the monthly salary cycle and components."
-        Icon={Wallet}
-        onEdit={() => setEditing('payroll')}
-      >
-        <div className="settings-policy-grid">
-          <div className="settings-policy-card">
-            <div className="settings-policy-card-title">
-              <h3>Salary Cycle & Components</h3>
+            <div className="settings-policy-card">
+              <div className="settings-policy-card-title">
+                <h3>Leave Types & Limits</h3>
+              </div>
+              <p className="staff-rule-caption">Days per academic year</p>
+              <dl className="staff-rule-list">
+                {(
+                  [
+                    ['casual', 'Casual'],
+                    ['sick', 'Sick'],
+                    ['paid', 'Paid'],
+                    ['unpaid', 'Unpaid'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <Rule key={key} label={label}>
+                    {work.leaveLimits[key] === null ? 'No limit' : `${work.leaveLimits[key]} days`}
+                  </Rule>
+                ))}
+              </dl>
             </div>
-            <dl className="staff-rule-list">
-              <Rule label="Salary Cycle">{payroll.salaryCycle}</Rule>
-              <Rule label="Salary Payment Date">Day {payroll.paymentDay} of every month</Rule>
-            </dl>
-            <h4 className="staff-rule-caption">Salary Components</h4>
-            <ul className="staff-component-list">
-              {payroll.components.map((component) => (
-                <li key={component}>{component}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="settings-policy-card">
-            <div className="settings-policy-card-title">
-              <h3>Deduction Rules</h3>
+            <div className="settings-policy-card">
+              <div className="settings-policy-card-title">
+                <h3>Unpaid Leave Deduction</h3>
+              </div>
+              <p className="staff-rule-description">One day’s salary per unpaid leave day.</p>
+              <AutoRule
+                label="Automatic Leave Deduction"
+                checked={work.autoLeaveDeduction}
+                onToggle={() => toggle('work')}
+              />
             </div>
-            <dl className="staff-rule-list">
-              <Rule label="Unpaid Leave Deduction">
-                {work.autoLeaveDeduction ? 'One day’s salary per unpaid day' : 'Off'}
-              </Rule>
-            </dl>
-            <p className="settings-policy-note">
-              Unpaid leave uses the rule configured in Work & Leave Rules.
-            </p>
           </div>
-          <div className="settings-policy-card">
-            <div className="settings-policy-card-title">
-              <h3>Calculation & Salary Slip</h3>
+        </SetupSection>
+      )}
+      {section === 'payroll' && (
+        <SetupSection
+          title="Payroll Settings"
+          subtitle="Configure the monthly salary cycle and components."
+          icon="wallet"
+          onEdit={() => setEditing('payroll')}
+        >
+          <div className="settings-policy-grid">
+            <div className="settings-policy-card">
+              <div className="settings-policy-card-title">
+                <h3>Salary Cycle & Components</h3>
+              </div>
+              <dl className="staff-rule-list">
+                <Rule label="Salary Cycle">{payroll.salaryCycle}</Rule>
+                <Rule label="Salary Payment Date">Day {payroll.paymentDay} of every month</Rule>
+              </dl>
+              <h4 className="staff-rule-caption">Salary Components</h4>
+              <ul className="staff-component-list">
+                {payroll.components.map((component) => (
+                  <li key={component}>{component}</li>
+                ))}
+              </ul>
             </div>
-            <AutoRule
-              label="Auto Calculation"
-              checked={payroll.autoCalculation}
-              onToggle={() => toggle('payroll')}
-            />
-            <dl className="staff-rule-list">
-              <Rule label="Salary Slip Template">
-                <Link className="text-link" to="/settings?tab=Templates">
-                  {TEMPLATE_LABELS[documentTemplatesFor(state).salarySlip.templateId]}
-                </Link>
-              </Rule>
-            </dl>
-            <p className="settings-policy-note">
-              School name, staff details, earnings, deductions, and net salary.
-            </p>
+            <div className="settings-policy-card">
+              <div className="settings-policy-card-title">
+                <h3>Deduction Rules</h3>
+              </div>
+              <dl className="staff-rule-list">
+                <Rule label="Unpaid Leave Deduction">
+                  {work.autoLeaveDeduction ? 'One day’s salary per unpaid day' : 'Off'}
+                </Rule>
+              </dl>
+              <p className="settings-policy-note">
+                Unpaid leave uses the rule configured in Work & Leave Rules.
+              </p>
+            </div>
+            <div className="settings-policy-card">
+              <div className="settings-policy-card-title">
+                <h3>Calculation & Salary Slip</h3>
+              </div>
+              <AutoRule
+                label="Auto Calculation"
+                checked={payroll.autoCalculation}
+                onToggle={() => toggle('payroll')}
+              />
+              <dl className="staff-rule-list">
+                <Rule label="Salary Slip Template">
+                  <Link className="text-link" to="/settings?tab=Templates&section=salary">
+                    {TEMPLATE_LABELS[documentTemplatesFor(state).salarySlip.templateId]}
+                  </Link>
+                </Rule>
+              </dl>
+              <p className="settings-policy-note">
+                School name, staff details, earnings, deductions, and net salary.
+              </p>
+            </div>
           </div>
-        </div>
-      </SetupSection>
-      <p className="settings-demo-note">
-        Full-day absences and half-days in Staff attendance automatically update leave counts and
-        salary deductions. Late arrivals do not reduce salary.
-      </p>
+        </SetupSection>
+      )}
       {error && (
         <p className="form-error" role="alert">
           {error}

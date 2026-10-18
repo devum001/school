@@ -15,6 +15,19 @@
 .management-row-actions .delete-action {
   color: #9b3737;
 }
+.student-profile-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: -11px 0 24px;
+}
+.student-profile-actions .button {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.student-profile-actions .delete-action {
+  color: #9b3737;
+}
 .teacher-profile-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -43,7 +56,7 @@
   gap: 10px;
   padding: 12px;
   border: 1px solid #dfe8e5;
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-size: 12px;
 }
 .teacher-assignment-grid small {
@@ -88,5 +101,45 @@
   }
   .profile-hero .management-row-actions {
     flex-wrap: wrap;
+  }
+}
+
+.stats-grid.teacher-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.teacher-summary .stat-card {
+  position: relative;
+  min-height: 152px;
+  padding-right: 132px;
+}
+.teacher-summary .stat-icon {
+  position: absolute;
+  right: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 88px;
+  height: 88px;
+}
+.teacher-summary .stat-icon img {
+  width: 100%;
+  height: 100%;
+}
+@media (max-width: 1050px) {
+  .teacher-summary .stat-card {
+    padding-right: 100px;
+  }
+  .teacher-summary .stat-icon {
+    width: 64px;
+    height: 64px;
+    right: 20px;
+  }
+}
+@media (max-width: 620px) {
+  .stats-grid.teacher-summary {
+    grid-template-columns: 1fr;
+  }
+  .teacher-summary .stat-card {
+    min-height: 132px;
+    padding-right: 100px;
   }
 }

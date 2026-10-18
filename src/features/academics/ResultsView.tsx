@@ -1,11 +1,13 @@
+import SectionNavigation from '../../components/shared/SectionNavigation';
 import TestResult from './TestResult';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Download, Trophy } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import {
-  Avatar,
+  AppIcon,
+  PickerInput,
   Button,
   EmptyState,
   Modal,
@@ -22,7 +24,7 @@ import {
 } from '../../lib/academicSheets';
 import { displayDate } from '../../lib/config';
 import { downloadCsv } from '../../lib/download';
-import { sectionLabel } from '../../lib/schoolLabels';
+import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
 import { studentHistoryUrl } from '../../lib/academicNavigation';
 import type { Examination } from '../../types/domain';
 
@@ -37,6 +39,7 @@ export default function ResultsView({
   params: URLSearchParams;
   change: (values: Record<string, string | null>) => void;
 }) {
+  const recentView = params.get('resultsView') === 'recent' || !!params.get('test');
   const state = useSchool(),
     today = useToday();
   const sections = state.sections.filter(
@@ -109,173 +112,205 @@ export default function ResultsView({
   );
   return (
     <div className="academic-results-stack">
-      <section className="academic-overall" aria-labelledby="overall-performance">
-        <div className="academic-list-heading">
-          <div>
-            <h2 id="overall-performance">
-              <Trophy size={21} />
-              Overall Performance — {name}
-            </h2>
-            <p>
-              {state.academicYear.name} · Through {displayDate(today)}
-            </p>
-          </div>
-          <label className="field">
-            Section Scope
-            <select
-              aria-label="Leaderboard section scope"
-              value={scope}
-              onChange={(e) => change({ scope: e.target.value, leaderboard: null })}
-            >
-              <option value="">All Sections</option>
-              {sections.map((s) => (
-                <option value={s.id} key={s.id}>
-                  {sectionLabel(s.name)}
+      <div className="academic-context academic-results-context">
+        <label className="field">
+          Class
+          <select
+            aria-label="Academic class"
+            value={classId}
+            onChange={(event) =>
+              change({
+                class: event.target.value,
+                scope: null,
+                section: null,
+                test: null,
+                marks: null,
+                student: null,
+                leaderboard: null,
+              })
+            }
+          >
+            {orderedClasses(state.classes.filter((item) => item.schoolId === state.school.id)).map(
+              (item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
                 </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {ranked.length ? (
-          <>
-            <div className="academic-podium">
-              {ranked.slice(0, 3).map((r, i) => (
-                <Link
-                  key={r.enrollment.id}
-                  to={history(r.student.id)}
-                  className={`academic-award award-${i + 1}`}
-                >
-                  <span className="award-rank">
-                    <Trophy size={17} />#{r.rank}
-                  </span>
-                  <Avatar name={r.student.name} large />
-                  <h3>{r.student.name}</h3>
-                  {!scope && <span className="award-section">{sectionLabel(r.sectionName)}</span>}
-                  <strong className="award-percentage">
-                    {r.percentage.toFixed(1)}
-                    <small>%</small>
-                  </strong>
-                  <span>
-                    {r.count} {r.count === 1 ? 'test' : 'tests'} counted
-                  </span>
-                </Link>
-              ))}
-            </div>
-            {ranked.length > 3 && (
-              <Panel className="academic-rank-table">{rankingTable(ranked.slice(3, 10))}</Panel>
+              ),
             )}
-            <div className="academic-leaderboard-footer">
-              <p>
-                All recorded marks count. Absence counts as zero; pending marks are excluded. Equal
-                scores share a rank.
-              </p>
-              <Button variant="secondary" onClick={() => change({ leaderboard: 'all' })}>
-                View All Students <ArrowRight size={16} />
-              </Button>
+          </select>
+        </label>
+        <label className="field">
+          Section
+          <select
+            aria-label={recentView ? 'Recent results section' : 'Leaderboard section scope'}
+            value={recentView ? section : scope}
+            onChange={(event) =>
+              change({
+                [recentView ? 'section' : 'scope']: event.target.value,
+                test: null,
+                leaderboard: null,
+              })
+            }
+          >
+            {!recentView && <option value="">All Sections</option>}
+            {sections.map((item) => (
+              <option key={item.id} value={item.id}>
+                {sectionLabel(item.name)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <SectionNavigation
+        label="Result views"
+        items={[
+          { id: 'overall', label: 'Overall Leaderboard' },
+          { id: 'recent', label: 'Recent Results' },
+        ]}
+        value={recentView ? 'recent' : 'overall'}
+        onChange={(value) => change({ resultsView: value, test: null, leaderboard: null })}
+      />
+      {!recentView && (
+        <section className="academic-overall" aria-labelledby="overall-performance">
+          <div className="academic-list-heading">
+            <div>
+              <h2 id="overall-performance">
+                <AppIcon name="trophy" size={24} />
+                Overall Performance — {name}
+              </h2>
+              <p>Through {displayDate(today)}</p>
             </div>
-          </>
-        ) : (
-          <EmptyState
-            title="No ranked results yet"
-            description="Save marks for a test to see the class’s overall performance."
-          />
-        )}
-      </section>
-      <section className="academic-recent-results" aria-labelledby="recent-results-heading">
-        <div className="academic-list-heading">
-          <div>
-            <h2 id="recent-results-heading">Recent Results</h2>
-            <p>Review one section at a time.</p>
           </div>
-          <div className="academic-result-filters">
-            <label className="field">
-              Section
-              <select
-                aria-label="Recent results section"
-                value={section}
-                onChange={(e) => change({ section: e.target.value, test: null })}
-              >
-                {sections.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {sectionLabel(s.name)}
-                  </option>
+          {ranked.length ? (
+            <>
+              <div className="academic-podium">
+                {ranked.slice(0, 3).map((r, i) => (
+                  <Link
+                    key={r.enrollment.id}
+                    to={history(r.student.id)}
+                    className={`academic-award award-${i + 1}`}
+                  >
+                    {['left', 'right'].map((side) => (
+                      <span key={side} className={`award-laurel ${side}`} aria-hidden="true">
+                        {Array.from({ length: 7 }, (_, leaf) => (
+                          <i key={leaf} />
+                        ))}
+                      </span>
+                    ))}
+                    <h3>{r.student.name}</h3>
+                    {!scope && <span className="award-section">{sectionLabel(r.sectionName)}</span>}
+                    <strong className="award-percentage">
+                      {r.percentage.toFixed(1)}
+                      <small>%</small>
+                    </strong>
+                    <span className="award-tests">
+                      {r.count} {r.count === 1 ? 'test' : 'tests'} counted
+                    </span>
+                    <span className="award-rank" aria-label={`Rank ${r.rank}`}>
+                      {r.rank}
+                    </span>
+                  </Link>
                 ))}
-              </select>
-            </label>
-            <label className="field">
-              Month
-              <input
-                aria-label="Results month"
-                type="month"
-                value={month}
-                min={state.academicYear.start.slice(0, 7)}
-                max={
-                  state.academicYear.end.slice(0, 7) < today.slice(0, 7)
-                    ? state.academicYear.end.slice(0, 7)
-                    : today.slice(0, 7)
-                }
-                onChange={(e) => change({ month: e.target.value, test: null })}
-              />
-            </label>
+              </div>
+              {ranked.length > 3 && (
+                <Panel className="academic-rank-table">{rankingTable(ranked.slice(3, 10))}</Panel>
+              )}
+              <div className="academic-leaderboard-footer">
+                <Button variant="secondary" onClick={() => change({ leaderboard: 'all' })}>
+                  View All Students <ArrowRight size={16} />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <EmptyState
+              title="No ranked results yet"
+              description="Save marks for a test to see the class’s overall performance."
+            />
+          )}
+        </section>
+      )}
+      {recentView && (
+        <section className="academic-recent-results" aria-labelledby="recent-results-heading">
+          <div className="academic-list-heading">
+            <div>
+              <h2 id="recent-results-heading">Recent Results</h2>
+            </div>
+            <div className="academic-result-filters">
+              <label className="field">
+                Month
+                <PickerInput
+                  aria-label="Results month"
+                  type="month"
+                  value={month}
+                  min={state.academicYear.start.slice(0, 7)}
+                  max={
+                    state.academicYear.end.slice(0, 7) < today.slice(0, 7)
+                      ? state.academicYear.end.slice(0, 7)
+                      : today.slice(0, 7)
+                  }
+                  onChange={(e) => change({ month: e.target.value, test: null })}
+                />
+              </label>
+            </div>
           </div>
-        </div>
-        <div className="academic-test-list">
-          {recent.map((e) => {
-            const stats = sectionStats(state, e, section);
-            return (
-              <article className="panel academic-result-card" key={e.id}>
-                <div className="academic-result-card-heading">
-                  <div>
-                    <h3>{e.name}</h3>
-                    <p>{e.kind}</p>
+          <div className="academic-test-list">
+            {recent.map((e) => {
+              const stats = sectionStats(state, e, section);
+              return (
+                <article className="panel academic-result-card" key={e.id}>
+                  <div className="academic-result-card-heading">
+                    <div>
+                      <h3>{e.name}</h3>
+                      <p>{e.kind}</p>
+                    </div>
+                    <span>{displayDate(e.date)}</span>
                   </div>
-                  <span>{displayDate(e.date)}</span>
-                </div>
-                <p className="academic-included-subjects">
-                  {savedSubjects(state, e, section)
-                    .map((s) => s.name)
-                    .join(' · ')}
-                </p>
-                <div className="academic-result-card-bottom">
-                  <dl>
-                    <div>
-                      <dt>Class Average</dt>
-                      <dd>{stats.average === null ? '—' : `${stats.average.toFixed(1)}%`}</dd>
-                    </div>
-                    <div>
-                      <dt>Students</dt>
-                      <dd>{stats.students}</dd>
-                    </div>
-                    <div>
-                      <dt>Absent</dt>
-                      <dd>{stats.absent}</dd>
-                    </div>
-                    <div>
-                      <dt>Pending</dt>
-                      <dd>{stats.pending}</dd>
-                    </div>
-                  </dl>
-                  <Button variant="secondary" onClick={() => change({ test: e.id, section })}>
-                    View Result <ArrowRight size={15} />
-                  </Button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-        {!recent.length && (
-          <EmptyState
-            title="No results for this month"
-            description="Choose another month or save marks for a test in this section."
-          />
-        )}
-      </section>
+                  <p className="academic-included-subjects">
+                    {savedSubjects(state, e, section)
+                      .map((s) => s.name)
+                      .join(' · ')}
+                  </p>
+                  <div className="academic-result-card-bottom">
+                    <dl>
+                      <div>
+                        <dt>Class Average</dt>
+                        <dd>{stats.average === null ? '—' : `${stats.average.toFixed(1)}%`}</dd>
+                      </div>
+                      <div>
+                        <dt>Students</dt>
+                        <dd>{stats.students}</dd>
+                      </div>
+                      <div>
+                        <dt>Absent</dt>
+                        <dd>{stats.absent}</dd>
+                      </div>
+                      <div>
+                        <dt>Pending</dt>
+                        <dd>{stats.pending}</dd>
+                      </div>
+                    </dl>
+                    <Button variant="secondary" onClick={() => change({ test: e.id, section })}>
+                      View Result <ArrowRight size={15} />
+                    </Button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          {!recent.length && (
+            <EmptyState
+              title="No results for this month"
+              description="Choose another month or save marks for a test in this section."
+            />
+          )}
+        </section>
+      )}
       {params.get('leaderboard') === 'all' && (
         <Modal
           open
           wide
           title={`Overall Leaderboard — ${name}`}
-          description={`${scope ? sectionLabel(sections.find((s) => s.id === scope)!.name) : 'All Sections'} · ${state.academicYear.name} · Through ${displayDate(today)}`}
+          description={`${scope ? sectionLabel(sections.find((s) => s.id === scope)!.name) : 'All Sections'} · Through ${displayDate(today)}`}
           onClose={() => change({ leaderboard: null })}
         >
           <div className="sheet-tools">
@@ -308,7 +343,7 @@ export default function ResultsView({
                 )
               }
             >
-              <Download size={15} />
+              <AppIcon name="download" size={16} />
               Export rankings
             </Button>
           </div>

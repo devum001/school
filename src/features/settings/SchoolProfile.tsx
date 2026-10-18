@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { MapPin, Tag, GraduationCap, Pencil } from 'lucide-react';
+import SectionNavigation from '../../components/shared/SectionNavigation';
+import { useSettingsSection } from './useSettingsSection';
+import { useState } from 'react';
+import { MapPin } from 'lucide-react';
 import { useFeedback } from '../../app/useFeedback';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
-import { Button, Modal, Panel } from '../../components/ui/Primitives';
+import { AppIcon, PickerInput, Button, Modal, Panel } from '../../components/ui/Primitives';
 import { displayDate } from '../../lib/config';
 import { repository } from '../../lib/repository';
 import { schoolProfileSchema } from '../../lib/settings';
@@ -28,21 +29,20 @@ const fields = [
   ['website', 'Website'],
 ] as const;
 export default function SchoolProfile() {
+  const { section, navigation } = useSettingsSection([
+    { id: 'profile', label: 'School Profile' },
+    { id: 'timing', label: 'School Timing' },
+  ]);
   const state = useSchool();
   const { school, academicYear } = state;
   const schoolLogo = schoolLogoFor(state);
   const hours = configuredSchoolHours(state);
-  const location = useLocation();
   const today = useToday();
   const notify = useFeedback();
   const [draft, setDraft] = useState<typeof school | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [readingLogo, setReadingLogo] = useState(false);
   const [draftHours, setDraftHours] = useState<SchoolHours>({ start: '', end: '', days: [] });
-  useEffect(() => {
-    if (['#school-hours', '#student-timings'].includes(location.hash))
-      document.getElementById('school-hours')?.focus();
-  }, [location.hash]);
   const draftLogo = draft?.logoDataUrl === null ? undefined : (draft?.logoDataUrl ?? schoolLogo);
   const rows = [
     ['Board / Affiliation', school.board],
@@ -62,6 +62,7 @@ export default function SchoolProfile() {
   ];
   return (
     <>
+      <SectionNavigation {...navigation} label="General settings features" />
       <Panel className="settings-profile">
         <div className="settings-profile-banner">
           <div className="settings-profile-identity">
@@ -70,10 +71,10 @@ export default function SchoolProfile() {
                 <img
                   src={schoolLogo}
                   alt="School logo"
-                  style={{ width: 64, height: 64, objectFit: 'contain' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
               ) : (
-                <GraduationCap size={48} strokeWidth={1.8} />
+                <AppIcon name="graduation-cap" size={48} />
               )}
             </span>
             <div>
@@ -85,7 +86,7 @@ export default function SchoolProfile() {
                   {school.city}
                 </span>
                 <span>
-                  <Tag size={14} />
+                  <AppIcon name="tag" size={14} />
                   Code: {school.code}
                 </span>
               </div>
@@ -100,23 +101,25 @@ export default function SchoolProfile() {
               setErrors({});
             }}
           >
-            <Pencil size={14} />
-            Edit Details
+            <AppIcon name="edit" size={14} />
+            {section === 'timing' ? 'Edit Timing' : 'Edit Details'}
           </Button>
         </div>
         <dl id="school-hours" tabIndex={-1} className="detail-list settings-profile-details">
-          {rows.map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value || 'Not provided'}</dd>
-            </div>
-          ))}
+          {rows
+            .filter((_, index) => (section === 'timing' ? index >= 8 : index < 8))
+            .map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value || 'Not provided'}</dd>
+              </div>
+            ))}
         </dl>
       </Panel>
       <Modal
         open={draft !== null}
         onClose={() => setDraft(null)}
-        title="Edit school details"
+        title={section === 'timing' ? 'Edit school timing' : 'Edit school details'}
         description="Update the school profile used throughout your workspace."
         wide
       >
@@ -160,123 +163,130 @@ export default function SchoolProfile() {
               }
             }}
           >
-            <div className="profile-image-editor">
-              {draftLogo && <img src={draftLogo} alt="School logo preview" />}
-              <label className="button secondary document-upload-control">
-                {readingLogo ? 'Preparing logo…' : 'Choose school logo'}
-                <input
-                  aria-label="School logo"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  disabled={readingLogo}
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = '';
-                    if (!file) return;
-                    setReadingLogo(true);
-                    try {
-                      const logoDataUrl = await readBrandingImage(file);
-                      setDraft((current) => (current ? { ...current, logoDataUrl } : null));
-                      setErrors({});
-                    } catch (cause) {
-                      setErrors({
-                        form: cause instanceof Error ? cause.message : 'Unable to read logo.',
-                      });
-                    } finally {
-                      setReadingLogo(false);
-                    }
-                  }}
-                />
-              </label>
-              <p className="panel-note">
-                Recommended logo: 400 × 400 px · PNG, JPG or WebP · up to 5 MB. Transparent PNG
-                works best.
-              </p>
-              {draftLogo && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setDraft({ ...draft, logoDataUrl: null })}
-                >
-                  Remove logo
-                </Button>
-              )}
-            </div>
-            <div className="settings-form-grid">
-              {fields.map(([key, label]) => (
-                <label key={key} className="settings-field">
-                  {label}
-                  <input
-                    value={draft[key] ?? ''}
-                    type={key === 'email' ? 'email' : key === 'phone' ? 'tel' : 'text'}
-                    onChange={(event) => setDraft({ ...draft, [key]: event.target.value })}
-                    aria-invalid={!!errors[key]}
-                    aria-describedby={errors[key] ? `school-${key}-error` : undefined}
-                  />
-                  {errors[key] && (
-                    <span className="form-error" id={`school-${key}-error`}>
-                      {errors[key]}
-                    </span>
-                  )}
-                </label>
-              ))}
-            </div>
-            <fieldset className="school-hours-fields">
-              <legend>School timing</legend>
-              <p>
-                One opening and closing time for the selected working days. Attendance cutoffs use
-                this timing.
-              </p>
-              <div className="settings-form-grid">
-                {(['start', 'end'] as const).map((key) => (
-                  <label className="settings-field" key={key}>
-                    {key === 'start' ? 'School opening time' : 'School closing time'}
+            {section !== 'timing' && (
+              <>
+                {' '}
+                <div className="profile-image-editor">
+                  {draftLogo && <img src={draftLogo} alt="School logo preview" />}
+                  <label className="button secondary document-upload-control">
+                    {readingLogo ? 'Preparing logo…' : 'Choose school logo'}
                     <input
-                      type="time"
-                      value={draftHours[key]}
-                      onChange={(e) => setDraftHours({ ...draftHours, [key]: e.target.value })}
-                      aria-invalid={!!errors[`hours-${key}`]}
-                      aria-describedby={errors[`hours-${key}`] ? `hours-${key}-error` : undefined}
-                    />
-                    {errors[`hours-${key}`] && (
-                      <span className="form-error" id={`hours-${key}-error`}>
-                        {errors[`hours-${key}`]}
-                      </span>
-                    )}
-                  </label>
-                ))}
-              </div>
-              <fieldset className="school-working-days">
-                <legend>Working days</legend>
-                <div className="student-day-options">
-                  {(state.preferences?.weekStartsOn === 'Sunday'
-                    ? [SCHOOL_WEEKDAYS[6], ...SCHOOL_WEEKDAYS.slice(0, 6)]
-                    : SCHOOL_WEEKDAYS
-                  ).map((day) => (
-                    <label key={day}>
-                      <input
-                        type="checkbox"
-                        checked={draftHours.days.includes(day)}
-                        onChange={(e) =>
-                          setDraftHours({
-                            ...draftHours,
-                            days: e.target.checked
-                              ? [...draftHours.days, day]
-                              : draftHours.days.filter((d) => d !== day),
-                          })
+                      aria-label="School logo"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      disabled={readingLogo}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (!file) return;
+                        setReadingLogo(true);
+                        try {
+                          const logoDataUrl = await readBrandingImage(file);
+                          setDraft((current) => (current ? { ...current, logoDataUrl } : null));
+                          setErrors({});
+                        } catch (cause) {
+                          setErrors({
+                            form: cause instanceof Error ? cause.message : 'Unable to read logo.',
+                          });
+                        } finally {
+                          setReadingLogo(false);
                         }
+                      }}
+                    />
+                  </label>
+                  <p className="panel-note">
+                    Recommended logo: 400 × 400 px · PNG, JPG or WebP · up to 5 MB. Transparent PNG
+                    works best.
+                  </p>
+                  {draftLogo && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setDraft({ ...draft, logoDataUrl: null })}
+                    >
+                      Remove logo
+                    </Button>
+                  )}
+                </div>
+                <div className="settings-form-grid">
+                  {fields.map(([key, label]) => (
+                    <label key={key} className="settings-field">
+                      {label}
+                      <input
+                        value={draft[key] ?? ''}
+                        type={key === 'email' ? 'email' : key === 'phone' ? 'tel' : 'text'}
+                        onChange={(event) => setDraft({ ...draft, [key]: event.target.value })}
+                        aria-invalid={!!errors[key]}
+                        aria-describedby={errors[key] ? `school-${key}-error` : undefined}
                       />
-                      {day}
+                      {errors[key] && (
+                        <span className="form-error" id={`school-${key}-error`}>
+                          {errors[key]}
+                        </span>
+                      )}
                     </label>
                   ))}
                 </div>
-              </fieldset>
-              {errors['hours-days'] && (
-                <p className="form-error" role="alert">
-                  {errors['hours-days']}
+              </>
+            )}
+            {section === 'timing' && (
+              <fieldset className="school-hours-fields">
+                <legend>School timing</legend>
+                <p>
+                  One opening and closing time for the selected working days. Attendance cutoffs use
+                  this timing.
                 </p>
-              )}
-            </fieldset>
+                <div className="settings-form-grid">
+                  {(['start', 'end'] as const).map((key) => (
+                    <label className="settings-field" key={key}>
+                      {key === 'start' ? 'School opening time' : 'School closing time'}
+                      <PickerInput
+                        type="time"
+                        value={draftHours[key]}
+                        onChange={(e) => setDraftHours({ ...draftHours, [key]: e.target.value })}
+                        aria-invalid={!!errors[`hours-${key}`]}
+                        aria-describedby={errors[`hours-${key}`] ? `hours-${key}-error` : undefined}
+                      />
+                      {errors[`hours-${key}`] && (
+                        <span className="form-error" id={`hours-${key}-error`}>
+                          {errors[`hours-${key}`]}
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+                <fieldset className="school-working-days">
+                  <legend>Working days</legend>
+                  <div className="student-day-options">
+                    {(state.preferences?.weekStartsOn === 'Sunday'
+                      ? [SCHOOL_WEEKDAYS[6], ...SCHOOL_WEEKDAYS.slice(0, 6)]
+                      : SCHOOL_WEEKDAYS
+                    ).map((day) => (
+                      <label key={day}>
+                        <input
+                          type="checkbox"
+                          checked={draftHours.days.includes(day)}
+                          onChange={(e) =>
+                            setDraftHours({
+                              ...draftHours,
+                              days: e.target.checked
+                                ? [...draftHours.days, day]
+                                : draftHours.days.filter((d) => d !== day),
+                            })
+                          }
+                        />
+                        {day}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                {errors['hours-days'] && (
+                  <p className="form-error" role="alert">
+                    {errors['hours-days']}
+                  </p>
+                )}
+              </fieldset>
+            )}
             {errors.form && (
               <p className="form-error" role="alert">
                 {errors.form}
@@ -287,7 +297,8 @@ export default function SchoolProfile() {
                 Cancel
               </Button>
               <Button type="submit" disabled={readingLogo}>
-                Save details
+                <AppIcon name="save" size={16} />
+                {section === 'timing' ? 'Save timing' : 'Save details'}
               </Button>
             </div>
           </form>

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
-import { Modal } from '../ui/Primitives';
+import { Modal, AppIcon } from '../ui/Primitives';
 import { notificationAttention, notificationReviewUrl } from '../../lib/communicationOverview';
 import { displayDate } from '../../lib/config';
 import './topbar-controls.css';
@@ -27,7 +27,7 @@ export default function TopbarControls() {
         aria-label={`Notifications: ${attention.count} need attention`}
         onClick={() => setDialog('notifications')}
       >
-        <Bell size={19} />
+        <AppIcon name="notifications" size={20} />
         {attention.count > 0 && (
           <span className="notification-count" aria-hidden="true">
             {attention.count > 99 ? '99+' : attention.count}
@@ -57,7 +57,7 @@ export default function TopbarControls() {
         <div className="modal-actions">
           <Link
             className="button secondary"
-            to="/settings?tab=Preferences"
+            to="/settings?tab=Preferences&section=context"
             onClick={() => setDialog(null)}
           >
             Academic year preferences

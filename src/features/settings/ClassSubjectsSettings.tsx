@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Panel } from '../../components/ui/Primitives';
+import { AppIcon, Button, Modal, Panel } from '../../components/ui/Primitives';
 import { classSubjects } from '../../lib/classSubjects';
 import { repository } from '../../lib/repository';
 import { useDraftGuard } from '../academics/useDraftGuard';
@@ -12,7 +12,7 @@ export default function ClassSubjectsSettings({
   onDirtyChange,
 }: {
   classId: string;
-  onDirtyChange: (dirty: boolean) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const state = useSchool(),
     notify = useFeedback();
@@ -21,21 +21,14 @@ export default function ClassSubjectsSettings({
   const [initial, setInitial] = useState(JSON.stringify(subjects));
   const [error, setError] = useState('');
   useEffect(() => {
-    onDirtyChange(JSON.stringify(subjects) !== initial);
+    onDirtyChange?.(JSON.stringify(subjects) !== initial);
   }, [subjects, initial, onDirtyChange]);
   const guard = useDraftGuard(JSON.stringify(subjects) !== initial, () =>
     setSubjects(JSON.parse(initial)),
   );
   return (
-    <Panel
-      title={`Subjects — ${state.classes.find((c) => c.id === classId)?.name}`}
-      subtitle={`${state.school.board ?? 'School'} starting subjects. Adjust these to your school’s curriculum; they appear automatically in marks sheets.`}
-    >
+    <Panel title={`Subjects — ${state.classes.find((c) => c.id === classId)?.name}`}>
       <div className="class-subject-settings">
-        <p>
-          Renaming a subject updates its name throughout Academics. Removing a subject keeps earlier
-          marks and reports.
-        </p>
         {subjects.map((s, i) => (
           <div className="class-subject-row" key={s.id}>
             <label className="field">
@@ -59,7 +52,7 @@ export default function ClassSubjectsSettings({
               aria-label={`Remove ${s.name}`}
               onClick={() => setSubjects(subjects.filter((subject) => subject.id !== s.id))}
             >
-              <Trash2 size={16} />
+              <AppIcon name="delete" size={16} />
             </Button>
           </div>
         ))}
@@ -93,12 +86,17 @@ export default function ClassSubjectsSettings({
               }
             }}
           >
+            <AppIcon name="save" size={16} />
             Save subjects
           </Button>
         </div>
         {guard.confirming && (
-          <div role="alert" className="sheet-import-preview">
-            <p>Subject changes are not saved.</p>
+          <Modal
+            open
+            onClose={guard.keepEditing}
+            title="Discard subject changes?"
+            description="Your subject changes have not been saved."
+          >
             <div className="inline-actions">
               <Button variant="secondary" onClick={guard.keepEditing}>
                 Keep editing
@@ -107,7 +105,7 @@ export default function ClassSubjectsSettings({
                 Discard changes
               </Button>
             </div>
-          </div>
+          </Modal>
         )}
       </div>
     </Panel>

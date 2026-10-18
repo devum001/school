@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createSeed } from '../mocks/seed';
 import { restoreSchoolState } from '../mocks/restore';
-import { nextAdmissionNumber, renumberStudentRolls, studentRollPreview } from './studentNumbering';
 import { saveStudent, deleteStudent, type StudentInput } from './management';
 import { feeSummary, roster } from './selectors';
 import { removeLegacyFeeAdjustments, saveFeePlan, currentFeePlan } from './feePlans';
 
 const input: StudentInput = {
   name: 'Aaa New Student',
-  admissionNumber: '',
+  admissionNumber: 'MANUAL-001',
   rollNumber: 99,
   status: 'active',
   birthDate: '2015-01-01',
@@ -17,63 +16,51 @@ const input: StudentInput = {
   classId: 'class-5',
   sectionId: 'class-5-a',
 };
-function expectAlphabetic(state: ReturnType<typeof createSeed>, section = input.sectionId) {
-  const rows = roster(state).filter((row) => row.enrollment.sectionId === section);
-  expect(rows.map((row) => row.enrollment.rollNumber)).toEqual(rows.map((_, index) => index + 1));
-}
-
-describe('automatic student identifiers', () => {
-  it('generates unique admissions on save and preserves them on rename and restoration', () => {
-    const original = createSeed();
-    const admission = nextAdmissionNumber(original);
-    expect(admission).not.toContain('2026-2026');
-    const first = saveStudent(original, input);
-    const added = first.students.at(-1)!;
-    expect(added.admissionNumber).toBe(admission);
-    const second = saveStudent(first, { ...input, name: 'Another Student' });
-    expect(second.students.at(-1)!.admissionNumber).not.toBe(admission);
-    const renamed = saveStudent(
-      second,
-      { ...input, admissionNumber: 'CHANGED', name: 'Zzz New Student' },
-      added.id,
-    );
-    expect(renamed.students.find((student) => student.id === added.id)?.admissionNumber).toBe(
-      admission,
-    );
-    const restored = restoreSchoolState(createSeed(), renamed);
-    expect(restored.students).toEqual(renamed.students);
-    expect(original.students.some((student) => student.admissionNumber === admission)).toBe(false);
-    expectAlphabetic(restored);
-    const removed = deleteStudent(first, added.id);
-    expect(nextAdmissionNumber(restoreSchoolState(createSeed(), removed))).not.toBe(admission);
+describe('manual student identifiers', () => {
+  it('requires a manual admission and positive whole roll, including duplicate protection', () => {
+    const state = createSeed();
+    expect(() => saveStudent(state, { ...input, admissionNumber: '' })).toThrow(/admission number/);
+    for (const rollNumber of [0, -1, 1.5, NaN, Number.MAX_SAFE_INTEGER + 1])
+      expect(() => saveStudent(state, { ...input, rollNumber })).toThrow(/roll number/);
+    const next = saveStudent(state, input);
+    expect(next.students.at(-1)?.admissionNumber).toBe('MANUAL-001');
+    expect(next.enrollments.at(-1)?.rollNumber).toBe(99);
+    expect(() =>
+      saveStudent(next, { ...input, admissionNumber: 'manual-001', rollNumber: 100 }),
+    ).toThrow(/admission number/);
+    expect(() => saveStudent(next, { ...input, admissionNumber: 'OTHER' })).toThrow(/roll number/);
+    expect(() =>
+      saveStudent(next, { ...input, admissionNumber: 'OTHER', sectionId: 'class-5-b' }),
+    ).not.toThrow();
   });
-  it('reorders rolls on add, name edit, class move, inactivity and deletion without changing linked IDs', () => {
+  it('keeps other rolls and all linked records unchanged on rename, edit, deactivate, delete and restore', () => {
     const original = createSeed();
     let state = saveStudent(original, input);
-    const added = state.students.at(-1)!;
-    expectAlphabetic(state);
-    expect(
-      state.enrollments.find((enrollment) => enrollment.studentId === added.id)?.rollNumber,
-    ).toBe(1);
-    const preview = studentRollPreview(state, { ...input, id: added.id, name: 'Zzz New Student' });
-    state = saveStudent(state, { ...input, name: 'Zzz New Student' }, added.id);
-    expect(
-      state.enrollments.find((enrollment) => enrollment.studentId === added.id)?.rollNumber,
-    ).toBe(preview);
-    state = saveStudent(state, { ...input, classId: 'class-6', sectionId: 'class-6-a' }, added.id);
-    expectAlphabetic(state);
-    expectAlphabetic(state, 'class-6-a');
+    const student = state.students.at(-1)!;
+    const enrollment = state.enrollments.at(-1)!;
     state = saveStudent(
       state,
-      { ...input, classId: 'class-6', sectionId: 'class-6-a', status: 'inactive' },
-      added.id,
+      { ...input, name: 'Zzz Renamed', admissionNumber: 'OFFICE-009', rollNumber: 51 },
+      student.id,
     );
-    expectAlphabetic(state, 'class-6-a');
-    state = deleteStudent(state, added.id);
-    expectAlphabetic(state, 'class-6-a');
+    expect(state.students.at(-1)?.admissionNumber).toBe('OFFICE-009');
+    expect(state.enrollments.at(-1)).toMatchObject({ id: enrollment.id, rollNumber: 51 });
+    state = saveStudent(state, { ...input, status: 'inactive' }, student.id);
+    expect(state.enrollments.slice(0, -1)).toEqual(original.enrollments);
+    expect(restoreSchoolState(createSeed(), state).enrollments).toEqual(state.enrollments);
+    state = deleteStudent(state, student.id);
+    expect(state.enrollments).toEqual(original.enrollments);
     expect(state.attendance).toEqual(original.attendance);
     expect(state.payments).toEqual(original.payments);
-    expect(renumberStudentRolls(state)).toBe(state);
+  });
+  it('retains nonalphabetic legacy rolls when restoring saved data', () => {
+    const seed = createSeed();
+    const saved = {
+      ...seed,
+      enrollments: seed.enrollments.map((entry, i) => ({ ...entry, rollNumber: i + 100 })),
+    };
+    expect(restoreSchoolState(seed, saved).enrollments).toEqual(saved.enrollments);
+    expect(roster(saved)[0].enrollment.rollNumber).toBeGreaterThanOrEqual(100);
   });
 });
 

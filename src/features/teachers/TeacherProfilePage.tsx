@@ -1,9 +1,10 @@
+import TabRail from '../../components/ui/TabRail';
 import { useState } from 'react';
 import { tabKeyboard } from '../../lib/tabKeyboard';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
-import { Avatar, EmptyState, Panel } from '../../components/ui/Primitives';
+import { PickerInput, Avatar, EmptyState, Panel } from '../../components/ui/Primitives';
 import EntityDocuments from '../../components/shared/EntityDocuments';
 import { staffDirectory, staffDesignation } from '../../lib/staffStructure';
 import { defaultStaffPayroll } from '../../lib/settings';
@@ -50,7 +51,7 @@ export default function TeacherProfilePage() {
       <Link className="back-link" to="/teachers">
         ← Teacher List
       </Link>
-      <div className="teacher-detail-tabs" role="tablist" aria-label="Teacher detail">
+      <TabRail className="teacher-detail-tabs" role="tablist" aria-label="Teacher detail">
         {(['Overview', 'Documents'] as const).map((value, index) => (
           <button
             key={value}
@@ -73,7 +74,7 @@ export default function TeacherProfilePage() {
             {value}
           </button>
         ))}
-      </div>
+      </TabRail>
       <div id="teacher-detail-panel" role="tabpanel" aria-labelledby={`teacher-tab-${tab}`}>
         {tab === 'Overview' ? (
           <div className="ledger-stack">
@@ -124,7 +125,7 @@ export default function TeacherProfilePage() {
               action={
                 <label className="field">
                   Month
-                  <input
+                  <PickerInput
                     aria-label="Teacher attendance month"
                     type="month"
                     value={month}

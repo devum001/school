@@ -1,25 +1,22 @@
 import { useToday } from '../../app/useToday';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Users,
-  UserCheck,
-  CalendarDays,
-  ArrowUpRight,
-  ArrowRight,
-  CheckCheck,
-  BookOpen,
-  GraduationCap,
-} from 'lucide-react';
+import { ArrowUpRight, ArrowRight, BookOpen } from 'lucide-react';
 import { AttendanceTrend } from './AttendanceTrend';
 import { useSchool } from '../../app/useSchool';
 import { attendanceSummary, roster, statusFor } from '../../lib/selectors';
-import { displayDate } from '../../lib/config';
-import { Avatar, Badge, PageHeading, Panel, StatCard } from '../../components/ui/Primitives';
+import {
+  PickerInput,
+  Avatar,
+  Badge,
+  PageHeading,
+  Panel,
+  StatCard,
+  AppIcon,
+} from '../../components/ui/Primitives';
 import { staffDirectory } from '../../lib/staffStructure';
 import { staffStatusFor } from '../../lib/staffAttendance';
 import { defaultStaffPayroll } from '../../lib/settings';
-import { prolongedAbsences } from '../../lib/attendanceFollowup';
 import '../../styles/admin-settings.css';
 export default function DashboardPage() {
   const state = useSchool();
@@ -35,7 +32,6 @@ export default function DashboardPage() {
   const staffAttendance = attendanceSummary(
     staff.map((member) => staffStatusFor(state, member.id, date)),
   );
-  const followup = prolongedAbsences(state, date);
   const absent = rows.filter((r) => statusFor(state, r.enrollment.id, date) === 'absent');
   const trend = [...new Set(state.attendance.map((r) => r.date))]
     .filter((d) => d <= date)
@@ -52,32 +48,28 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeading
-        eyebrow="YOUR SCHOOL, AT A GLANCE"
         title="A good day starts with clarity."
-        description={`Welcome back, Dr. Rao. Here’s what’s happening at ${state.school.name}.`}
         actions={
           <>
-            <label className="date-control">
-              <CalendarDays size={16} />
-              <input
-                aria-label="Dashboard date"
-                type="date"
-                value={date}
-                min={state.academicYear.start}
-                max={today}
-                onChange={(e) => {
-                  if (e.target.value) setDate(e.target.value);
-                }}
-              />
-            </label>
+            <PickerInput
+              className="date-control"
+              aria-label="Dashboard date"
+              type="date"
+              value={date}
+              min={state.academicYear.start}
+              max={today}
+              onChange={(e) => {
+                if (e.target.value) setDate(e.target.value);
+              }}
+            />
             <Link className="button primary" to={`/attendance?date=${date}`}>
-              <CheckCheck size={17} />
+              <AppIcon name="attendance" size={17} />
               Mark attendance
             </Link>
           </>
         }
       />
-      <div className="stats-grid">
+      <div className="stats-grid dashboard-stats" role="group" aria-label="School summary">
         <StatCard
           label="Enrolled students"
           value={rows.length}
@@ -86,14 +78,12 @@ export default function DashboardPage() {
               <span>Across {state.sections.length} sections</span>
             </>
           }
-          icon={<Users size={19} />}
           href="/students?status=active"
         />
         <StatCard
           label="Teaching team"
           value={state.teachers.filter((t) => t.status === 'active').length}
           detail="Active teaching staff"
-          icon={<GraduationCap size={19} />}
           href="/teachers"
         />
         <StatCard
@@ -110,8 +100,6 @@ export default function DashboardPage() {
               <span> · {attendance.unmarked} unmarked</span>
             </>
           }
-          icon={<UserCheck size={19} />}
-          tone="green"
           href={`/attendance?date=${date}`}
         />
         <StatCard
@@ -123,8 +111,6 @@ export default function DashboardPage() {
             </>
           }
           detail={`${staffAttendance.percentage}% of marked · ${staffAttendance.unmarked} unmarked`}
-          icon={<UserCheck size={19} />}
-          tone="green"
           href={`/attendance/staff?date=${date}`}
         />
       </div>
@@ -133,7 +119,7 @@ export default function DashboardPage() {
         <Panel
           title="Today’s attendance"
           subtitle="A clear picture of your classrooms"
-          action={<CalendarDays size={18} className="muted" />}
+          action={<AppIcon name="attendance" size={22} />}
         >
           <div
             className="attendance-donut"
@@ -178,8 +164,7 @@ export default function DashboardPage() {
       </div>
       <div className="dashboard-classroom">
         <Panel
-          title="Classroom pulse"
-          subtitle="Attendance by class · selected day"
+          title="Attendance by class · selected day"
           action={
             <Link className="text-link" to="/classes">
               All classes <ArrowUpRight size={14} />
@@ -219,59 +204,9 @@ export default function DashboardPage() {
           </div>
         </Panel>
       </div>
-      <Panel
-        className="dashboard-followup"
-        title="Leave follow-up"
-        subtitle="Absent for more than 3 consecutive working days. Weekly offs are skipped; unmarked days are not counted."
-      >
-        <div className="leave-followup-grid">
-          <section aria-label="Students on prolonged leave">
-            <h3>Students ({followup.students.length})</h3>
-            {followup.students.length ? (
-              followup.students.map(({ row, count, first }) => (
-                <Link
-                  key={row.enrollment.id}
-                  className="followup-person"
-                  to={`/students/${row.student.id}?tab=attendance`}
-                >
-                  <strong>{row.student.name}</strong>
-                  <span>
-                    {row.className} · {row.sectionName}
-                  </span>
-                  <small>
-                    {count} days · since {displayDate(first)}
-                  </small>
-                </Link>
-              ))
-            ) : (
-              <p>No students absent for more than 3 working days.</p>
-            )}
-          </section>
-          <section aria-label="Teachers on prolonged leave">
-            <h3>Teachers ({followup.teachers.length})</h3>
-            {followup.teachers.length ? (
-              followup.teachers.map(({ member, count, first }) => (
-                <Link
-                  key={member.id}
-                  className="followup-person"
-                  to={`/staff?tab=Attendance&staff=${member.id}&date=${date}`}
-                >
-                  <strong>{member.name}</strong>
-                  <small>
-                    {count} days · since {displayDate(first)}
-                  </small>
-                </Link>
-              ))
-            ) : (
-              <p>No teachers absent for more than 3 working days.</p>
-            )}
-          </section>
-        </div>
-      </Panel>
       <div className="dashboard-absence">
         <Panel
-          title="A little attention goes a long way"
-          subtitle={`${absent.length} absent students · ${displayDate(date)}`}
+          title="Absent students · selected day"
           action={
             <Link
               className="text-link"

@@ -1,7 +1,7 @@
+import TabRail from '../../components/ui/TabRail';
 import { useSearchParams } from 'react-router-dom';
-import { PageHeading } from '../../components/ui/Primitives';
+import { AppIcon, type IconName, PageHeading } from '../../components/ui/Primitives';
 import SchoolProfile from './SchoolProfile';
-import AttendanceSettings from './AttendanceSettings';
 import StaffPayrollSettings from './StaffPayrollSettings';
 import ClassStructureSettings from './ClassStructureSettings';
 import CommunicationSettings from './CommunicationSettings';
@@ -15,7 +15,6 @@ import PreferencesSettings from './PreferencesSettings';
 const tabs = [
   'General',
   'Classes, Sections & Grades',
-  'Attendance',
   'Staff & Payroll',
   'Communication',
   'Roles & Permissions',
@@ -23,37 +22,40 @@ const tabs = [
   'Data & Security',
   'Preferences',
 ];
+
+const TAB_ICONS: Record<string, IconName> = {
+  General: 'settings',
+  'Classes, Sections & Grades': 'graduation-cap',
+  'Staff & Payroll': 'staff',
+  Communication: 'notifications',
+  'Roles & Permissions': 'user-check',
+  Templates: 'templates',
+  'Data & Security': 'security',
+  Preferences: 'overview-grid',
+};
 export default function SettingsPage() {
   const [params, setParams] = useSearchParams();
   const requestedTab =
     params.get('tab') === 'Documents & Templates' ? 'Templates' : params.get('tab');
   const tab = tabs.find((label) => label === requestedTab) ?? 'General';
   function selectTab(label: string) {
-    setParams((previous) => {
-      const next = new URLSearchParams(previous);
-      if (label === 'General') next.delete('tab');
-      else next.set('tab', label);
-      return next;
-    });
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (label === 'General') next.delete('tab');
+        else next.set('tab', label);
+        next.delete('section');
+        next.delete('action');
+        return next;
+      },
+      { flushSync: true },
+    );
   }
   return (
     <div className="school-settings">
-      <PageHeading
-        title="School settings"
-        description={
-          tab === 'Classes, Sections & Grades'
-            ? 'Configure classes, sections, grade labels and their student enrollments.'
-            : tab === 'Attendance'
-              ? 'Configure attendance policies, tracking rules, and notification thresholds.'
-              : tab === 'Staff & Payroll'
-                ? 'Configure staff structure, work and leave rules, and salary preferences.'
-                : tab === 'Roles & Permissions'
-                  ? 'Staff roles, module permissions and login access.'
-                  : 'School identity, academic context, and workspace preferences.'
-        }
-      />
+      <PageHeading title="School settings" />
       <nav className="settings-tabs" aria-label="School settings sections">
-        <div role="tablist" aria-label="Settings">
+        <TabRail role="tablist" aria-label="Settings">
           {tabs.map((label, index) => (
             <button
               key={label}
@@ -76,10 +78,11 @@ export default function SettingsPage() {
                 document.getElementById(`settings-tab-${next}`)?.focus();
               }}
             >
-              {label}
+              <AppIcon name={TAB_ICONS[label] ?? 'settings'} size={18} />
+              <span>{label}</span>
             </button>
           ))}
-        </div>
+        </TabRail>
       </nav>
       <div
         id="settings-content"
@@ -88,7 +91,6 @@ export default function SettingsPage() {
         tabIndex={0}
       >
         {tab === 'General' && <SchoolProfile />}
-        {tab === 'Attendance' && <AttendanceSettings />}
         {tab === 'Classes, Sections & Grades' && <ClassStructureSettings />}
         {tab === 'Staff & Payroll' && <StaffPayrollSettings />}
         {tab === 'Communication' && <CommunicationSettings />}

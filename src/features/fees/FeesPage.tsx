@@ -1,18 +1,11 @@
+import SectionNavigation from '../../components/shared/SectionNavigation';
 import { feeProgress } from '../../lib/feeProgress';
 import InstallmentSchedule from './InstallmentSchedule';
 import FeeProgressSummary from './FeeProgressSummary';
 import './fee-progress.css';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import {
-  Wallet,
-  Receipt,
-  Clock3,
-  ArrowUpRight,
-  Download,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import {
   Avatar,
@@ -24,6 +17,7 @@ import {
   Modal,
   SearchInput,
   StatCard,
+  AppIcon,
 } from '../../components/ui/Primitives';
 import { ClassFilters } from '../../components/shared/ClassFilters';
 import { feeSummary, roster } from '../../lib/selectors';
@@ -75,12 +69,10 @@ export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
     <>
       {!embedded && (
         <PageHeading
-          eyebrow="HEALTHY FINANCES. STRONGER SCHOOLS."
           title="Student Fees"
-          description="Keep every obligation, payment, and balance in perspective."
           actions={
             <Button variant="secondary" onClick={exportBalances}>
-              <Download size={16} />
+              <AppIcon name="download" size={16} />
               Export balances
             </Button>
           }
@@ -91,36 +83,37 @@ export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
           label="Annual fee obligations"
           detail={null}
           value={shortMoney(total.total)}
-          icon={<Receipt size={19} />}
+          icon={<AppIcon name="receipt" size={24} />}
         />
         <StatCard
           label="Total collected"
           value={shortMoney(total.paid)}
           detail={`${total.payments.length} payment records`}
-          icon={<Wallet size={19} />}
+          icon={<AppIcon name="wallet" size={24} />}
           tone="green"
         />
         <StatCard
           label="Outstanding balance"
           value={shortMoney(total.outstanding)}
           detail="Includes future installments"
-          icon={<Clock3 size={19} />}
+          icon={<AppIcon name="finance-balance" size={24} />}
           tone="amber"
         />
       </div>
-      <div className="tabs">
-        <button className={tab === 'balances' ? 'active' : ''} onClick={() => setTab('balances')}>
-          Student balances
-        </button>
-        <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
-          Payment history
-        </button>
-      </div>
+      <SectionNavigation
+        label="Student fee views"
+        items={[
+          { id: 'balances', label: 'Student balances' },
+          { id: 'history', label: 'Payment history' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
       <Panel>
         <div className="toolbar">
           {embedded && (
             <Button variant="secondary" onClick={exportBalances}>
-              <Download size={16} />
+              <AppIcon name="download" size={16} />
               Export balances
             </Button>
           )}
@@ -308,9 +301,6 @@ export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
           </>
         )}
       </Panel>
-      <p className="panel-note">
-        All amounts are in INR. Recorded payments are retained in the transaction history.
-      </p>
       {viewingPlan && (
         <Modal
           open

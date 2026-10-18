@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Copy, MessageCircle } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Modal } from '../../components/ui/Primitives';
+import { AppIcon, Button, Modal } from '../../components/ui/Primitives';
 import type { Examination, RosterEntry } from '../../types/domain';
 import {
   studentReportMessage,
@@ -124,7 +123,7 @@ export default function ShareReportDialog({
             }
           }}
         >
-          <Copy size={15} />
+          <AppIcon name="copy" size={16} />
           Copy message
         </Button>
         {href ? (
@@ -134,12 +133,12 @@ export default function ShareReportDialog({
             target="_blank"
             rel="noopener noreferrer"
           >
-            <MessageCircle size={16} />
+            <AppIcon name="send" size={16} />
             {phone.trim() ? 'Open parent chat' : 'Choose contact in WhatsApp'}
           </a>
         ) : (
           <Button disabled>
-            <MessageCircle size={16} />
+            <AppIcon name="send" size={16} />
             Open WhatsApp
           </Button>
         )}

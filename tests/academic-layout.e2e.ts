@@ -7,11 +7,12 @@ test('class subject setup renames live results and keeps earlier marks', async (
   await loadAcademicFixture(page, academicFixture(true));
   await page.goto('/settings?tab=Classes%2C+Sections+%26+Grades');
   await page.getByLabel('Setup class').selectOption('class-8');
+  await page.getByRole('tab', { name: 'Subjects', exact: true }).click();
   const input = page.getByLabel('Subject 1 name', { exact: true });
   await expect(input).toHaveValue('Mathematics');
   await input.fill('Applied Mathematics');
   await page.getByRole('button', { name: 'Save subjects', exact: true }).click();
-  await page.goto('/academics?class=class-8&view=results');
+  await page.goto('/academics?class=class-8&view=results&resultsView=recent');
   await page.getByRole('button', { name: 'View Result', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Applied Mathematics', exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toContainText('18/20');
@@ -61,6 +62,7 @@ test('subject changes require save or discard before switching class; legacy tes
   await loadAcademicFixture(page, createSeed('2026-10-15'));
   await page.goto('/settings?tab=Classes%2C+Sections+%26+Grades');
   await page.getByLabel('Setup class').selectOption('class-8');
+  await page.getByRole('tab', { name: 'Subjects', exact: true }).click();
   await page.getByLabel('Subject 1 name', { exact: true }).fill('Unsaved maths');
   await page.getByLabel('Setup class').selectOption('class-7');
   await expect(page.getByRole('dialog')).toContainText('Discard subject changes?');

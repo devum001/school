@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBlocker } from 'react-router-dom';
-export function useDraftGuard(dirty: boolean, onClose: () => void) {
+type DraftLocation = { pathname: string; search: string };
+export function useDraftGuard(
+  dirty: boolean,
+  onClose: () => void,
+  retainsDraft?: (current: DraftLocation, next: DraftLocation) => boolean,
+) {
   const [closing, setClosing] = useState(false);
   const approvedNavigation = useRef(false);
-  const blocker = useBlocker(() => dirty && !approvedNavigation.current);
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty && !approvedNavigation.current && !retainsDraft?.(currentLocation, nextLocation),
+  );
   useEffect(() => {
     if (!dirty) approvedNavigation.current = false;
   }, [dirty]);

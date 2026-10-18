@@ -1,16 +1,7 @@
 import { useToday } from '../../app/useToday';
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import {
-  ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  Users,
-  Plus,
-  Pencil,
-  Trash2,
-} from 'lucide-react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import {
   Avatar,
@@ -20,6 +11,7 @@ import {
   PageHeading,
   Panel,
   SearchInput,
+  AppIcon,
 } from '../../components/ui/Primitives';
 import { ClassFilters } from '../../components/shared/ClassFilters';
 import { roster, statusFor } from '../../lib/selectors';
@@ -29,6 +21,7 @@ import StudentDialog from './StudentDialog';
 import DeleteStudentDialog from './DeleteStudentDialog';
 export default function StudentsPage() {
   const state = useSchool();
+  const navigate = useNavigate();
   const today = useToday();
   const [editing, setEditing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState('');
@@ -58,9 +51,7 @@ export default function StudentsPage() {
   return (
     <>
       <PageHeading
-        eyebrow="PEOPLE & POSSIBILITIES"
         title="Student directory"
-        description="Every learner, one connected story."
         actions={
           <>
             <Button
@@ -79,11 +70,17 @@ export default function StudentsPage() {
                 )
               }
             >
-              <Download size={16} />
+              <AppIcon name="download" size={16} />
               Export directory
             </Button>
-            <Button onClick={() => setEditing('')}>
-              <Plus size={15} />
+            <Button
+              onClick={() =>
+                navigate(
+                  `/students/new?${new URLSearchParams({ classId, sectionId: section, returnTo: `/students?${params}` })}`,
+                )
+              }
+            >
+              <AppIcon name="student" size={16} />
               Add student
             </Button>
           </>
@@ -91,7 +88,7 @@ export default function StudentsPage() {
       />
       <div className="directory-banner">
         <div className="banner-icon">
-          <Users size={26} />
+          <AppIcon name="users" size={30} />
         </div>
         <div>
           <strong>{state.students.length} student stories. One school community.</strong>
@@ -171,7 +168,7 @@ export default function StudentsPage() {
                         aria-label={`Edit ${r.student.name}`}
                         onClick={() => setEditing(r.student.id)}
                       >
-                        <Pencil size={15} />
+                        <AppIcon name="edit" size={16} />
                       </Button>
                       <Button
                         variant="ghost"
@@ -179,7 +176,7 @@ export default function StudentsPage() {
                         aria-label={`Delete ${r.student.name}`}
                         onClick={() => setDeleting(r.student.id)}
                       >
-                        <Trash2 size={15} />
+                        <AppIcon name="delete" size={16} />
                       </Button>
                     </div>
                   </td>

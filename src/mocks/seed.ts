@@ -1,5 +1,4 @@
 import { installmentName } from '../lib/feeLabels';
-import { renumberStudentRolls } from '../lib/studentNumbering';
 import type { DemoState } from '../types/domain';
 import { SCHOOL_ID } from '../lib/config';
 import { getSchoolDate, shiftCalendarDate } from '../lib/dates';
@@ -317,5 +316,5 @@ export function createSeed(anchorDate = getSchoolDate()): DemoState {
       kind: 'attendance',
     },
   ];
-  return renumberStudentRolls(state);
+  return state;
 }

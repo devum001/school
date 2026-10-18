@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { documentWithBranding } from '../../lib/documentData';
 import type { GeneratedDocument } from '../../types/ledger';
-import { Button } from '../ui/Primitives';
+import { AppIcon, Button } from '../ui/Primitives';
 import {
   documentPng,
   downloadDocumentPdf,
@@ -91,9 +91,11 @@ export default function GeneratedDocumentPreview({
       {actions && (
         <div className="modal-actions">
           <Button variant="secondary" disabled={busy || !image} onClick={() => void act(true)}>
+            <AppIcon name="document" size={16} />
             Print {data.kind}
           </Button>
           <Button disabled={busy || !image} onClick={() => void act(false)}>
+            <AppIcon name="download" size={16} />
             Download {data.kind}
           </Button>
         </div>

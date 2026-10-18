@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Download, Trash2, Upload } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, EmptyState, Modal, Panel } from '../ui/Primitives';
+import { Button, EmptyState, Modal, Panel, AppIcon } from '../ui/Primitives';
 import { STAFF_DOCUMENT_CATEGORIES, STUDENT_DOCUMENT_CATEGORIES } from '../../lib/entityDocuments';
 import { downloadStoredDocument, readDocumentFile } from '../../lib/fileUploads';
 import { communicationError } from '../../lib/communication';
@@ -51,7 +50,7 @@ export default function EntityDocuments({
             </select>
           </label>
           <label className="button secondary document-upload-control">
-            <Upload size={16} /> {busy ? 'Saving…' : 'Upload document'}
+            <AppIcon name="upload" size={16} /> {busy ? 'Saving…' : 'Upload document'}
             <input
               aria-label="Upload document"
               type="file"
@@ -118,14 +117,14 @@ export default function EntityDocuments({
                           aria-label={`Download ${entry.fileName}`}
                           onClick={() => downloadStoredDocument(entry.dataUrl, entry.fileName)}
                         >
-                          <Download size={15} /> Download
+                          <AppIcon name="download" size={15} /> Download
                         </Button>
                         <Button
                           variant="ghost"
                           aria-label={`Delete ${entry.fileName}`}
                           onClick={() => setRemoving(entry)}
                         >
-                          <Trash2 size={15} />
+                          <AppIcon name="delete" size={15} />
                         </Button>
                       </div>
                     </td>
@@ -138,6 +137,7 @@ export default function EntityDocuments({
           <EmptyState
             title="No documents uploaded"
             description="Upload an existing ID proof, certificate or other document."
+            icon={<AppIcon name="document" size={36} />}
           />
         )}
       </div>

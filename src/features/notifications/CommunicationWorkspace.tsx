@@ -1,8 +1,9 @@
+import TabRail from '../../components/ui/TabRail';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
-import { Button, PageHeading } from '../../components/ui/Primitives';
+import { PickerInput, Button, PageHeading } from '../../components/ui/Primitives';
 import { notificationReviewUrl } from '../../lib/communicationOverview';
 import { communicationFor } from '../../lib/communication';
 import { ACTIVE_EVENTS, EVENTS, SYSTEM_EVENTS } from '../../lib/communicationConfig';
@@ -99,14 +100,13 @@ export default function CommunicationWorkspace() {
     <div className="communication-workspace">
       <PageHeading
         title="Notifications"
-        description="Daily communication, notices and delivery history."
         actions={
           <Link className="button secondary" to="/settings?tab=Communication">
             Communication Settings
           </Link>
         }
       />
-      <div className="communication-tabs" role="tablist" aria-label="Notifications">
+      <TabRail className="communication-tabs" role="tablist" aria-label="Notifications">
         {tabs.map((value, index) => (
           <button
             role="tab"
@@ -132,7 +132,7 @@ export default function CommunicationWorkspace() {
             {value}
           </button>
         ))}
-      </div>
+      </TabRail>
       {error && (
         <p className="form-error" role="alert">
           {error}
@@ -242,7 +242,7 @@ export default function CommunicationWorkspace() {
               </label>
               <label>
                 Notification date
-                <input
+                <PickerInput
                   type="date"
                   value={date}
                   min={state.academicYear.start}

@@ -1,9 +1,9 @@
+import TabRail from '../../components/ui/TabRail';
 import { tabKeyboard } from '../../lib/tabKeyboard';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Download } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
-import { Badge, Button, EmptyState, Modal } from '../../components/ui/Primitives';
+import { AppIcon, Badge, Button, EmptyState, Modal } from '../../components/ui/Primitives';
 import { savedSubjects, subjectResults } from '../../lib/academicSheets';
 import { subjectName } from '../../lib/classSubjects';
 import { displayDate } from '../../lib/config';
@@ -40,7 +40,12 @@ export default function TestResult({
       description={`${displayDate(exam.date)} · ${className} · ${sectionLabel(section?.name ?? '')}`}
       onClose={onClose}
     >
-      <div className="academic-tabs" role="tablist" aria-label="Result subjects">
+      <TabRail
+        variant="secondary"
+        className="academic-tabs"
+        role="tablist"
+        aria-label="Result subjects"
+      >
         {subjects.map((s, i) => (
           <button
             role="tab"
@@ -62,7 +67,7 @@ export default function TestResult({
             {s.name}
           </button>
         ))}
-      </div>
+      </TabRail>
       {data && subject ? (
         <>
           <dl className="academic-subject-stats">
@@ -169,10 +174,12 @@ export default function TestResult({
                 )
               }
             >
-              <Download size={15} />
+              <AppIcon name="download" size={16} />
               Export class result
             </Button>
-            <Button onClick={onEdit}>Edit Marks</Button>
+            <Button onClick={onEdit}>
+              <AppIcon name="edit" size={16} /> Edit Marks
+            </Button>
           </div>
         </>
       ) : (

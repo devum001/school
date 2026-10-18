@@ -1,11 +1,13 @@
+import SectionNavigation from '../../components/shared/SectionNavigation';
+import { useSettingsSection } from './useSettingsSection';
 import ClassSubjectsSettings from './ClassSubjectsSettings';
 import '../academics/academics.css';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, EmptyState, Panel, Modal } from '../../components/ui/Primitives';
+import { AppIcon, Button, EmptyState, Panel } from '../../components/ui/Primitives';
 import DeleteDialog from '../../components/shared/DeleteDialog';
 import { repository } from '../../lib/repository';
 import { roster } from '../../lib/selectors';
@@ -16,9 +18,25 @@ import '../../styles/student-timings.css';
 
 export default function ClassStructureSettings() {
   const state = useSchool();
+  const { section, navigation } = useSettingsSection([
+    { id: 'sections', label: 'Sections' },
+    { id: 'students', label: 'Students' },
+    { id: 'subjects', label: 'Subjects' },
+  ]);
+  const [params, setParams] = useSearchParams();
   const notify = useFeedback();
   const classes = orderedClasses(state.classes.filter((c) => c.schoolId === state.school.id));
-  const [selected, setSelected] = useState(classes[0]?.id ?? '');
+  const selected = params.get('classId') ?? '';
+  const setSelected = (classId: string) =>
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        next.set('classId', classId);
+        next.delete('studentSection');
+        return next;
+      },
+      { flushSync: true },
+    );
   const current = classes.find((c) => c.id === selected) ?? classes[0];
   const sections = state.sections.filter(
     (s) => s.schoolId === state.school.id && s.classId === current?.id,
@@ -30,11 +48,9 @@ export default function ClassStructureSettings() {
     id: string;
     name: string;
   } | null>(null);
-  const [students, setStudents] = useState('');
-  const [subjectsDirty, setSubjectsDirty] = useState(false);
-  const [pendingClass, setPendingClass] = useState('');
   return (
     <div className="setup-stack">
+      <SectionNavigation {...navigation} label="Class features" />
       <Panel
         title="Classes, Sections & Grades"
         subtitle="Set up class / grade names, sections and student enrollments for your school."
@@ -54,12 +70,7 @@ export default function ClassStructureSettings() {
                   aria-label="Setup class"
                   value={current.id}
                   onChange={(e) => {
-                    if (subjectsDirty) {
-                      setPendingClass(e.target.value);
-                      return;
-                    }
                     setSelected(e.target.value);
-                    setStudents('');
                   }}
                 >
                   {classes.map((c) => (
@@ -75,7 +86,7 @@ export default function ClassStructureSettings() {
                 {rows.filter((r) => r.enrollment.classId === current.id).length} students
               </span>
               <Button variant="ghost" onClick={() => setEditing({ kind: 'class', id: current.id })}>
-                <Pencil size={14} />
+                <AppIcon name="edit" size={14} />
                 Edit Class / Grade
               </Button>
               <Button
@@ -83,63 +94,63 @@ export default function ClassStructureSettings() {
                 aria-label={`Delete class ${current.name}`}
                 onClick={() => setDeleting({ kind: 'class', id: current.id, name: current.name })}
               >
-                <Trash2 size={14} />
+                <AppIcon name="delete" size={14} />
               </Button>
               <Button variant="secondary" onClick={() => setEditing({ kind: 'section' })}>
                 <Plus size={14} />
                 Add section
               </Button>
             </div>
-            {sections.length ? (
-              <ul className="setup-sections">
-                {sections.map((s) => (
-                  <li key={s.id}>
-                    <div>
-                      <h3>{sectionLabel(s.name)}</h3>
-                      <p>
-                        {state.teachers.find((t) => t.id === s.teacherId)?.name ??
-                          'Class teacher not assigned'}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      aria-label={`Students in ${current.name} ${sectionLabel(s.name)}`}
-                      onClick={() => setStudents(s.id)}
-                    >
-                      <Users size={14} />
-                      {rows.filter((r) => r.enrollment.sectionId === s.id).length} students
-                    </Button>
-                    <div className="student-timing-actions">
-                      <Button
-                        variant="ghost"
-                        aria-label={`Edit section ${s.name}`}
-                        onClick={() => setEditing({ kind: 'section', id: s.id })}
-                      >
-                        <Pencil size={14} />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        aria-label={`Delete section ${s.name}`}
-                        onClick={() =>
-                          setDeleting({
-                            kind: 'section',
-                            id: s.id,
-                            name: `${current.name} Section ${s.name}`,
-                          })
-                        }
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState
-                title="Add the first section"
-                description="Create a section to enroll students and assign its timetable."
-              />
+            {section === 'sections' && (
+              <>
+                {' '}
+                {sections.length ? (
+                  <ul className="setup-sections">
+                    {sections.map((s) => (
+                      <li key={s.id}>
+                        <div>
+                          <h3>{sectionLabel(s.name)}</h3>
+                          <p>
+                            {state.teachers.find((t) => t.id === s.teacherId)?.name ??
+                              'Class teacher not assigned'}
+                          </p>
+                        </div>
+                        <span className="section-student-count">
+                          {rows.filter((r) => r.enrollment.sectionId === s.id).length} students
+                        </span>
+                        <div className="student-timing-actions">
+                          <Button
+                            variant="ghost"
+                            aria-label={`Edit section ${s.name}`}
+                            onClick={() => setEditing({ kind: 'section', id: s.id })}
+                          >
+                            <AppIcon name="edit" size={14} />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            aria-label={`Delete section ${s.name}`}
+                            onClick={() =>
+                              setDeleting({
+                                kind: 'section',
+                                id: s.id,
+                                name: `${current.name} Section ${s.name}`,
+                              })
+                            }
+                          >
+                            <AppIcon name="delete" size={14} />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyState
+                    title="Add the first section"
+                    description="Create a section to enroll students and assign its timetable."
+                  />
+                )}
+              </>
             )}
           </>
         ) : (
@@ -148,50 +159,11 @@ export default function ClassStructureSettings() {
             description="Use any class name or grade label your school follows."
           />
         )}
-        <p className="setup-footnote">
-          Classes and sections appear automatically in Students and Attendance. Configure school
-          opening and closing times in{' '}
-          <Link className="text-link" to="/settings#school-hours">
-            General
-          </Link>
-          .
-        </p>
       </Panel>
-      {current && (
-        <ClassSubjectsSettings
-          key={current.id}
-          classId={current.id}
-          onDirtyChange={setSubjectsDirty}
-        />
+      {current && section === 'subjects' && (
+        <ClassSubjectsSettings key={current.id} classId={current.id} />
       )}
-      {students && sections.some((s) => s.id === students) && (
-        <ClassStudents key={students} sectionId={students} />
-      )}
-      {pendingClass && (
-        <Modal
-          open
-          title="Discard subject changes?"
-          description="Save your subjects before switching classes, or discard these changes."
-          onClose={() => setPendingClass('')}
-        >
-          <div className="modal-actions">
-            <Button variant="secondary" onClick={() => setPendingClass('')}>
-              Keep editing
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => {
-                setSelected(pendingClass);
-                setPendingClass('');
-                setStudents('');
-                setSubjectsDirty(false);
-              }}
-            >
-              Discard changes
-            </Button>
-          </div>
-        </Modal>
-      )}
+      {current && section === 'students' && <ClassStudents key={current.id} classId={current.id} />}
       {editing && (
         <ClassStructureDialog
           key={`${editing.kind}-${editing.id ?? current?.id}`}

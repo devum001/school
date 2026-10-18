@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUp, ArrowDown, Plus, Trash2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Plus } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, EmptyState, Modal } from '../../components/ui/Primitives';
+import { AppIcon, PickerInput, Button, EmptyState, Modal } from '../../components/ui/Primitives';
 import DeleteDialog from '../../components/shared/DeleteDialog';
 import { repository } from '../../lib/repository';
 import {
@@ -180,7 +180,7 @@ export default function ClassTimetableDialog({
             title="Set student timings first"
             description="Assign school days and hours to this section in General settings."
             action={
-              <Link className="button secondary" to="/settings#student-timings">
+              <Link className="button secondary" to="/settings?section=timing">
                 Set student timings
               </Link>
             }
@@ -342,7 +342,7 @@ export default function ClassTimetableDialog({
                   {(['start', 'end'] as const).map((key) => (
                     <label key={key} className="student-timing-field">
                       {key === 'start' ? 'Start' : 'End'}
-                      <input
+                      <PickerInput
                         aria-label={`Row ${index + 1} ${key}`}
                         type="time"
                         required
@@ -413,7 +413,7 @@ export default function ClassTimetableDialog({
                         setSlotErrors({});
                       }}
                     >
-                      <Trash2 size={14} />
+                      <AppIcon name="delete" size={14} />
                     </Button>
                   </div>
                 </div>
@@ -480,7 +480,7 @@ export default function ClassTimetableDialog({
                 Close
               </Button>
               <Button type="submit" disabled={!dirty}>
-                Save timetable
+                <AppIcon name="save" size={16} /> Save timetable
               </Button>
             </div>
           </form>

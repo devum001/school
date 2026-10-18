@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Clock3, Pencil, Users } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
-import { Button, EmptyState, Panel } from '../../components/ui/Primitives';
+import { AppIcon, Button, EmptyState, Panel } from '../../components/ui/Primitives';
 import { roster } from '../../lib/selectors';
 import {
   formatSchoolTime,
@@ -58,7 +57,7 @@ export default function TimetableSettings() {
           section &&
           timing && (
             <Button variant="secondary" onClick={() => setEditing(true)}>
-              <Pencil size={15} />
+              <AppIcon name="edit" size={16} />
               {rows.length ? 'Edit timetable' : 'Build timetable'}
             </Button>
           )
@@ -95,7 +94,7 @@ export default function TimetableSettings() {
             </select>
           </label>
           <span>
-            <Users size={14} />
+            <AppIcon name="users" size={14} />
             {studentCount} students
           </span>
           <Link className="text-link" to="/settings?tab=Classes%2C+Sections+%26+Grades">
@@ -137,7 +136,7 @@ export default function TimetableSettings() {
         ) : (
           <>
             <div className="timetable-summary">
-              <Clock3 size={16} />
+              <AppIcon name="attendance" size={16} />
               <strong>
                 {day} · {formatSchoolTime(timing.start)} – {formatSchoolTime(timing.end)}
               </strong>

@@ -1,9 +1,9 @@
 import { useToday } from '../../app/useToday';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Users, CalendarCheck } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
-import { Avatar, Badge, PageHeading, SearchInput } from '../../components/ui/Primitives';
+import { Avatar, Badge, PageHeading, SearchInput, AppIcon } from '../../components/ui/Primitives';
 import { roster, attendanceSummary, statusFor } from '../../lib/selectors';
 import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
 export default function ClassesPage() {
@@ -14,20 +14,18 @@ export default function ClassesPage() {
   return (
     <>
       <PageHeading
-        eyebrow="ROOM TO GROW"
         title="Classes & sections"
-        description="Your classrooms, teachers, and learners — thoughtfully organized."
         actions={
           <SearchInput value={query} onChange={setQuery} placeholder="Search grade or teacher…" />
         }
       />
       <div className="context-strip">
         <span>
-          <BookOpen size={16} />
+          <AppIcon name="academics" size={16} />
           {state.classes.length} grades
         </span>
         <span>
-          <Users size={16} />
+          <AppIcon name="users" size={16} />
           {state.sections.length} sections · {rows.length} active students
         </span>
         <Badge tone="blue">{state.academicYear.name}</Badge>
@@ -93,7 +91,7 @@ export default function ClassesPage() {
                           className="text-link"
                           to={`/attendance?class=${c.id}&section=${s.id}`}
                         >
-                          <CalendarCheck size={14} />
+                          <AppIcon name="attendance" size={14} />
                           Register
                         </Link>
                       </div>

@@ -13,10 +13,10 @@ function emptySection() {
 const grid: ExcelCell[][] = [
   STUDENT_IMPORT_HEADERS,
   ['Asha Singh', 'NEW-001', '2016-05-21', 'Ravi Singh', 'Parent', '', '', '01'],
-  ['Zoya Khan', 'NEW-002', '2016-07-12', 'Sana Khan', '', '', '', ''],
+  ['Zoya Khan', 'NEW-002', '2016-07-12', 'Sana Khan', '', '', '', '02'],
 ];
 describe('Excel student import', () => {
-  it('imports a validated batch atomically with normalized, consecutive roll numbers', () => {
+  it('imports a validated batch atomically with the manual roll numbers provided', () => {
     const state = emptySection(),
       sectionId = state.sections.at(-1)!.id;
     const preview = previewStudentImport(state, sectionId, grid);
@@ -29,9 +29,9 @@ describe('Excel student import', () => {
     expect(
       previewStudentImport(next, sectionId, [
         STUDENT_IMPORT_HEADERS,
-        ['Next Student', 'NEW-003', '2016-05-21', 'Parent Name', '', '', '', ''],
+        ['Next Student', 'NEW-003', '2016-05-21', 'Parent Name', '', '', '', '17'],
       ]).rows[0].input.rollNumber,
-    ).toBe(2);
+    ).toBe(17);
   });
   it('reports duplicates, invalid dates, phones and rolls without saving valid preceding rows', () => {
     const state = emptySection(),
@@ -53,6 +53,37 @@ describe('Excel student import', () => {
       /no student rows/,
     );
     expect(() => previewStudentImport(state, 'foreign', grid)).toThrow(/this school/);
+  });
+  it('imports one class across sections and permits equal rolls only in different sections', () => {
+    const state = createSeed();
+    const batch = [
+      STUDENT_IMPORT_HEADERS,
+      ['Class A Student', 'CLASS-A-01', '2016-05-21', 'Parent', '', '', '', 51, 'A'],
+      ['Class B Student', 'CLASS-B-01', '2016-05-21', 'Parent', '', '', '', 51, 'Section B'],
+    ];
+    const next = importStudents(state, 'class-5', batch);
+    expect(next.enrollments.slice(-2).map((entry) => [entry.sectionId, entry.rollNumber])).toEqual([
+      ['class-5-a', 51],
+      ['class-5-b', 51],
+    ]);
+    expect(next.enrollments.slice(0, -2)).toEqual(state.enrollments);
+    for (const [column, value] of [
+      [8, 'Z'],
+      [7, ''],
+      [1, ''],
+      [7, '1.5'],
+    ] as const) {
+      const invalid = batch.map((row) => [...row]);
+      invalid[2][column] = value;
+      expect(previewStudentImport(state, 'class-5', invalid).errors.length).toBeGreaterThan(0);
+      expect(() => importStudents(state, 'class-5', invalid)).toThrow();
+      expect(state.students.some((student) => student.admissionNumber === 'CLASS-A-01')).toBe(
+        false,
+      );
+    }
+    const duplicateRoll = batch.map((row) => [...row]);
+    duplicateRoll[2][8] = 'A';
+    expect(previewStudentImport(state, 'class-5', duplicateRoll).errors[0]).toMatch(/roll number/);
   });
   it('handles true Excel birth dates, creates a genuine XLSX, and orders numbers naturally', async () => {
     expect(excelBirthDate(42511)).toBe('2016-05-21');

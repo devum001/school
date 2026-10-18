@@ -1,5 +1,5 @@
-import { Plus, Trash2 } from 'lucide-react';
-import { Button } from '../../components/ui/Primitives';
+import { Plus } from 'lucide-react';
+import { AppIcon, PickerInput, Button } from '../../components/ui/Primitives';
 import { installmentName } from '../../lib/feeLabels';
 import { money } from '../../lib/config';
 import '../../styles/ledgers.css';
@@ -59,7 +59,7 @@ export default function FeePlanEditor({
       {value.kind === 'One Time' ? (
         <label className="field">
           Due Date
-          <input
+          <PickerInput
             aria-label="Fee due date"
             required={required}
             type="date"
@@ -98,7 +98,7 @@ export default function FeePlanEditor({
               </label>
               <label className="field">
                 Due Date
-                <input
+                <PickerInput
                   aria-label={`Installment ${index + 1} due date`}
                   required={required}
                   type="date"
@@ -125,7 +125,7 @@ export default function FeePlanEditor({
                   })
                 }
               >
-                <Trash2 size={16} />
+                <AppIcon name="delete" size={16} />
               </Button>
             </div>
           ))}

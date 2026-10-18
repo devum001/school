@@ -7,7 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { Badge, Panel } from '../../components/ui/Primitives';
+import { Panel } from '../../components/ui/Primitives';
 import type { attendanceSummary } from '../../lib/selectors';
 export function AttendanceTrend({
   attendance,
@@ -18,21 +18,14 @@ export function AttendanceTrend({
 }) {
   return (
     <Panel
-      title="Every school day counts"
-      subtitle="Attendance rate · last seven recorded school days"
-      action={<Badge tone="green">{attendance.percentage}% selected day</Badge>}
+      title="Attendance trend"
+      action={
+        <div className="attendance-trend-summary">
+          <strong>{attendance.percentage}<span>%</span></strong>
+          <span>selected day</span>
+        </div>
+      }
     >
-      <div className="chart-heading">
-        <strong>
-          {attendance.percentage}
-          <span>%</span>
-        </strong>
-        <p>
-          Attending ÷ marked students
-          <br />
-          <span>Includes late and half-day attendance</span>
-        </p>
-      </div>
       <div
         className="attendance-chart"
         role="img"

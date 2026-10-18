@@ -1,9 +1,8 @@
 import InstallmentSchedule from './InstallmentSchedule';
 import { useToday } from '../../app/useToday';
 import { useState } from 'react';
-import { Receipt, Wallet, Clock3 } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
-import { Badge, Button, Panel, StatCard } from '../../components/ui/Primitives';
+import { Badge, Button, Panel, StatCard, AppIcon } from '../../components/ui/Primitives';
 import { feeSummary, installments } from '../../lib/selectors';
 import { displayDate, money } from '../../lib/config';
 import PaymentDialog from './PaymentDialog';
@@ -31,20 +30,20 @@ export function StudentFees({ enrollmentId }: { enrollmentId: string }) {
           label="Total Fee"
           detail={null}
           value={money(summary.total)}
-          icon={<Receipt size={18} />}
+          icon={<AppIcon name="receipt" size={24} />}
         />
         <StatCard
           label="Paid"
           value={money(summary.paid)}
           detail={`${summary.payments.length} recorded transactions`}
-          icon={<Wallet size={18} />}
+          icon={<AppIcon name="wallet" size={24} />}
           tone="green"
         />
         <StatCard
           label="Pending"
           value={money(summary.outstanding)}
           detail="Includes future installments"
-          icon={<Clock3 size={18} />}
+          icon={<AppIcon name="finance-balance" size={24} />}
           tone="amber"
         />
       </div>

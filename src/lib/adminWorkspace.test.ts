@@ -72,7 +72,7 @@ describe('saved admin preferences and local audit', () => {
       };
     const saved = savePreferences(seed, settings);
     configureDisplay(saved.preferences);
-    expect(displayDate('2026-10-14')).toBe('14/10/2026');
+    expect(displayDate('2026-10-14')).toBe('14 Oct 2026');
     expect(formatSchoolTime('15:30')).toBe('15:30');
     expect(saved.students).toBe(seed.students);
     expect(() =>

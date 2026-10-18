@@ -85,7 +85,7 @@
 }
 .student-timing-picker {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   margin: 0;
   padding: 14px;
 }
@@ -377,8 +377,13 @@
   font-size: 12px;
 }
 @media (max-width: 600px) {
-  .class-students-panel .panel-heading { flex-direction: column; align-items: stretch; }
-  .class-students-panel .student-import-actions { justify-content: flex-start; }
+  .class-students-panel .panel-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .class-students-panel .student-import-actions {
+    justify-content: flex-start;
+  }
 }
 .school-hours-fields {
   margin: 24px 0 0;
@@ -431,7 +436,7 @@
   overflow-x: auto;
   max-height: 350px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 .import-preview {
   width: 100%;
@@ -463,7 +468,7 @@
 .timetable-days button {
   border: 0;
   background: transparent;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   color: var(--muted);
   font-size: 12px;
   padding: 8px 15px;
