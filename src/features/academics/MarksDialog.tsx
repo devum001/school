@@ -232,7 +232,11 @@ export default function MarksDialog({
                       Download sample Excel / CSV
                       <ChevronDown size={16} aria-hidden="true" />
                     </summary>
-                    <div className="sample-download-options" role="group" aria-label="Sample file formats">
+                    <div
+                      className="sample-download-options"
+                      role="group"
+                      aria-label="Sample file formats"
+                    >
                       <Button variant="ghost" onClick={() => template('xlsx')}>
                         Excel (.xlsx)
                       </Button>
@@ -452,19 +456,49 @@ export default function MarksDialog({
                                     });
                                   }}
                                   onKeyDown={(event) => {
-                                    if (event.key === 'Enter') {
-                                      event.preventDefault();
-                                      const index = draft.students.findIndex(
-                                          (s) => s.enrollment.id === row.enrollmentId,
-                                        ),
-                                        next = draft.students[index + 1];
-                                      if (next)
-                                        document
-                                          .getElementsByName(
-                                            `${next.enrollment.id}-${c.subjectId}`,
-                                          )[0]
-                                          ?.focus();
-                                    }
+                                    if (
+                                      event.nativeEvent.isComposing ||
+                                      event.altKey ||
+                                      event.ctrlKey ||
+                                      event.metaKey ||
+                                      (event.shiftKey && event.key !== 'Enter')
+                                    )
+                                      return;
+                                    const directions: Record<string, [number, number] | undefined> =
+                                      {
+                                        ArrowUp: [-1, 0],
+                                        ArrowDown: [1, 0],
+                                        ArrowLeft: [0, -1],
+                                        ArrowRight: [0, 1],
+                                        Enter: [event.shiftKey ? -1 : 1, 0],
+                                      };
+                                    const direction = directions[event.key];
+                                    if (!direction) return;
+                                    event.preventDefault();
+                                    const body = event.currentTarget.closest('tbody');
+                                    if (!body) return;
+                                    const visibleRows = Array.from(body.rows);
+                                    const index = visibleRows.findIndex((tr) =>
+                                      tr.contains(event.currentTarget),
+                                    );
+                                    const next =
+                                      visibleRows[
+                                        index + direction[0]
+                                      ]?.querySelectorAll<HTMLInputElement>('input')[
+                                        i + direction[1]
+                                      ];
+                                    if (!next || next.disabled) return;
+                                    const table = body.closest('table');
+                                    const studentCell = visibleRows[index].cells[1];
+                                    // Keep the focused marks clear of the sticky headings and student columns.
+                                    next.style.scrollMarginTop = `${table?.tHead?.offsetHeight ?? 0}px`;
+                                    next.style.scrollMarginLeft =
+                                      getComputedStyle(studentCell).position === 'sticky'
+                                        ? `${visibleRows[index].cells[0].offsetWidth + studentCell.offsetWidth}px`
+                                        : '0px';
+                                    next.focus({ preventScroll: true });
+                                    next.select();
+                                    next.scrollIntoView({ block: 'nearest', inline: 'nearest' });
                                   }}
                                   name={`${row.enrollmentId}-${c.subjectId}`}
                                 />
