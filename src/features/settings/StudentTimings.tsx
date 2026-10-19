@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Panel } from '../../components/ui/Primitives';
+import { AppIcon, Button, Panel } from '../../components/ui/Primitives';
 import DeleteDialog from '../../components/shared/DeleteDialog';
 import { repository } from '../../lib/repository';
 import { formatSchoolTime } from '../../lib/studentTimings';
@@ -76,7 +76,7 @@ export default function StudentTimings() {
                       aria-label={`Edit timing ${timing.name}`}
                       onClick={() => setEditing(timing.id)}
                     >
-                      <Pencil size={15} />
+                      <AppIcon name="edit" size={14} />
                       Edit
                     </Button>
                     <Button
@@ -84,7 +84,7 @@ export default function StudentTimings() {
                       aria-label={`Delete timing ${timing.name}`}
                       onClick={() => setDeleting(timing.id)}
                     >
-                      <Trash2 size={15} />
+                      <AppIcon name="delete" size={14} />
                     </Button>
                   </div>
                 </li>

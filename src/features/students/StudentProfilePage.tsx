@@ -1,20 +1,21 @@
+import TabRail from '../../components/ui/TabRail';
 import { useState } from 'react';
 import StudentDialog from './StudentDialog';
 import DeleteStudentDialog from './DeleteStudentDialog';
 import { useToday } from '../../app/useToday';
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft,
-  CalendarCheck,
-  Wallet,
-  Award,
-  MapPin,
-  Users,
-  CalendarDays,
-  ArrowUpRight,
-} from 'lucide-react';
+import { ArrowLeft, MapPin, Users, CalendarDays, ArrowUpRight } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
-import { Avatar, Badge, Button, EmptyState, Panel, StatCard } from '../../components/ui/Primitives';
+import {
+  Avatar,
+  Badge,
+  Button,
+  EmptyState,
+  Panel,
+  StatCard,
+  AppIcon,
+  type IconName,
+} from '../../components/ui/Primitives';
 import { attendanceSummary, feeSummary, resultSummary, roster } from '../../lib/selectors';
 import { displayDate, money } from '../../lib/config';
 import { StudentFees } from '../fees/StudentFees';
@@ -22,7 +23,14 @@ import { StudentAcademics } from '../academics/StudentAcademics';
 import { StudentAttendance } from './StudentAttendance';
 import EntityDocuments from '../../components/shared/EntityDocuments';
 import '../../styles/ledgers.css';
-const tabs = ['overview', 'attendance', 'fees', 'academics', 'documents'];
+const tabs = ['overview', 'attendance', 'fees', 'academics', 'documents'] as const;
+const tabIcons: Record<(typeof tabs)[number], IconName> = {
+  overview: 'overview',
+  attendance: 'attendance',
+  fees: 'fees',
+  academics: 'academics',
+  documents: 'document',
+};
 export default function StudentProfilePage() {
   const state = useSchool();
   const navigate = useNavigate();
@@ -32,7 +40,8 @@ export default function StudentProfilePage() {
   const monthName = new Date(`${today}T12:00:00`).toLocaleDateString('en-IN', { month: 'long' });
   const { studentId } = useParams();
   const [params, setParams] = useSearchParams();
-  const tab = tabs.includes(params.get('tab') ?? '') ? params.get('tab')! : 'overview';
+  const requestedTab = params.get('tab') as (typeof tabs)[number] | null;
+  const tab = requestedTab && tabs.includes(requestedTab) ? requestedTab : 'overview';
   const row = roster(state, true).find((r) => r.student.id === studentId);
   if (!row)
     return (
@@ -101,15 +110,17 @@ export default function StudentProfilePage() {
           className="button secondary"
           to={`/attendance?class=${enrollment.classId}&section=${enrollment.sectionId}`}
         >
-          <CalendarCheck size={16} />
+          <AppIcon name="attendance" size={16} />
           Class register
         </Link>
       </div>
-      <div className="management-row-actions">
+      <div className="student-profile-actions">
         <Button variant="secondary" onClick={() => setEditing(true)}>
+          <AppIcon name="edit" size={15} />
           Edit student
         </Button>
         <Button variant="ghost" className="delete-action" onClick={() => setDeleting(true)}>
+          <AppIcon name="delete" size={15} />
           Delete student
         </Button>
       </div>
@@ -121,7 +132,7 @@ export default function StudentProfilePage() {
           onDeleted={() => navigate('/students')}
         />
       )}
-      <div className="tabs profile-tabs" role="tablist" aria-label="Student profile tabs">
+      <TabRail className="tabs profile-tabs" role="tablist" aria-label="Student profile tabs">
         {tabs.map((t) => (
           <button
             role="tab"
@@ -138,10 +149,11 @@ export default function StudentProfilePage() {
               })
             }
           >
-            {t[0].toUpperCase() + t.slice(1)}
+            <AppIcon name={tabIcons[t]} size={16} />
+            {t === 'academics' ? 'Progress Report' : t[0].toUpperCase() + t.slice(1)}
           </button>
         ))}
-      </div>
+      </TabRail>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === 'overview' && (
           <>
@@ -150,7 +162,7 @@ export default function StudentProfilePage() {
                 label={`${monthName} attendance`}
                 value={`${attendance.percentage}%`}
                 detail={`${attendance.attended} attending / ${attendance.marked} marked days`}
-                icon={<CalendarCheck size={18} />}
+                icon={<AppIcon name="attendance" size={24} />}
                 tone="green"
                 href={`/students/${student.id}?tab=attendance`}
               />
@@ -158,7 +170,7 @@ export default function StudentProfilePage() {
                 label="Outstanding fees"
                 value={money(fees.outstanding)}
                 detail="Current academic year · Includes future dues"
-                icon={<Wallet size={18} />}
+                icon={<AppIcon name="finance-balance" size={24} />}
                 tone="amber"
                 href={`/students/${student.id}?tab=fees`}
               />
@@ -170,7 +182,7 @@ export default function StudentProfilePage() {
                     ? `${latestExam.name} · ${result?.absent ? 'Absent' : `Grade ${academic.grade}`}`
                     : 'No results recorded yet'
                 }
-                icon={<Award size={18} />}
+                icon={<AppIcon name="trophy" size={24} />}
                 href={`/students/${student.id}?tab=academics`}
               />
             </div>
@@ -218,9 +230,6 @@ export default function StudentProfilePage() {
                   <Badge tone={student.guardian.contact ? 'green' : 'amber'}>
                     {student.guardian.contact ? 'Contact on file' : 'Contact not available'}
                   </Badge>
-                  <p className="fine-print">
-                    Parent communication preferences are managed by the school office.
-                  </p>
                 </div>
                 <Link className="panel-bottom-link" to="/notifications">
                   Open notification workspace <ArrowUpRight size={15} />
@@ -234,7 +243,7 @@ export default function StudentProfilePage() {
               <div className="student-activity">
                 <div>
                   <span className="activity-icon blue">
-                    <CalendarCheck size={17} />
+                    <AppIcon name="attendance" size={20} />
                   </span>
                   <span>
                     <strong>{monthName} attendance summary</strong>
@@ -245,7 +254,7 @@ export default function StudentProfilePage() {
                 </div>
                 <div>
                   <span className="activity-icon green">
-                    <Wallet size={17} />
+                    <AppIcon name="wallet" size={20} />
                   </span>
                   <span>
                     <strong>{fees.payments.length} payments recorded</strong>
@@ -254,7 +263,7 @@ export default function StudentProfilePage() {
                 </div>
                 <div>
                   <span className="activity-icon blue">
-                    <Award size={17} />
+                    <AppIcon name="trophy" size={20} />
                   </span>
                   <span>
                     <strong>{latestExam?.name ?? 'No results recorded yet'}</strong>

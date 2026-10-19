@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, EmptyState, Panel } from '../../components/ui/Primitives';
+import { AppIcon, Button, EmptyState, Panel } from '../../components/ui/Primitives';
 import DeleteDialog from '../../components/shared/DeleteDialog';
 import { defaultStaffPayroll } from '../../lib/settings';
 import { staffDirectory, staffLabel } from '../../lib/staffStructure';
@@ -66,7 +66,7 @@ export default function StaffDepartments() {
                 setEditing({ kind: 'Department', id: department.id, name: department.name })
               }
             >
-              <Pencil size={14} />
+              <AppIcon name="edit" size={14} />
               Edit
             </Button>
             <Button
@@ -76,7 +76,7 @@ export default function StaffDepartments() {
                 setDeleting({ kind: 'Department', id: department.id, name: department.name })
               }
             >
-              <Trash2 size={14} />
+              <AppIcon name="delete" size={14} />
             </Button>
           </div>
           <div className="staff-designation-heading">
@@ -107,7 +107,7 @@ export default function StaffDepartments() {
                         aria-label={`Edit staff ${member.name}`}
                         onClick={() => setEditingStaff(member.id)}
                       >
-                        <Pencil size={14} />
+                        <AppIcon name="edit" size={14} />
                       </Button>
                     </li>
                   );

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Modal } from '../../components/ui/Primitives';
+import { PickerInput, Button, Modal } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import {
   SCHOOL_WEEKDAYS,
@@ -93,7 +93,7 @@ export default function StudentTimingDialog({
           {(['start', 'end'] as const).map((key) => (
             <label className="student-timing-field" key={key}>
               {key === 'start' ? 'Student start time' : 'Student end time'}
-              <input
+              <PickerInput
                 type="time"
                 required
                 value={draft[key]}

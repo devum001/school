@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Modal } from '../../components/ui/Primitives';
+import { PickerInput, Button, Modal } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import type { TeacherInput } from '../../lib/management';
 import { useDraftGuard } from '../academics/useDraftGuard';
@@ -145,7 +145,7 @@ export default function TeacherDialog({
             </label>
             <label className="field">
               Joining date
-              <input
+              <PickerInput
                 required
                 type="date"
                 max={today}

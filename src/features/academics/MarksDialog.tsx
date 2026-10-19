@@ -1,12 +1,11 @@
-import { useRef, useState } from 'react';
-
-import { Download, Upload } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 
 import { useSchool } from '../../app/useSchool';
 
 import { useFeedback } from '../../app/useFeedback';
 
-import { Button, Modal, SearchInput } from '../../components/ui/Primitives';
+import { AppIcon, Button, Modal, SearchInput } from '../../components/ui/Primitives';
 
 import { examSections, sheetDraft } from '../../lib/academicSheets';
 
@@ -65,6 +64,28 @@ export default function MarksDialog({
   const [reading, setReading] = useState(false);
 
   const request = useRef(0);
+  const sampleDownload = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !sampleDownload.current?.contains(event.target))
+        sampleDownload.current?.removeAttribute('open');
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && sampleDownload.current?.open) {
+        event.preventDefault();
+        event.stopPropagation();
+        sampleDownload.current.removeAttribute('open');
+        sampleDownload.current.querySelector('summary')?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeOnEscape, true);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside);
+      document.removeEventListener('keydown', closeOnEscape, true);
+    };
+  }, []);
 
   const guard = useDraftGuard(
     JSON.stringify(drafts) !== initial || Boolean(preview) || reading,
@@ -97,6 +118,8 @@ export default function MarksDialog({
   };
 
   const template = (format: 'xlsx' | 'csv') => {
+    sampleDownload.current?.removeAttribute('open');
+    sampleDownload.current?.querySelector('summary')?.focus();
     const grid = sheetTemplate(draft.columns, draft.students),
       filename =
         `Marks-${exam.name}-${state.classes.find((c) => c.id === scopeClass)?.name ?? ''}-${sectionLabel(sections.find((s) => s.id === section)?.name ?? '')}`.replace(
@@ -196,15 +219,30 @@ export default function MarksDialog({
                   placeholder="Search name or roll number…"
                 />
                 <div className="inline-actions">
-                  <Button variant="secondary" onClick={() => template('xlsx')}>
-                    <Download size={15} />
-                    Excel template
-                  </Button>
-                  <Button variant="ghost" onClick={() => template('csv')}>
-                    CSV
-                  </Button>
+                  <details
+                    className="sample-download"
+                    ref={sampleDownload}
+                    onBlur={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget))
+                        event.currentTarget.removeAttribute('open');
+                    }}
+                  >
+                    <summary className="button secondary">
+                      <AppIcon name="download" size={16} />
+                      Download sample Excel / CSV
+                      <ChevronDown size={16} aria-hidden="true" />
+                    </summary>
+                    <div className="sample-download-options" role="group" aria-label="Sample file formats">
+                      <Button variant="ghost" onClick={() => template('xlsx')}>
+                        Excel (.xlsx)
+                      </Button>
+                      <Button variant="ghost" onClick={() => template('csv')}>
+                        CSV (.csv)
+                      </Button>
+                    </div>
+                  </details>
                   <label className="button secondary sheet-upload">
-                    <Upload size={15} />
+                    <AppIcon name="upload" size={16} />
                     {reading ? 'Reading…' : 'Import Excel / CSV'}
                     <input
                       type="file"
@@ -476,6 +514,7 @@ export default function MarksDialog({
                 }
               }}
             >
+              <AppIcon name="save" size={16} />
               Save Marks
             </Button>
           </div>

@@ -3,12 +3,12 @@ import '../../styles/ledgers.css';
 import AttendanceTabs from '../../components/shared/AttendanceTabs';
 import { attendanceSummary } from '../../lib/selectors';
 import { displayDate } from '../../lib/config';
-import { CheckCheck, Save, CalendarCheck } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import { useFeedback } from '../../app/useFeedback';
 import {
+  PickerInput,
   Avatar,
   Badge,
   Button,
@@ -16,6 +16,7 @@ import {
   Modal,
   PageHeading,
   Panel,
+  AppIcon,
 } from '../../components/ui/Primitives';
 import { useDraftGuard } from '../academics/useDraftGuard';
 import { defaultStaffPayroll } from '../../lib/settings';
@@ -88,10 +89,10 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
       {!embedded && (
         <PageHeading
           title="Attendance register"
-          description="Mark daily staff attendance. Full-day absences and half-days update salary leave counts."
           actions={
             <>
               <Link className="button secondary" to="/fees?tab=Salary+Expenses">
+                <AppIcon name="wallet" size={15} />
                 Open Salary
               </Link>
             </>
@@ -104,7 +105,7 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
           <div className="toolbar attendance-toolbar staff-register-toolbar">
             <label className="filter-label">
               Staff attendance date
-              <input
+              <PickerInput
                 type="date"
                 required
                 min={state.academicYear.start}
@@ -130,7 +131,7 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
               </select>
             </label>
             <div className="register-context">
-              <CalendarCheck size={18} />
+              <AppIcon name="attendance" size={20} />
               <span>
                 <strong>{state.academicYear.name}</strong>
                 <small>Academic year</small>
@@ -163,7 +164,7 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
                 setDraft(Object.fromEntries(members.map((member) => [member.id, 'present'])))
               }
             >
-              <CheckCheck size={16} />
+              <AppIcon name="user-check" size={16} />
               Mark all present
             </Button>
           }
@@ -248,7 +249,7 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
               </small>
             </div>
             <Button disabled={!members.length} onClick={save}>
-              <Save size={16} />
+              <AppIcon name="save" size={16} />
               Save staff attendance
             </Button>
           </div>

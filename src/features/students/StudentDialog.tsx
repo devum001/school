@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Modal } from '../../components/ui/Primitives';
+import { PickerInput, Button, Modal } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import { studentRecordCounts, type StudentInput } from '../../lib/management';
 import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
@@ -11,15 +11,18 @@ import '../../styles/management.css';
 import { currentFeePlan } from '../../lib/feePlans';
 import FeePlanEditor from './FeePlanEditor';
 import { feePlanDraft, feePlanInput } from '../../lib/feePlanDraft';
-import { nextAdmissionNumber, studentRollPreview } from '../../lib/studentNumbering';
 import { communicationError } from '../../lib/communication';
 export default function StudentDialog({
   studentId,
   initialSectionId,
+  initialClassId,
+  presentation = 'dialog',
   onClose,
 }: {
   studentId?: string;
   initialSectionId?: string;
+  initialClassId?: string;
+  presentation?: 'dialog' | 'page';
   onClose: () => void;
 }) {
   const state = useSchool();
@@ -29,6 +32,20 @@ export default function StudentDialog({
   const enrollment = state.enrollments.find(
     (e) => e.studentId === studentId && e.academicYearId === state.academicYear.id,
   );
+  const requestedSection = state.sections.find(
+    (section) => section.schoolId === state.school.id && section.id === initialSectionId,
+  );
+  const startingClass =
+    state.classes.find(
+      (item) =>
+        item.schoolId === state.school.id &&
+        item.id === (requestedSection?.classId ?? initialClassId),
+    ) ?? orderedClasses(state.classes.filter((item) => item.schoolId === state.school.id))[0];
+  const startingSection =
+    requestedSection ??
+    state.sections.find(
+      (section) => section.schoolId === state.school.id && section.classId === startingClass?.id,
+    );
   const [initial] = useState<StudentInput>(() => ({
     name: student?.name ?? '',
     admissionNumber: student?.admissionNumber ?? '',
@@ -36,17 +53,11 @@ export default function StudentDialog({
     birthDate: student?.birthDate ?? '',
     address: student?.address ?? '',
     guardian: student?.guardian ?? { name: '', relation: 'Parent', contact: null },
-    classId:
-      enrollment?.classId ??
-      state.sections.find((s) => s.id === initialSectionId)?.classId ??
-      state.classes[0]?.id ??
-      '',
-    sectionId: enrollment?.sectionId ?? initialSectionId ?? state.sections[0]?.id ?? '',
-    rollNumber: enrollment?.rollNumber ?? 1,
+    classId: enrollment?.classId ?? startingClass?.id ?? '',
+    sectionId: enrollment?.sectionId ?? startingSection?.id ?? '',
+    rollNumber: enrollment?.rollNumber ?? 0,
   }));
   const [draft, setDraft] = useState(initial);
-  const admission = student?.admissionNumber ?? nextAdmissionNumber(state);
-  const roll = studentRollPreview(state, { ...draft, id: studentId, admissionNumber: admission });
   const [initialFees] = useState(() =>
     feePlanDraft(enrollment ? currentFeePlan(state, enrollment.id) : undefined),
   );
@@ -66,6 +77,7 @@ export default function StudentDialog({
     <Modal
       open
       wide
+      presentation={presentation}
       onClose={guard.confirming ? guard.keepEditing : guard.requestClose}
       title={
         guard.confirming ? 'Discard student changes?' : student ? 'Edit student' : 'Add student'
@@ -93,14 +105,12 @@ export default function StudentDialog({
               repository.saveStudent(
                 {
                   ...draft,
-                  admissionNumber: student?.admissionNumber ?? '',
-                  rollNumber: roll,
                   feePlan: !student || feesChanged ? feePlanInput(fees) : undefined,
                 },
                 studentId,
               );
               notify(student ? 'Student updated.' : 'Student added to the directory.');
-              onClose();
+              guard.complete();
             } catch (err) {
               setError(communicationError(err));
             }
@@ -119,11 +129,16 @@ export default function StudentDialog({
             </label>
             <label className="field">
               Admission number
-              <input readOnly value={admission} />
+              <input
+                required
+                maxLength={100}
+                value={draft.admissionNumber}
+                onChange={(e) => field('admissionNumber', e.target.value)}
+              />
             </label>
             <label className="field">
               Date of birth
-              <input
+              <PickerInput
                 required
                 type="date"
                 max={today}
@@ -192,7 +207,14 @@ export default function StudentDialog({
             </label>
             <label className="field">
               Roll number
-              <input readOnly value={draft.name.trim() ? roll : 'Assigned by name'} />
+              <input
+                required
+                type="number"
+                min={1}
+                step={1}
+                value={draft.rollNumber || ''}
+                onChange={(e) => field('rollNumber', Number(e.target.value))}
+              />
             </label>
           </div>
           {locked && (

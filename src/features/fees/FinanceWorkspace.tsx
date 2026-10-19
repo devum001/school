@@ -1,9 +1,12 @@
+import TabRail from '../../components/ui/TabRail';
+import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Wallet, Receipt, ArrowDownLeft, Scale, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import {
+  PickerInput,
   Button,
   EmptyState,
   Modal,
@@ -11,6 +14,8 @@ import {
   Panel,
   SearchInput,
   StatCard,
+  AppIcon,
+  type IconName,
 } from '../../components/ui/Primitives';
 import GeneratedDocumentPreview from '../../components/shared/GeneratedDocumentPreview';
 import { money, displayDate } from '../../lib/config';
@@ -27,6 +32,12 @@ import FeesPage from './FeesPage';
 import StaffPage from '../teachers/StaffPage';
 import '../../styles/ledgers.css';
 const tabs = ['Overview', 'Student Fees', 'Salary Expenses', 'Transactions'] as const;
+const financeTabIcons: Record<(typeof tabs)[number], IconName> = {
+  Overview: 'overview',
+  'Student Fees': 'fees',
+  'Salary Expenses': 'wallet',
+  Transactions: 'receipt',
+};
 export default function FinanceWorkspace() {
   const state = useSchool(),
     today = useToday(),
@@ -68,11 +79,8 @@ export default function FinanceWorkspace() {
     });
   return (
     <div className="ledger-stack finance-workspace">
-      <PageHeading
-        title="Finance"
-        description="Student fee collections, staff salary expenses and your school's balance."
-      />
-      <div className="hr-tabs" role="tablist" aria-label="Finance">
+      <PageHeading title="Finance" />
+      <TabRail className="hr-tabs" role="tablist" aria-label="Finance">
         {tabs.map((value, index) => (
           <button
             key={value}
@@ -92,10 +100,27 @@ export default function FinanceWorkspace() {
               )
             }
           >
+            <AppIcon name={financeTabIcons[value]} size={16} />
             {value}
           </button>
         ))}
-      </div>
+      </TabRail>
+      {tab === 'Overview' && (
+        <SectionNavigation
+          label="Finance overview views"
+          items={[
+            { id: 'summary', label: 'Collections & Revenue' },
+            { id: 'salary', label: 'Salary Summary' },
+            { id: 'recent', label: 'Recent Transactions' },
+          ]}
+          value={
+            ['salary', 'recent'].includes(params.get('financeView') ?? '')
+              ? params.get('financeView')!
+              : 'summary'
+          }
+          onChange={(value) => update('financeView', value)}
+        />
+      )}
       {(tab === 'Overview' || tab === 'Transactions') && (
         <div className="finance-period">
           <label className="field">
@@ -112,7 +137,7 @@ export default function FinanceWorkspace() {
           {period === 'cycle' && (
             <label className="field">
               Finance cycle month
-              <input
+              <PickerInput
                 aria-label="Finance cycle month"
                 type="month"
                 value={month}
@@ -131,116 +156,122 @@ export default function FinanceWorkspace() {
       <div id="finance-panel" role="tabpanel" aria-labelledby={`finance-tab-${tabs.indexOf(tab)}`}>
         {tab === 'Overview' && (
           <div className="ledger-stack">
-            <div className="stats-grid four finance-summary">
-              <StatCard
-                label="Student Fee Collections"
-                value={money(income)}
-                detail="Recorded student fee collections"
-                icon={<Receipt size={18} />}
-                tone="green"
-              />
-              <StatCard
-                label="Salary Expenses"
-                value={money(expenses)}
-                detail="Recorded salary payments"
-                icon={<ArrowDownLeft size={18} />}
-                tone="amber"
-              />
-              <StatCard
-                label="Net Revenue"
-                value={money(netRevenue)}
-                detail="Revenue minus paid salaries"
-                icon={<Scale size={18} />}
-              />
-              <StatCard
-                label="Pending Student Fees"
-                value={money(fees.outstanding)}
-                detail="All current fee plans, including future dues"
-                icon={<Wallet size={18} />}
-              />
-            </div>
-            <Panel
-              title="Salary Overview"
-              action={
-                <Button variant="secondary" onClick={() => update('tab', 'Salary Expenses')}>
-                  Manage Staff Salaries
-                </Button>
-              }
-            >
-              <div className="finance-period panel-padding">
-                <label className="field">
-                  Salary cycle month
-                  <input
-                    aria-label="Overview salary cycle month"
-                    type="month"
-                    value={month}
-                    onChange={(e) => {
-                      if (salaryMonthSchema.safeParse(e.target.value).success)
-                        update('month', e.target.value);
-                    }}
-                  />
-                </label>
-                <p>
-                  {displayDate(cycle.start)} – {displayDate(cycle.end)}
-                </p>
-              </div>
-              <dl className="school-finance-values finance-salary-values" data-month={month}>
-                {[
-                  ['Gross monthly salaries', finance.grossSalary],
-                  ['Salary deductions', finance.deductions],
-                  ['Net monthly salaries', finance.netSalary],
-                ].map(([label, value]) => (
-                  <div key={String(label)}>
-                    <dt>{label}</dt>
-                    <dd>{money(Number(value))}</dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="school-finance-note panel-padding">
-                {finance.configuredCount} active staff with salary configured
-                {finance.unconfiguredCount
-                  ? ` · ${finance.unconfiguredCount} salaries not set`
-                  : ''}
-                .
-              </p>
-            </Panel>
-            <Panel title="Recent transactions">
-              <div
-                className="table-wrap"
-                role="region"
-                aria-label="Recent finance transactions"
-                tabIndex={0}
-              >
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Person</th>
-                      <th>Type</th>
-                      <th>Date</th>
-                      <th>Income</th>
-                      <th>Expense</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {entries.slice(0, 8).map((entry) => (
-                      <tr key={entry.id}>
-                        <th scope="row">{entry.name}</th>
-                        <td>{entry.type}</td>
-                        <td>{displayDate(entry.date)}</td>
-                        <td>{entry.income ? money(entry.income) : '—'}</td>
-                        <td>{entry.expense ? money(entry.expense) : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {!entries.length && (
-                <EmptyState
-                  title="No payments in this period"
-                  description="Record student or salary payments to update this summary."
+            {!['salary', 'recent'].includes(params.get('financeView') ?? '') && (
+              <div className="stats-grid four finance-summary">
+                <StatCard
+                  label="Student Fee Collections"
+                  value={money(income)}
+                  detail="Recorded student fee collections"
+                  icon={<AppIcon name="receipt" size={48} />}
+                  tone="green"
                 />
-              )}
-            </Panel>
+                <StatCard
+                  label="Salary Expenses"
+                  value={money(expenses)}
+                  detail="Recorded salary payments"
+                  icon={<AppIcon name="wallet" size={48} />}
+                  tone="amber"
+                />
+                <StatCard
+                  label="Net Revenue"
+                  value={money(netRevenue)}
+                  detail="Revenue minus paid salaries"
+                  icon={<AppIcon name="finance-balance" size={48} />}
+                />
+                <StatCard
+                  label="Pending Student Fees"
+                  value={money(fees.outstanding)}
+                  detail="All current fee plans, including future dues"
+                  icon={<AppIcon name="fees" size={48} />}
+                />
+              </div>
+            )}
+            {params.get('financeView') === 'salary' && (
+              <Panel
+                title="Salary Overview"
+                action={
+                  <Button variant="secondary" onClick={() => update('tab', 'Salary Expenses')}>
+                    Manage Staff Salaries
+                  </Button>
+                }
+              >
+                <div className="finance-period panel-padding">
+                  <label className="field">
+                    Salary cycle month
+                    <PickerInput
+                      aria-label="Overview salary cycle month"
+                      type="month"
+                      value={month}
+                      onChange={(e) => {
+                        if (salaryMonthSchema.safeParse(e.target.value).success)
+                          update('month', e.target.value);
+                      }}
+                    />
+                  </label>
+                  <p>
+                    {displayDate(cycle.start)} – {displayDate(cycle.end)}
+                  </p>
+                </div>
+                <dl className="school-finance-values finance-salary-values" data-month={month}>
+                  {[
+                    ['Gross monthly salaries', finance.grossSalary],
+                    ['Salary deductions', finance.deductions],
+                    ['Net monthly salaries', finance.netSalary],
+                  ].map(([label, value]) => (
+                    <div key={String(label)}>
+                      <dt>{label}</dt>
+                      <dd>{money(Number(value))}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="school-finance-note panel-padding">
+                  {finance.configuredCount} active staff with salary configured
+                  {finance.unconfiguredCount
+                    ? ` · ${finance.unconfiguredCount} salaries not set`
+                    : ''}
+                  .
+                </p>
+              </Panel>
+            )}
+            {params.get('financeView') === 'recent' && (
+              <Panel title="Recent transactions">
+                <div
+                  className="table-wrap"
+                  role="region"
+                  aria-label="Recent finance transactions"
+                  tabIndex={0}
+                >
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Person</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Income</th>
+                        <th>Expense</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {entries.slice(0, 8).map((entry) => (
+                        <tr key={entry.id}>
+                          <th scope="row">{entry.name}</th>
+                          <td>{entry.type}</td>
+                          <td>{displayDate(entry.date)}</td>
+                          <td>{entry.income ? money(entry.income) : '—'}</td>
+                          <td>{entry.expense ? money(entry.expense) : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {!entries.length && (
+                  <EmptyState
+                    title="No payments in this period"
+                    description="Record student or salary payments to update this summary."
+                  />
+                )}
+              </Panel>
+            )}
           </div>
         )}
         {tab === 'Student Fees' && <FeesPage embedded />}
@@ -367,10 +398,6 @@ export default function FinanceWorkspace() {
           </Panel>
         )}
       </div>
-      <p className="panel-note">
-        Amounts are in INR. Fee plans and pending salaries are tracked separately from received or
-        paid amounts.
-      </p>
       <Modal
         open={!!document}
         wide
@@ -380,7 +407,7 @@ export default function FinanceWorkspace() {
       >
         {document && <GeneratedDocumentPreview data={document} />}
       </Modal>
-      <Link className="text-link" to="/settings?tab=Staff+%26+Payroll">
+      <Link className="text-link" to="/settings?tab=Staff+%26+Payroll&section=payroll">
         Salary rules & settings →
       </Link>
     </div>

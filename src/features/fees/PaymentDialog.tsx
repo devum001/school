@@ -3,7 +3,7 @@ import { useToday } from '../../app/useToday';
 import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Modal } from '../../components/ui/Primitives';
+import { PickerInput, Button, Modal } from '../../components/ui/Primitives';
 import { feeSummary, installments, roster } from '../../lib/selectors';
 import { money } from '../../lib/config';
 import { repository } from '../../lib/repository';
@@ -167,7 +167,7 @@ export default function PaymentDialog({
             </label>
             <label className="field">
               Payment date
-              <input
+              <PickerInput
                 aria-label="Payment date"
                 required
                 type="date"

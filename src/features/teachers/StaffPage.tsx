@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import {
+  PickerInput,
   Avatar,
   Badge,
   Button,
@@ -11,6 +11,7 @@ import {
   PageHeading,
   Panel,
   SearchInput,
+  AppIcon,
 } from '../../components/ui/Primitives';
 import { defaultStaffPayroll } from '../../lib/settings';
 import { staffDirectory, staffDesignation, staffLabel } from '../../lib/staffStructure';
@@ -53,14 +54,14 @@ export default function StaffPage({ embedded = false }: { embedded?: boolean }) 
       {!embedded && (
         <PageHeading
           title="Staff"
-          description="Track staff salaries and leave deductions by salary cycle."
           actions={
             <>
               <Link className="button secondary" to="/attendance/staff">
+                <AppIcon name="attendance" size={15} />
                 Staff attendance
               </Link>
               <Button onClick={() => setAdding(true)} disabled={!config.setup.departments.length}>
-                <Plus size={15} />
+                <AppIcon name="staff" size={15} />
                 Add Staff
               </Button>
             </>
@@ -71,7 +72,7 @@ export default function StaffPage({ embedded = false }: { embedded?: boolean }) 
         title="Salary"
         subtitle={`${members.length} staff`}
         action={
-          <Link className="text-link" to="/settings?tab=Staff+%26+Payroll">
+          <Link className="text-link" to="/settings?tab=Staff+%26+Payroll&section=payroll">
             Manage staff & salary settings
           </Link>
         }
@@ -79,7 +80,7 @@ export default function StaffPage({ embedded = false }: { embedded?: boolean }) 
         <div className="staff-directory-toolbar">
           <label>
             Salary cycle month
-            <input
+            <PickerInput
               type="month"
               value={month}
               onChange={(event) => {

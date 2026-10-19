@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Modal } from '../../components/ui/Primitives';
+import { PickerInput, Button, Modal } from '../../components/ui/Primitives';
 import GeneratedDocumentPreview from '../../components/shared/GeneratedDocumentPreview';
 import { defaultStaffPayroll } from '../../lib/settings';
 import { staffDirectory } from '../../lib/staffStructure';
@@ -111,7 +111,7 @@ export default function SalaryPaymentDialog({
             </label>
             <label className="field">
               Payment Date
-              <input
+              <PickerInput
                 aria-label="Salary payment date"
                 required
                 type="date"

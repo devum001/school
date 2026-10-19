@@ -26,7 +26,7 @@ test('student records can be added, edited and deleted without returning after r
   await page.getByLabel('Student name', { exact: true }).fill('Aditi V. Verma');
   await page.getByRole('button', { name: 'Save student', exact: true }).click();
   await page.getByRole('link', { name: 'Open Aditi V. Verma', exact: true }).click();
-  await page.getByRole('tab', { name: 'Academics', exact: true }).click();
+  await page.getByRole('tab', { name: 'Progress Report', exact: true }).click();
   await expect(page.getByText('Marks pending', { exact: true })).toBeVisible();
   await page.goto('/students');
   await page.getByPlaceholder('Search name or admission number…').fill(admission);

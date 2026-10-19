@@ -4,6 +4,8 @@ import AppShell from '../components/layout/AppShell';
 import { LazyBoundary, RouteError } from './RouteBoundaries';
 const Dashboard = lazy(() => import('../features/dashboard/DashboardPage'));
 const Students = lazy(() => import('../features/students/StudentsPage'));
+const StudentImport = lazy(() => import('../features/students/StudentImportPage'));
+const StudentCreate = lazy(() => import('../features/students/StudentCreatePage'));
 const Profile = lazy(() => import('../features/students/StudentProfilePage'));
 const Teachers = lazy(() => import('../features/teachers/TeachersPage'));
 const TeacherProfile = lazy(() => import('../features/teachers/TeacherProfilePage'));
@@ -25,6 +27,8 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Dashboard /> },
           { path: 'students', element: <Students /> },
+          { path: 'students/new', element: <StudentCreate /> },
+          { path: 'students/import', element: <StudentImport /> },
           { path: 'students/:studentId', element: <Profile /> },
           { path: 'classes', element: <Classes /> },
           { path: 'teachers', element: <Teachers /> },

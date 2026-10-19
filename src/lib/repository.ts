@@ -239,7 +239,7 @@ export interface SchoolRepository {
   createTest: (input: NewTest) => string;
   saveTestMarks: (examId: string, entries: MarksEntry[]) => void;
   saveStudent: (input: StudentInput, studentId?: string) => void;
-  importStudents: (sectionId: string, grid: ExcelCell[][]) => void;
+  importStudents: (scopeId: string, grid: ExcelCell[][]) => void;
   deleteStudent: (studentId: string) => void;
   saveTeacher: (input: TeacherInput, teacherId?: string) => void;
   deleteTeacher: (teacherId: string) => void;
@@ -425,7 +425,7 @@ export const repository: SchoolRepository = {
   saveStaffRole: (input) => commit(saveStaffRole(state, input)),
   deleteStaffRole: (id) => commit(deleteStaffRole(state, id)),
   saveStaffLoginAccess: (input) => commit(saveStaffLoginAccess(state, input)),
-  importStudents: (sectionId, grid) => commit(importStudents(state, sectionId, grid)),
+  importStudents: (scopeId, grid) => commit(importStudents(state, scopeId, grid)),
   deleteStudent: (id) => commit(deleteStudent(state, id)),
   saveTeacher: (input, id) => commit(saveTeacher(state, input, id)),
   deleteTeacher: (id) => {

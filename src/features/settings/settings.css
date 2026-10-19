@@ -29,13 +29,16 @@
 }
 .settings-tabs button {
   white-space: nowrap;
-  padding: 10px;
+  padding: 10px 14px;
   background: transparent;
   border: 0;
   border-bottom: 2px solid transparent;
   color: #52647a;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .settings-tabs button:hover {
   color: var(--school-forest);
@@ -47,8 +50,8 @@
 }
 .school-settings .panel {
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px #00000005;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 .settings-profile {
   padding: 44px 24px 48px;
@@ -70,12 +73,10 @@
   width: 96px;
   height: 96px;
   flex-shrink: 0;
-  border-radius: 16px;
-  background: var(--school-forest);
-  color: #a7f3d0;
+  background: transparent;
+  color: var(--school-forest);
   display: grid;
   place-items: center;
-  box-shadow: 0 1px 2px #0000000d;
 }
 .settings-profile-identity h2 {
   font-size: 16px;
@@ -118,7 +119,7 @@
   border: 1px solid var(--border);
   padding: 6px 12px;
   min-height: 30px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: white;
   font-size: 12px;
   font-weight: 600;
@@ -172,13 +173,9 @@
   gap: 14px;
   padding: 16px;
   margin-bottom: 24px;
-  border: 1px solid #a7f3d099;
-  border-radius: 12px;
-  background: linear-gradient(90deg, #ecfdf5e6, #f0fdfa80, white);
-  box-shadow:
-    0 4px 16px -3px #10b9811f,
-    0 2px 4px #00000008,
-    inset 0 1px white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-heading);
 }
 .settings-policy-icon {
   display: grid;
@@ -186,14 +183,8 @@
   width: 40px;
   height: 40px;
   flex-shrink: 0;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #059669, var(--school-forest));
-  border: 1px solid #10b98166;
-  color: white;
-  box-shadow:
-    0 4px 10px #133a344d,
-    inset 0 1px 1px #ffffff59,
-    inset 0 -2px #00000033;
+  background: transparent;
+  color: var(--school-forest);
 }
 .settings-policy-header > div {
   flex: 1;
@@ -239,7 +230,7 @@
 .settings-policy-card {
   border: 1px solid var(--border);
   background: #f9fbfa;
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -585,13 +576,13 @@
   color: #334155;
   background: white;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-badge);
   padding: 4px 8px;
   font-size: 11px;
 }
 .staff-component-fields {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   margin: 0;
   padding: 14px;
   grid-column: 1 / -1;
@@ -621,7 +612,7 @@
 }
 .staff-payslip-preview {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 16px;
   background: #f9fbfa;
   grid-column: 1 / -1;

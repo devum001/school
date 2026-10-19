@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Modal } from '../../components/ui/Primitives';
+import { PickerInput, Button, Modal } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import { defaultStaffPayroll } from '../../lib/settings';
 import { staffDirectory, staffDesignation, type StaffInput } from '../../lib/staffStructure';
@@ -236,7 +236,7 @@ export default function StaffDialog({
             </label>
             <label className="field">
               Joining Date
-              <input
+              <PickerInput
                 required
                 type="date"
                 max={today}
@@ -257,7 +257,7 @@ export default function StaffDialog({
           <div className="form-grid">
             <label className="field">
               Salary effective from
-              <input
+              <PickerInput
                 required
                 type="month"
                 value={salary.effectiveFrom}

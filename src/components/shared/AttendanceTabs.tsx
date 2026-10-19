@@ -1,22 +1,24 @@
+import TabRail from '../ui/TabRail';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AppIcon } from '../ui/Primitives';
 import '../../styles/admin-settings.css';
 export default function AttendanceTabs({ date }: { date: string }) {
   const location = useLocation(),
     navigate = useNavigate();
   const staff = location.pathname.endsWith('/staff');
   return (
-    <div className="hr-tabs" role="tablist" aria-label="Attendance registers">
+    <TabRail className="hr-tabs" role="tablist" aria-label="Attendance registers">
       {[
-        ['Student Attendance', `/attendance?date=${date}`],
-        ['Staff Attendance', `/attendance/staff?date=${date}`],
-      ].map(([label, to], index) => (
+        { label: 'Student Attendance', to: `/attendance?date=${date}`, icon: 'student' as const },
+        { label: 'Staff Attendance', to: `/attendance/staff?date=${date}`, icon: 'staff' as const },
+      ].map((item, index) => (
         <Link
-          key={label}
+          key={item.label}
           role="tab"
           aria-selected={staff === !!index}
           tabIndex={staff === !!index ? 0 : -1}
           aria-controls="attendance-register-content"
-          to={to}
+          to={item.to}
           onKeyDown={(e) => {
             if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
               e.preventDefault();
@@ -24,9 +26,10 @@ export default function AttendanceTabs({ date }: { date: string }) {
             }
           }}
         >
-          {label}
+          <AppIcon name={item.icon} size={16} />
+          {item.label}
         </Link>
       ))}
-    </div>
+    </TabRail>
   );
 }

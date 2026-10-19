@@ -1,9 +1,11 @@
+import TabRail from '../../components/ui/TabRail';
 import { useState } from 'react';
 import { tabKeyboard } from '../../lib/tabKeyboard';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import {
+  PickerInput,
   Avatar,
   Badge,
   Button,
@@ -64,10 +66,9 @@ export default function StaffHRPage() {
     <div className="ledger-stack">
       <PageHeading
         title="Staff & HR"
-        description="Staff records, daily attendance and leave counts."
         actions={<Button onClick={() => setAdding(true)}>Add Staff</Button>}
       />
-      <div className="hr-tabs" role="tablist" aria-label="Staff & HR">
+      <TabRail className="hr-tabs" role="tablist" aria-label="Staff & HR">
         {tabs.map((value, index) => (
           <button
             key={value}
@@ -90,7 +91,7 @@ export default function StaffHRPage() {
             {value}
           </button>
         ))}
-      </div>
+      </TabRail>
       {focus && (
         <p className="panel-note">
           Viewing {members.find((member) => member.id === focus)?.name ?? 'selected staff'} ·{' '}
@@ -224,7 +225,7 @@ export default function StaffHRPage() {
             <div className="toolbar staff-leave-toolbar">
               <label className="field">
                 Leave cycle month
-                <input
+                <PickerInput
                   aria-label="Leave cycle month"
                   type="month"
                   value={month}

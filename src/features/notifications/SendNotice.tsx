@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Badge, Button, Modal, Panel } from '../../components/ui/Primitives';
+import { PickerInput, Badge, Button, Modal, Panel } from '../../components/ui/Primitives';
 import { communicationError, communicationFor, previewNotice } from '../../lib/communication';
 import { ACTIVE_EVENTS, SYSTEM_EVENTS } from '../../lib/communicationConfig';
 import { roster } from '../../lib/selectors';
@@ -357,7 +357,7 @@ export default function SendNotice({
           {delivery === 'Schedule' && (
             <label className="field">
               Schedule date and time
-              <input
+              <PickerInput
                 type="datetime-local"
                 required
                 value={schedule}
@@ -366,11 +366,6 @@ export default function SendNotice({
             </label>
           )}
         </div>
-        {delivery === 'Schedule' && (
-          <p className="communication-note">
-            School local time. Scheduled demo notices are processed while the workspace is open.
-          </p>
-        )}
         {error && (
           <p className="form-error" role="alert">
             {error}
@@ -431,15 +426,15 @@ export default function SendNotice({
                     setComplete(true);
                     notify(
                       review?.input.scheduledAt
-                        ? 'Demo notice scheduled.'
-                        : 'Demo notice processed. Check delivery status in History.',
+                        ? 'Notice scheduled.'
+                        : 'Notice prepared. Review History for details.',
                     );
                   } catch (cause) {
                     setError(communicationError(cause));
                   }
                 }}
               >
-                {review?.input.scheduledAt ? 'Confirm schedule' : 'Send demo notice'}
+                {review?.input.scheduledAt ? 'Confirm schedule' : 'Save notice'}
               </Button>
             </>
           )}

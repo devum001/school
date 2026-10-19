@@ -1,9 +1,10 @@
+import SectionNavigation from '../../components/shared/SectionNavigation';
+import { useSettingsSection } from './useSettingsSection';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Pencil } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Modal, Panel } from '../../components/ui/Primitives';
+import { AppIcon, Button, Modal, Panel } from '../../components/ui/Primitives';
 import { communicationError, communicationFor } from '../../lib/communication';
 import { ACTIVE_EVENTS } from '../../lib/communicationConfig';
 import { repository } from '../../lib/repository';
@@ -15,6 +16,10 @@ import { useDraftGuard } from '../academics/useDraftGuard';
 import '../notifications/communication.css';
 
 export default function CommunicationSettings() {
+  const { section, navigation } = useSettingsSection([
+    { id: 'channels', label: 'Channels' },
+    { id: 'messages', label: 'Message Templates' },
+  ]);
   const state = useSchool(),
     notify = useFeedback(),
     settings = communicationFor(state).settings;
@@ -31,72 +36,71 @@ export default function CommunicationSettings() {
   };
   return (
     <div className="communication-settings">
-      <Panel
-        title="Channels"
-        subtitle="Choose the channels available to your school."
-        action={
-          <Link className="text-link" to="/notifications">
-            Open notifications
-          </Link>
-        }
-      >
-        <div className="communication-channels">
-          {settings.channels.map((channel) => (
-            <div key={channel.name}>
-              <div>
-                <strong>{channel.name}</strong>
-                <p>
-                  {channel.enabled
-                    ? channel.name === 'WhatsApp'
-                      ? 'Demo connected'
-                      : 'Active in demo'
-                    : 'Disabled'}
-                </p>
+      <SectionNavigation {...navigation} label="Settings features" />
+      {section === 'channels' && (
+        <Panel
+          title="Channels"
+          subtitle="Choose the channels available to your school."
+          action={
+            <Link className="text-link" to="/notifications">
+              Open notifications
+            </Link>
+          }
+        >
+          <div className="communication-channels">
+            {settings.channels.map((channel) => (
+              <div key={channel.name}>
+                <div>
+                  <strong>{channel.name}</strong>
+                  <p>{channel.enabled ? 'Enabled' : 'Disabled'}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-label={`${channel.name} channel`}
+                  aria-checked={channel.enabled}
+                  className={`toggle ${channel.enabled ? 'checked' : ''}`}
+                  onClick={() =>
+                    save({
+                      ...settings,
+                      channels: settings.channels.map((c) =>
+                        c.name === channel.name ? { ...c, enabled: !c.enabled } : c,
+                      ),
+                    })
+                  }
+                >
+                  <span />
+                </button>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-label={`${channel.name} channel`}
-                aria-checked={channel.enabled}
-                className={`toggle ${channel.enabled ? 'checked' : ''}`}
-                onClick={() =>
-                  save({
-                    ...settings,
-                    channels: settings.channels.map((c) =>
-                      c.name === channel.name ? { ...c, enabled: !c.enabled } : c,
-                    ),
-                  })
-                }
-              >
-                <span />
-              </button>
-            </div>
-          ))}
-        </div>
-      </Panel>
-      <Panel
-        title="Message Templates"
-        subtitle="Write default messages in your preferred language."
-      >
-        <ul className="communication-template-list">
-          {ACTIVE_EVENTS.map((event) => (
-            <li key={event}>
-              <div>
-                <strong>{event}</strong>
-                <p>{settings.templates[event]}</p>
-              </div>
-              <Button
-                variant="ghost"
-                aria-label={`Edit ${event} template`}
-                onClick={() => setEditing(event)}
-              >
-                <Pencil size={15} />
-                Edit
-              </Button>
-            </li>
-          ))}
-        </ul>
-      </Panel>
+            ))}
+          </div>
+        </Panel>
+      )}
+      {section === 'messages' && (
+        <Panel
+          title="Message Templates"
+          subtitle="Write default messages in your preferred language."
+        >
+          <ul className="communication-template-list">
+            {ACTIVE_EVENTS.map((event) => (
+              <li key={event}>
+                <div>
+                  <strong>{event}</strong>
+                  <p>{settings.templates[event]}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  aria-label={`Edit ${event} template`}
+                  onClick={() => setEditing(event)}
+                >
+                  <AppIcon name="edit" size={16} />
+                  Edit
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
       {error && (
         <p role="alert" className="form-error">
           {error}
@@ -179,7 +183,9 @@ function TemplateEditor({
               <Button type="button" variant="secondary" onClick={guard.requestClose}>
                 Cancel
               </Button>
-              <Button type="submit">Save template</Button>
+              <Button type="submit">
+                <AppIcon name="save" size={16} /> Save template
+              </Button>
             </div>
           </form>
         )}

@@ -1,8 +1,10 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Search, Inbox, ArrowUpRight } from 'lucide-react';
-import type { ReactNode, ButtonHTMLAttributes } from 'react';
+import { X, ArrowUpRight } from 'lucide-react';
+import type { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes } from 'react';
 import { Link } from 'react-router-dom';
 import { initials } from '../../lib/config';
+import { AppIcon } from './AppIcon';
+export { AppIcon, iconNames, type IconName, type AppIconProps } from './AppIcon';
 export function Button({
   children,
   variant = 'primary',
@@ -17,6 +19,44 @@ export function Button({
     </button>
   );
 }
+type PickerInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
+  type: 'date' | 'month' | 'time' | 'datetime-local';
+};
+
+function openNativePicker(input: HTMLInputElement): boolean {
+  if (input.disabled || input.readOnly || typeof input.showPicker !== 'function') return false;
+  try {
+    input.showPicker();
+    return true;
+  } catch {
+    // Keep native editing available when the browser blocks or lacks a popup picker.
+    return false;
+  }
+}
+
+export function PickerInput({ type, onClick, onKeyDown, ...props }: PickerInputProps) {
+  return (
+    <input
+      {...props}
+      type={type}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented && openNativePicker(event.currentTarget))
+          event.preventDefault();
+      }}
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        if (
+          !event.defaultPrevented &&
+          event.key === 'Enter' &&
+          openNativePicker(event.currentTarget)
+        )
+          event.preventDefault();
+      }}
+    />
+  );
+}
+
 export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: string }) {
   return <span className={`badge ${tone}`}>{children}</span>;
 }
@@ -35,7 +75,7 @@ export function PageHeading({
 }: {
   eyebrow?: string;
   title: string;
-  description: string;
+  description?: string;
   actions?: ReactNode;
 }) {
   return (
@@ -43,7 +83,7 @@ export function PageHeading({
       <div>
         {eyebrow && <div className="eyebrow">{eyebrow}</div>}
         <h1>{title}</h1>
-        <p>{description}</p>
+        {description && <p>{description}</p>}
       </div>
       {actions && <div className="page-actions">{actions}</div>}
     </div>
@@ -88,7 +128,7 @@ export function StatCard({
   label: string;
   value: ReactNode;
   detail: ReactNode;
-  icon: ReactNode;
+  icon?: ReactNode;
   href?: string;
   tone?: string;
 }) {
@@ -96,7 +136,7 @@ export function StatCard({
     <>
       <div className="stat-top">
         <span>{label}</span>
-        <span className={`stat-icon ${tone}`}>{icon}</span>
+        {icon && <span className={`stat-icon ${tone}`}>{icon}</span>}
       </div>
       <strong className="stat-value">{value}</strong>
       <div className="stat-detail">
@@ -106,11 +146,11 @@ export function StatCard({
     </>
   );
   return href ? (
-    <Link className="panel stat-card" to={href}>
+    <Link className={`panel stat-card ${tone}`} to={href}>
       {content}
     </Link>
   ) : (
-    <div className="panel stat-card">{content}</div>
+    <div className={`panel stat-card ${tone}`}>{content}</div>
   );
 }
 export function SearchInput({
@@ -123,29 +163,31 @@ export function SearchInput({
   placeholder?: string;
 }) {
   return (
-    <div className="search-input">
-      <Search size={17} />
+    <label className="search-input">
+      <AppIcon name="search" size={18} aria-hidden="true" />
       <input
         aria-label={placeholder}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
-    </div>
+    </label>
   );
 }
 export function EmptyState({
   title = 'No records found',
   description = 'Try another search or update your filters.',
   action,
+  icon,
 }: {
   title?: string;
   description?: string;
   action?: ReactNode;
+  icon?: ReactNode;
 }) {
   return (
     <div className="empty-state">
-      <Inbox size={30} />
+      {icon ?? <AppIcon name="inbox" size={36} />}
       <h3>{title}</h3>
       <p>{description}</p>
       {action}
@@ -159,6 +201,7 @@ export function Modal({
   description,
   children,
   wide = false,
+  presentation = 'dialog',
 }: {
   open: boolean;
   onClose: () => void;
@@ -166,7 +209,23 @@ export function Modal({
   description: string;
   children: ReactNode;
   wide?: boolean;
+  presentation?: 'dialog' | 'page';
 }) {
+  if (presentation === 'page')
+    return open ? (
+      <section className="panel routed-form" aria-label={title}>
+        <div className="routed-form-heading">
+          <div>
+            <h1>{title}</h1>
+            {description && <p>{description}</p>}
+          </div>
+          <button className="button secondary" type="button" onClick={onClose}>
+            Back
+          </button>
+        </div>
+        {children}
+      </section>
+    ) : null;
   return (
     <Dialog.Root open={open} onOpenChange={(v) => !v && onClose()}>
       <Dialog.Portal>

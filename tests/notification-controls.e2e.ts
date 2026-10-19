@@ -119,7 +119,7 @@ test('Staff Access combines department and name filters and Off survives reload'
     },
     { key: STORAGE_KEY, state },
   );
-  await page.goto('/settings?tab=Roles+%26+Permissions');
+  await page.goto('/settings?tab=Roles+%26+Permissions&section=staff');
   await page.getByLabel('Staff access department').selectOption(accounts.id);
   const rows = page
     .getByRole('region', { name: 'Staff login access', exact: true })
@@ -132,7 +132,7 @@ test('Staff Access combines department and name filters and Off survives reload'
   await page.getByLabel('Search staff', { exact: true }).fill('');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: info.outputPath('staff-access-mobile.png'), fullPage: true });
-  await page.goto('/settings?tab=Data+%26+Security');
+  await page.goto('/settings?tab=Data+%26+Security&section=security');
   await page.getByLabel('Auto logout after inactivity', { exact: true }).selectOption('0');
   await page.reload();
   await expect(page.getByLabel('Auto logout after inactivity', { exact: true })).toHaveValue('0');

@@ -1,27 +1,19 @@
+import '../../styles/navigation.css';
 import { useToday } from '../../app/useToday';
 import { displayDate } from '../../lib/config';
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Users,
-  Bell,
-  CalendarCheck,
-  Wallet,
-  GraduationCap,
-  Settings,
   ChevronsUpDown,
   ArrowUpRight,
-  Search,
   Menu,
   X,
   ChevronDown,
-  ShieldCheck,
   CircleHelp,
 } from 'lucide-react';
 import { schoolLogoFor } from '../../lib/schoolBranding';
 import { useSchool } from '../../app/useSchool';
-import { Avatar, Button, Modal } from '../ui/Primitives';
+import { Avatar, Button, Modal, AppIcon, type IconName } from '../ui/Primitives';
 import TopbarControls from './TopbarControls';
 import { notificationAttention } from '../../lib/communicationOverview';
 import { preferencesFor } from '../../lib/adminSettings';
@@ -36,14 +28,14 @@ const hindiLabels: Record<string, string> = {
   Notifications: 'सूचनाएँ',
   'School settings': 'स्कूल सेटिंग्स',
 };
-const navigation = [
-  { to: '/', label: 'Overview', icon: LayoutDashboard },
-  { to: '/students', label: 'Students', icon: Users },
-  { to: '/teachers', label: 'Teachers', icon: GraduationCap },
-  { to: '/staff', label: 'Staff & HR', icon: Users },
-  { to: '/attendance', label: 'Attendance', icon: CalendarCheck },
-  { to: '/fees', label: 'Finance', icon: Wallet },
-  { to: '/academics', label: 'Academics', icon: GraduationCap },
+const navigation: Array<{ to: string; label: string; icon: IconName }> = [
+  { to: '/', label: 'Overview', icon: 'overview' },
+  { to: '/students', label: 'Students', icon: 'student' },
+  { to: '/teachers', label: 'Teachers', icon: 'teacher' },
+  { to: '/staff', label: 'Staff & HR', icon: 'staff' },
+  { to: '/attendance', label: 'Attendance', icon: 'attendance' },
+  { to: '/fees', label: 'Finance', icon: 'fees' },
+  { to: '/academics', label: 'Academics', icon: 'academics' },
 ];
 export default function AppShell() {
   const state = useSchool();
@@ -55,6 +47,17 @@ export default function AppShell() {
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const routeParams = new URLSearchParams(location.search);
+  const featureRoute = [
+    location.pathname,
+    ...['tab', 'section', 'action', 'view', 'resultsView', 'financeView'].map((key) =>
+      routeParams.get(key),
+    ),
+  ].join('|');
+  const focusPending = routeParams.get('focus') === 'pending';
+  useEffect(() => {
+    if (!location.hash && !focusPending) window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [featureRoute, location.hash, focusPending]);
   const preferences = preferencesFor(state),
     initialNavigation = useRef(false);
   const label = (value: string) =>
@@ -87,7 +90,7 @@ export default function AppShell() {
       <aside className={`sidebar ${mobile ? 'mobile-open' : ''}`}>
         <Link to="/" className="brand" onClick={() => setMobile(false)}>
           <span className="brand-mark">
-            <GraduationCap size={23} aria-hidden="true" />
+            <AppIcon name="graduation-cap" size={24} />
           </span>
           schoolwell<span className="brand-dot">.</span>
         </Link>
@@ -121,7 +124,7 @@ export default function AppShell() {
               onClick={() => setMobile(false)}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >
-              <n.icon size={19} />
+              <AppIcon name={n.icon} size={20} />
               <span>{label(n.label)}</span>
               {n.to === '/attendance' && <span className="nav-dot" />}
             </NavLink>
@@ -130,12 +133,12 @@ export default function AppShell() {
         <div className="nav-label second">COMMUNICATION & ADMIN</div>
         <nav aria-label="Administration">
           <NavLink className="nav-link" to="/notifications" onClick={() => setMobile(false)}>
-            <Bell size={19} />
+            <AppIcon name="notifications" size={20} />
             {label('Notifications')}
             {attention.count > 0 && <span className="nav-count">{attention.count}</span>}
           </NavLink>
           <NavLink className="nav-link" to="/settings" onClick={() => setMobile(false)}>
-            <Settings size={19} />
+            <AppIcon name="settings" size={20} />
             {label('School settings')}
           </NavLink>
         </nav>
@@ -173,13 +176,15 @@ export default function AppShell() {
                 setQuery('');
               }}
             >
-              <Search size={16} />
-              <input
-                aria-label="Search the student directory"
-                placeholder="Find a student…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
+              <label className="global-search-field">
+                <AppIcon name="search-dark" size={17} aria-hidden="true" />
+                <input
+                  aria-label="Search the student directory"
+                  placeholder="Find a student…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
             </form>
             <TopbarControls />
             <Link to="/settings" aria-label="Account settings">
@@ -193,7 +198,7 @@ export default function AppShell() {
         <footer>
           <span>Schoolwell · Thoughtfully connected.</span>
           <span>
-            <ShieldCheck size={13} /> {state.school.name}
+            <AppIcon name="security" size={14} /> {state.school.name}
           </span>
           <button onClick={() => setHelp(true)}>
             <CircleHelp size={14} />

@@ -12,6 +12,7 @@ export const STUDENT_IMPORT_HEADERS = [
   'Parent Mobile',
   'Address',
   'Roll Number',
+  'Section',
 ];
 export interface StudentImportRow {
   row: number;
@@ -22,17 +23,38 @@ export interface StudentImportPreview {
   rows: StudentImportRow[];
   errors: string[];
 }
+const sectionKey = (name: string) =>
+  name
+    .trim()
+    .replace(/^(?:section\s+)+/i, '')
+    .toLowerCase();
+
+/** Validate all class rows, section assignments and identifiers before committing any students. */
 export function previewStudentImport(
   state: DemoState,
-  sectionId: string,
+  scopeId: string,
   grid: ExcelCell[][],
 ): StudentImportPreview {
-  const section = state.sections.find((s) => s.id === sectionId && s.schoolId === state.school.id);
-  if (!section) throw new Error('Choose a section from this school.');
+  const legacySection = state.sections.find(
+    (s) => s.id === scopeId && s.schoolId === state.school.id,
+  );
+  const schoolClass = state.classes.find(
+    (c) => c.schoolId === state.school.id && c.id === (legacySection?.classId ?? scopeId),
+  );
+  if (!schoolClass) throw new Error('Choose a class from this school.');
   if (grid.length > 1001) throw new Error('Import up to 1,000 students per file.');
+  const sections = state.sections.filter(
+    (s) => s.schoolId === state.school.id && s.classId === schoolClass.id,
+  );
   const headers = (grid[0] ?? []).map((value) => String(value).trim().toLowerCase());
-  const required = ['Student Name', 'Birth Date', 'Guardian Name'];
-  for (const header of required)
+  for (const header of [
+    'Student Name',
+    'Admission Number',
+    'Birth Date',
+    'Guardian Name',
+    'Roll Number',
+    ...(!legacySection ? ['Section'] : []),
+  ])
     if (!headers.includes(header.toLowerCase()))
       throw new Error(`Missing column: ${header}. Download the sample Excel file.`);
   if (new Set(headers.filter(Boolean)).size !== headers.filter(Boolean).length)
@@ -40,22 +62,16 @@ export function previewStudentImport(
   const rows: StudentImportRow[] = [],
     errors: string[] = [];
   let validationState = state;
-  let nextRoll =
-    Math.max(
-      0,
-      ...state.enrollments
-        .filter(
-          (e) =>
-            e.schoolId === state.school.id &&
-            e.academicYearId === state.academicYear.id &&
-            e.sectionId === sectionId,
-        )
-        .map((e) => e.rollNumber),
-    ) + 1;
   grid.slice(1).forEach((cells, index) => {
     if (!cells.some((value) => String(value).trim() !== '')) return;
     const value = (header: string) => cells[headers.indexOf(header.toLowerCase())] ?? '';
     const text = (header: string) => String(value(header)).trim();
+    const matches = sections.filter((s) => sectionKey(s.name) === sectionKey(text('Section')));
+    const section = text('Section')
+      ? matches.length === 1
+        ? matches[0]
+        : undefined
+      : legacySection;
     const roll = text('Roll Number');
     let birthDate = text('Birth Date'),
       dateError = '';
@@ -76,21 +92,24 @@ export function previewStudentImport(
       },
       address: text('Address'),
       status: 'active',
-      classId: section.classId,
-      sectionId,
-      rollNumber: roll === '' ? nextRoll : Number(roll),
+      classId: schoolClass.id,
+      sectionId: section?.id ?? '',
+      rollNumber: Number(roll),
     };
     let error: string | undefined;
     try {
+      if (!section)
+        throw new Error(
+          `Section must match a configured section of ${schoolClass.name}: ${sections.map((s) => s.name).join(', ')}.`,
+        );
       if (dateError || !z.iso.date().safeParse(birthDate).success)
         throw new Error(
           dateError || 'Birth Date must be a valid YYYY-MM-DD date or Excel date cell.',
         );
-      if (roll && !/^\d+$/.test(roll))
-        throw new Error('Roll Number must be a whole number: 1, 2, 3…');
+      if (!/^\d+$/.test(roll) || Number(roll) <= 0)
+        throw new Error('Enter Roll Number as a positive whole number.');
+      if (!input.admissionNumber) throw new Error('Admission Number is required.');
       validationState = saveStudent(validationState, input);
-      input.admissionNumber = validationState.students.at(-1)!.admissionNumber;
-      nextRoll = Math.max(nextRoll, input.rollNumber + 1);
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'Check the student details.';
       errors.push(`Row ${index + 2}: ${error}`);
@@ -99,28 +118,10 @@ export function previewStudentImport(
   });
   if (!rows.length)
     throw new Error('The Students sheet has no student rows. Fill the sample below its header.');
-  for (const row of rows) {
-    if (row.error) continue;
-    const student = validationState.students.find(
-      (entry) =>
-        entry.schoolId === state.school.id && entry.admissionNumber === row.input.admissionNumber,
-    );
-    row.input.rollNumber =
-      validationState.enrollments.find(
-        (entry) =>
-          entry.studentId === student?.id &&
-          entry.sectionId === sectionId &&
-          entry.academicYearId === state.academicYear.id,
-      )?.rollNumber ?? row.input.rollNumber;
-  }
   return { rows, errors };
 }
-export function importStudents(
-  state: DemoState,
-  sectionId: string,
-  grid: ExcelCell[][],
-): DemoState {
-  const preview = previewStudentImport(state, sectionId, grid);
+export function importStudents(state: DemoState, scopeId: string, grid: ExcelCell[][]): DemoState {
+  const preview = previewStudentImport(state, scopeId, grid);
   if (preview.errors.length) throw new Error(preview.errors[0]);
   return preview.rows.reduce((next, row) => saveStudent(next, row.input), state);
 }

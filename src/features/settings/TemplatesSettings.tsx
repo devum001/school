@@ -1,5 +1,6 @@
+import SectionNavigation from '../../components/shared/SectionNavigation';
+import { retainsSettingsDraft, useSettingsSection } from './useSettingsSection';
 import { useState } from 'react';
-import { tabKeyboard } from '../../lib/tabKeyboard';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import { useFeedback } from '../../app/useFeedback';
@@ -32,18 +33,23 @@ import type {
 import '../../styles/ledgers.css';
 
 export default function TemplatesSettings() {
+  const { section, navigation } = useSettingsSection([
+    { id: 'letterhead', label: 'School Letterhead' },
+    { id: 'fee', label: 'Fee Receipt' },
+    { id: 'salary', label: 'Salary Slip' },
+  ]);
   const state = useSchool(),
     today = useToday(),
     notify = useFeedback(),
     settings = documentTemplatesFor(state);
   const [draft, setDraft] = useState(() => structuredClone(settings)),
-    [kind, setKind] = useState<DocumentKind>('Fee Receipt'),
     [error, setError] = useState('');
+  const kind: DocumentKind = section === 'salary' ? 'Salary Slip' : 'Fee Receipt';
   const [previewId, setPreviewId] = useState<TemplateId | null>(null),
     [zoom, setZoom] = useState(100),
     [uploading, setUploading] = useState<BrandingAsset | null>(null);
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings),
-    guard = useDraftGuard(dirty, () => setDraft(structuredClone(settings)));
+    guard = useDraftGuard(dirty, () => setDraft(structuredClone(settings)), retainsSettingsDraft);
   const key = kind === 'Fee Receipt' ? 'feeReceipt' : 'salarySlip',
     choice = draft[key];
   const row = roster(state, true)[0],
@@ -105,131 +111,96 @@ export default function TemplatesSettings() {
     amountLabel: kind === 'Fee Receipt' ? 'Amount received' : 'Net salary paid',
   };
   return (
-    <Panel
-      title="Templates"
-      subtitle="Select a design and accent color for generated receipts and salary slips."
-    >
+    <Panel className="templates-settings-panel">
       <div className="panel-padding">
-        <section className="document-branding" aria-label="School letterhead assets">
-          <h3>School letterhead</h3>
-          <div className="branding-assets">
-            {(
-              [
-                ['logo', 'School logo', '800 × 800 px'],
+        <SectionNavigation {...navigation} label="Template features" />
+        {section === 'letterhead' && (
+          <section className="document-branding" aria-label="School letterhead assets">
+            <h3>School letterhead</h3>
+            <div className="branding-assets">
+              {(
                 [
-                  'header',
-                  'Header',
-                  `${HEADER_IMPORT_SIZE.width} × ${HEADER_IMPORT_SIZE.height} px`,
-                ],
-                ['footer', 'Footer', '2480 × 262 px'],
-                ['signature', 'Official signature', '1040 × 560 px'],
-                ['stamp', 'School stamp', '800 × 800 px'],
-              ] as const
-            ).map(([asset, label, size]) => (
-              <div className="branding-asset" key={asset}>
-                <strong>{label}</strong>
-                <div className="branding-asset-image">
-                  {draft.branding?.[asset] ? (
-                    <img src={draft.branding[asset]} alt={`${label} artwork`} />
-                  ) : (
-                    <span>No image added</span>
-                  )}
-                </div>
-                <p className="branding-size">
-                  {asset === 'header' ? 'Recommended size' : 'Print quality'}: {size}
-                  <br />
-                  PNG, JPG or WebP · up to 5 MB
-                  <br />
-                  {asset === 'header'
-                    ? 'Matches the receipt table width. Export at this size without extra outside margins; the full image is preserved.'
-                    : 'Keep artwork close to the edges; avoid large blank margins.'}
-                  {(asset === 'logo' || asset === 'signature' || asset === 'stamp') && (
-                    <>
-                      <br />
-                      Transparent PNG works best.
-                    </>
-                  )}
-                </p>
-                <label className="button secondary document-upload-control">
-                  {uploading === asset ? 'Preparing…' : 'Import image'}
-                  <input
-                    aria-label={`Import ${label}`}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    disabled={!!uploading}
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      e.target.value = '';
-                      if (!file) return;
-                      setUploading(asset);
-                      try {
-                        const image = await readBrandingImage(file, asset);
+                  ['logo', 'School logo', '800 × 800 px'],
+                  [
+                    'header',
+                    'Header',
+                    `${HEADER_IMPORT_SIZE.width} × ${HEADER_IMPORT_SIZE.height} px`,
+                  ],
+                  ['footer', 'Footer', '2480 × 262 px'],
+                  ['signature', 'Official signature', '1040 × 560 px'],
+                  ['stamp', 'School stamp', '800 × 800 px'],
+                ] as const
+              ).map(([asset, label, size]) => (
+                <div className="branding-asset" key={asset}>
+                  <strong>{label}</strong>
+                  <div className="branding-asset-image">
+                    {draft.branding?.[asset] ? (
+                      <img src={draft.branding[asset]} alt={`${label} artwork`} />
+                    ) : (
+                      <span>No image added</span>
+                    )}
+                  </div>
+                  <p className="branding-size">
+                    {asset === 'header' ? 'Recommended size' : 'Print quality'}: {size}
+                    <br />
+                    PNG, JPG or WebP · up to 5 MB
+                    <br />
+                    {asset === 'header'
+                      ? 'Matches the receipt table width. Export at this size without extra outside margins; the full image is preserved.'
+                      : 'Keep artwork close to the edges; avoid large blank margins.'}
+                    {(asset === 'logo' || asset === 'signature' || asset === 'stamp') && (
+                      <>
+                        <br />
+                        Transparent PNG works best.
+                      </>
+                    )}
+                  </p>
+                  <label className="button secondary document-upload-control">
+                    {uploading === asset ? 'Preparing…' : 'Import image'}
+                    <input
+                      aria-label={`Import ${label}`}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      disabled={!!uploading}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (!file) return;
+                        setUploading(asset);
+                        try {
+                          const image = await readBrandingImage(file, asset);
+                          setDraft((current) => ({
+                            ...current,
+                            branding: { ...current.branding, [asset]: image },
+                          }));
+                          setError('');
+                        } catch (cause) {
+                          setError(communicationError(cause));
+                        } finally {
+                          setUploading(null);
+                        }
+                      }}
+                    />
+                  </label>
+                  {draft.branding?.[asset] && (
+                    <Button
+                      variant="ghost"
+                      onClick={() =>
                         setDraft((current) => ({
                           ...current,
-                          branding: { ...current.branding, [asset]: image },
-                        }));
-                        setError('');
-                      } catch (cause) {
-                        setError(communicationError(cause));
-                      } finally {
-                        setUploading(null);
+                          branding: { ...current.branding, [asset]: null },
+                        }))
                       }
-                    }}
-                  />
-                </label>
-                {draft.branding?.[asset] && (
-                  <Button
-                    variant="ghost"
-                    onClick={() =>
-                      setDraft((current) => ({
-                        ...current,
-                        branding: { ...current.branding, [asset]: null },
-                      }))
-                    }
-                  >
-                    Remove {label}
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-          <p className="panel-note">
-            Sample artwork is ready to preview. Import your school images to replace it. The school
-            logo updates school identity and documents. Schoolwell keeps its own app icon.
-          </p>
-        </section>
-        <div className="hr-tabs" role="tablist" aria-label="Document templates">
-          {(['Fee Receipt', 'Salary Slip'] as const).map((value, index) => (
-            <button
-              id={`document-template-tab-${index}`}
-              aria-controls="document-template-panel"
-              role="tab"
-              aria-selected={kind === value}
-              tabIndex={kind === value ? 0 : -1}
-              onKeyDown={(e) =>
-                tabKeyboard(
-                  e,
-                  index,
-                  ['Fee Receipt', 'Salary Slip'] as const,
-                  setKind,
-                  (_, i) => `document-template-tab-${i}`,
-                )
-              }
-              key={value}
-              onClick={() => {
-                setKind(value);
-                setPreviewId(null);
-              }}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
-        <div
-          id="document-template-panel"
-          role="tabpanel"
-          aria-labelledby={`document-template-tab-${kind === 'Fee Receipt' ? 0 : 1}`}
-        >
+                    >
+                      Remove {label}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        <div id="document-template-panel">
           <div className="template-tools">
             <Button
               disabled={!dirty || !!uploading}
@@ -246,48 +217,49 @@ export default function TemplatesSettings() {
               Save templates
             </Button>
           </div>
-          <div className="template-gallery">
-            {TEMPLATE_IDS.map((id) => (
-              <button
-                key={id}
-                className={`template-option ${choice.templateId === id ? 'selected' : ''}`}
-                aria-pressed={choice.templateId === id}
-                aria-label={`${TEMPLATE_LABELS[id]} ${kind} template`}
-                onClick={() => {
-                  setPreviewId(id);
-                  setZoom(100);
-                  setError('');
-                }}
-              >
-                {preview ? (
-                  <GeneratedDocumentPreview
-                    compact
-                    brandingMode="draft"
-                    actions={false}
-                    data={{
-                      ...preview,
-                      schoolLogo:
-                        draft.branding?.logo === null
-                          ? undefined
-                          : (draft.branding?.logo ?? schoolLogoFor(state)),
-                      branding: { ...draft.branding },
-                      template: designChoice(choice, id),
+          {section !== 'letterhead' && (
+            <>
+              {' '}
+              <div className="template-gallery">
+                {TEMPLATE_IDS.map((id) => (
+                  <button
+                    key={id}
+                    className={`template-option ${choice.templateId === id ? 'selected' : ''}`}
+                    aria-pressed={choice.templateId === id}
+                    aria-label={`${TEMPLATE_LABELS[id]} ${kind} template`}
+                    onClick={() => {
+                      setPreviewId(id);
+                      setZoom(100);
+                      setError('');
                     }}
-                  />
-                ) : (
-                  <img
-                    src={`/document-templates/${key === 'feeReceipt' ? 'fee' : 'salary'}-${id}.png`}
-                    alt={`${TEMPLATE_LABELS[id]} design`}
-                  />
-                )}
-                <span>{TEMPLATE_LABELS[id]}</span>
-              </button>
-            ))}
-          </div>
-          <p className="panel-note">
-            Preview uses existing school and {kind === 'Fee Receipt' ? 'student' : 'staff'} details.
-            All receipts and salary slips use your current saved templates and letterhead.
-          </p>
+                  >
+                    {preview ? (
+                      <GeneratedDocumentPreview
+                        compact
+                        brandingMode="draft"
+                        actions={false}
+                        data={{
+                          ...preview,
+                          schoolLogo:
+                            draft.branding?.logo === null
+                              ? undefined
+                              : (draft.branding?.logo ?? schoolLogoFor(state)),
+                          branding: { ...draft.branding },
+                          template: designChoice(choice, id),
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={`/document-templates/${key === 'feeReceipt' ? 'fee' : 'salary'}-${id}.png`}
+                        alt={`${TEMPLATE_LABELS[id]} design`}
+                      />
+                    )}
+                    <span>{TEMPLATE_LABELS[id]}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         {error && (
           <p className="form-error" role="alert">

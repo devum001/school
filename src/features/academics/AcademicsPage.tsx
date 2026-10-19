@@ -1,10 +1,11 @@
+import TabRail from '../../components/ui/TabRail';
 import { examClasses } from '../../lib/testScope';
 import { tabKeyboard } from '../../lib/tabKeyboard';
 import { useState } from 'react';
 
 import { Link, useSearchParams } from 'react-router-dom';
 
-import { MoreVertical, Pencil, Plus, BookOpen, ArrowLeft } from 'lucide-react';
+import { MoreVertical, ArrowLeft } from 'lucide-react';
 
 import { useSchool } from '../../app/useSchool';
 
@@ -14,6 +15,7 @@ import {
   EmptyState,
   PageHeading,
   SearchInput,
+  AppIcon,
 } from '../../components/ui/Primitives';
 
 import DeleteDialog from '../../components/shared/DeleteDialog';
@@ -71,7 +73,7 @@ export default function AcademicsPage() {
       (e) =>
         e.schoolId === state.school.id &&
         e.academicYearId === state.academicYear.id &&
-        examIncludes(e, classId),
+        (!resultsView || examIncludes(e, classId)),
     )
     .reverse()
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -91,18 +93,17 @@ export default function AcademicsPage() {
 
       <PageHeading
         title="Academics"
-        description="Manage tests, record marks and follow every student’s progress."
         actions={
           !resultsView ? (
             <Button onClick={() => setAdding(true)}>
-              <Plus size={17} />
+              <AppIcon name="academics" size={17} />
               Add Test / Exam
             </Button>
           ) : undefined
         }
       />
 
-      <div className="academic-tabs academic-main-tabs" role="tablist" aria-label="Academics">
+      <TabRail className="academic-tabs academic-main-tabs" role="tablist" aria-label="Academics">
         <button
           role="tab"
           id="academics-tab-tests"
@@ -120,6 +121,7 @@ export default function AcademicsPage() {
           aria-selected={!resultsView}
           onClick={() => change({ view: null, test: null, marks: null })}
         >
+          <AppIcon name="academics" size={16} />
           Recent Tests / Exams
         </button>
         <button
@@ -139,36 +141,16 @@ export default function AcademicsPage() {
           aria-selected={resultsView}
           onClick={() => change({ view: 'results', test: null, marks: null })}
         >
+          <AppIcon name="trophy" size={16} />
           Results
         </button>
-      </div>
+      </TabRail>
 
-      <div className="academic-context">
-        <label className="field">
-          Class
-          <select
-            aria-label="Academic class"
-            value={classId}
-            onChange={(e) =>
-              change({
-                class: e.target.value,
-                section: null,
-                scope: null,
-                test: null,
-                marks: null,
-                student: null,
-              })
-            }
-          >
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span>{state.academicYear.name}</span>
-      </div>
+      {!resultsView && (
+        <div className="academic-context academic-test-search">
+          <SearchInput value={query} onChange={setQuery} placeholder="Search test or exam…" />
+        </div>
+      )}
 
       {!classes.length ? (
         <EmptyState
@@ -184,30 +166,20 @@ export default function AcademicsPage() {
         <ResultsView classId={classId} exams={exams} params={params} change={change} />
       ) : (
         <>
-          <div className="academic-list-heading">
-            <div>
-              <h2>Recent Tests / Exams</h2>
-              <p>Newest first. Use the pencil to add or edit marks.</p>
-            </div>
-            <SearchInput value={query} onChange={setQuery} placeholder="Search test or exam…" />
-          </div>
-
           <div className="academic-test-list">
             {exams
-              .filter((e) => `${e.name} ${e.kind}`.toLowerCase().includes(query.toLowerCase()))
+              .filter((e) => e.name.toLowerCase().includes(query.toLowerCase()))
               .map((e) => {
-                const sections = examSections(state, e, classId);
+                const sections = examSections(state, e, '');
 
                 return (
                   <article className="panel academic-test-card" key={e.id}>
                     <span className="academic-test-icon">
-                      <BookOpen size={21} />
+                      <AppIcon name="document" size={44} />
                     </span>
                     <div className="academic-test-info">
                       <h3>{e.name}</h3>
-                      <p>
-                        {e.kind} · {displayDate(e.date)}
-                      </p>
+                      <p>{displayDate(e.date)}</p>
                       <div className="academic-test-scope">
                         {examClasses(state, e).map((c) => {
                           const assigned = examSections(state, e, c.id);
@@ -233,10 +205,15 @@ export default function AcademicsPage() {
                         aria-label={`Add/Edit Marks for ${e.name}`}
                         title="Add/Edit Marks"
                         onClick={() =>
-                          change({ test: e.id, marks: '1', section: sections[0]?.id ?? null })
+                          change({
+                            class: sections[0]?.classId ?? null,
+                            test: e.id,
+                            marks: '1',
+                            section: sections[0]?.id ?? null,
+                          })
                         }
                       >
-                        <Pencil size={18} />
+                        <AppIcon name="edit" size={18} />
                       </Button>
                       <details className="academic-test-menu">
                         <summary aria-label={`More options for ${e.name}`}>
@@ -268,9 +245,7 @@ export default function AcademicsPage() {
               })}
           </div>
 
-          {!exams.some((e) =>
-            `${e.name} ${e.kind}`.toLowerCase().includes(query.toLowerCase()),
-          ) && (
+          {!exams.some((e) => e.name.toLowerCase().includes(query.toLowerCase())) && (
             <EmptyState
               title={query ? 'No matching tests' : 'No tests yet'}
               description="Create a test, then open its pencil to record marks."

@@ -18,7 +18,8 @@ test('section roster templates and preview import use roll numbers and save no f
   await openSheet(page);
   const dialog = page.getByRole('dialog');
   const download = page.waitForEvent('download');
-  await dialog.getByRole('button', { name: 'CSV', exact: true }).click();
+  await dialog.getByText('Download sample Excel / CSV', { exact: true }).click();
+  await dialog.getByRole('button', { name: 'CSV (.csv)', exact: true }).click();
   const file = await download;
   const downloaded = parseMarksCsv(await readFile((await file.path())!, 'utf8'));
   expect(downloaded[0].slice(0, 2)).toEqual(['Roll No.', 'Student Name']);

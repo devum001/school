@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Download } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
-import { Badge, Button, Panel, SearchInput } from '../../components/ui/Primitives';
+import { AppIcon, Badge, Button, Panel, SearchInput } from '../../components/ui/Primitives';
 import { testResults } from '../../lib/academics';
 import { displayDate } from '../../lib/config';
 import { downloadCsv } from '../../lib/download';
@@ -56,7 +55,7 @@ export default function TestAbsences({
                 )
               }
             >
-              <Download size={15} />
+              <AppIcon name="download" size={16} />
               Export absences
             </Button>
           </div>
@@ -90,7 +89,7 @@ export default function TestAbsences({
                         aria-label={`Notify parent of ${r.student.name}`}
                         onClick={() => setRecipient(r.enrollment.id)}
                       >
-                        <MessageCircle size={15} />
+                        <AppIcon name="send" size={16} />
                         Notify parent
                       </Button>
                     </td>

@@ -139,7 +139,7 @@
 .pending-alert-focus:focus {
   outline: 2px solid var(--school-forest);
   outline-offset: 4px;
-  border-radius: 12px;
+  border-radius: var(--radius);
 }
 .dashboard-classroom,
 .dashboard-absence {

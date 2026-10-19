@@ -1,10 +1,19 @@
 import { useToday } from '../../app/useToday';
 import { useEffect, useState } from 'react';
 import { Link, useBlocker, useSearchParams } from 'react-router-dom';
-import { CalendarCheck, CheckCheck, Save, Send, CircleAlert } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Avatar, Badge, Button, Modal, PageHeading, Panel } from '../../components/ui/Primitives';
+import {
+  PickerInput,
+  Avatar,
+  Badge,
+  Button,
+  Modal,
+  PageHeading,
+  Panel,
+  AppIcon,
+} from '../../components/ui/Primitives';
 import { ClassFilters } from '../../components/shared/ClassFilters';
 import { attendanceSummary, roster, statusFor } from '../../lib/selectors';
 import { STATUS_LABELS, displayDate } from '../../lib/config';
@@ -89,16 +98,14 @@ function AttendanceRegister() {
   return (
     <>
       <PageHeading
-        eyebrow="EVERY STUDENT COUNTS"
         title="Attendance register"
-        description="A small daily habit. A better picture of every learner."
         actions={
           <>
             <Link
               className="button secondary"
               to={`/notifications?date=${date}&class=${classId}&section=${sectionId}&event=Student+Absent&focus=pending`}
             >
-              <Send size={16} />
+              <AppIcon name="send" size={16} />
               Review notifications
             </Link>
           </>
@@ -110,7 +117,7 @@ function AttendanceRegister() {
           <div className="toolbar attendance-toolbar">
             <label className="filter-label">
               <span>Attendance date</span>
-              <input
+              <PickerInput
                 aria-label="Attendance date"
                 type="date"
                 value={date}
@@ -129,7 +136,7 @@ function AttendanceRegister() {
               allowAll={false}
             />
             <div className="register-context">
-              <CalendarCheck size={18} />
+              <AppIcon name="attendance" size={20} />
               <span>
                 <strong>{state.academicYear.name}</strong>
                 <small>Academic year</small>
@@ -153,7 +160,7 @@ function AttendanceRegister() {
             ) : hasAssignedTiming ? (
               <span>Not a school working day.</span>
             ) : (
-              <Link className="student-timing-link" to="/settings#school-hours">
+              <Link className="student-timing-link" to="/settings?section=timing">
                 Set school timing
               </Link>
             )}
@@ -187,7 +194,7 @@ function AttendanceRegister() {
                 setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])))
               }
             >
-              <CheckCheck size={16} />
+              <AppIcon name="user-check" size={16} />
               Mark all present
             </Button>
           }
@@ -257,7 +264,7 @@ function AttendanceRegister() {
               </small>
             </div>
             <Button onClick={save}>
-              <Save size={16} />
+              <AppIcon name="save" size={16} />
               Save attendance
             </Button>
           </div>

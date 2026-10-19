@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
-import { Button, EmptyState, Panel } from '../../components/ui/Primitives';
+import { PickerInput, Button, EmptyState, Panel } from '../../components/ui/Primitives';
 import { displayDate } from '../../lib/config';
 import { getSchoolDate } from '../../lib/dates';
 import { downloadCsv } from '../../lib/download';
@@ -77,7 +77,7 @@ export default function ActivityLog() {
         ))}
         <label className="field">
           Date
-          <input
+          <PickerInput
             aria-label="Activity Date"
             type="date"
             value={date}

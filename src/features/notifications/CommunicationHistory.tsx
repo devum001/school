@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Badge, Button, EmptyState, Modal, Panel } from '../../components/ui/Primitives';
+import {
+  PickerInput,
+  Badge,
+  Button,
+  EmptyState,
+  Modal,
+  Panel,
+} from '../../components/ui/Primitives';
 import { communicationError, communicationFor } from '../../lib/communication';
 import { CHANNELS, ACTIVE_EVENTS } from '../../lib/communicationConfig';
 import { repository } from '../../lib/repository';
@@ -44,17 +51,14 @@ export default function CommunicationHistory() {
     try {
       if (cancel) repository.cancelScheduledNotice(record.id);
       else repository.dispatchCommunication([record.id]);
-      notify(cancel ? 'Scheduled notice cancelled.' : 'Demo retry complete.');
+      notify(cancel ? 'Scheduled notice cancelled.' : 'Retry processed.');
       setError('');
     } catch (cause) {
       setError(communicationError(cause));
     }
   };
   return (
-    <Panel
-      title="Notification History"
-      subtitle="Sent, failed and scheduled notices. All delivery statuses are from the demo."
-    >
+    <Panel title="Notification History" subtitle="Sent, failed and scheduled notices.">
       <div className="communication-filters">
         <label>
           Type
@@ -71,7 +75,7 @@ export default function CommunicationHistory() {
         </label>
         <label>
           Date
-          <input
+          <PickerInput
             type="date"
             value={params.get('historyDate') ?? ''}
             onChange={(e) => update('historyDate', e.target.value)}

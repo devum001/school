@@ -2,16 +2,9 @@ import { examIncludes } from '../../lib/academicSheets';
 import { resolvedResult } from '../../lib/classSubjects';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import {
-  FileText,
-  CalendarDays,
-  ChevronRight,
-  MessageCircle,
-  ArrowLeft,
-  Pencil,
-} from 'lucide-react';
+import { CalendarDays, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
-import { Badge, Button, EmptyState, Modal, Panel } from '../../components/ui/Primitives';
+import { AppIcon, Badge, Button, EmptyState, Modal, Panel } from '../../components/ui/Primitives';
 import { resultSummary, roster } from '../../lib/selectors';
 import { displayDate } from '../../lib/config';
 import ShareReportDialog from './ShareReportDialog';
@@ -172,7 +165,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
             <p>Results below belong to this test.</p>
           </div>
           <Link className="button secondary" to={managePath}>
-            <Pencil size={15} /> Manage marks
+            <AppIcon name="edit" size={16} /> Manage marks
           </Link>
         </div>
         <div className="student-test-context-body">
@@ -189,9 +182,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
                 </option>
               ))}
             </select>
-            <small>
-              {displayDate(selected.date)} · {selected.kind}
-            </small>
+            <small>{displayDate(selected.date)}</small>
           </label>
           <div className="student-selected-marks">
             <span>Marks obtained</span>
@@ -233,7 +224,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
         action={
           <div className="inline-actions">
             <Button variant="secondary" disabled={!summary} onClick={() => setReport(true)}>
-              <FileText size={15} />
+              <AppIcon name="document" size={16} />
               Report preview
             </Button>
             <Button
@@ -242,7 +233,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
               disabled={!summary}
               onClick={() => setSharing(true)}
             >
-              <MessageCircle size={15} />
+              <AppIcon name="send" size={16} />
               Share on WhatsApp
             </Button>
           </div>
@@ -274,9 +265,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
                 </span>
                 <span className="student-exam-name">
                   <strong>{e.name}</strong>
-                  <small>
-                    {displayDate(e.date)} <span aria-hidden="true">·</span> {e.kind}
-                  </small>
+                  <small>{displayDate(e.date)}</small>
                 </span>
                 <span className="student-exam-marks">
                   <small>Marks</small>
@@ -330,10 +319,12 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
               setSharing(true);
             }}
           >
-            <MessageCircle size={15} />
+            <AppIcon name="send" size={16} />
             Share on WhatsApp
           </Button>
-          <Button onClick={() => window.print()}>Print report</Button>
+          <Button onClick={() => window.print()}>
+            <AppIcon name="document" size={16} /> Print report
+          </Button>
         </div>
       </Modal>
       {sharing && (

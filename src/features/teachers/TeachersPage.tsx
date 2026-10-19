@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Users, UserCheck, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import {
   Avatar,
@@ -11,6 +11,7 @@ import {
   Panel,
   SearchInput,
   StatCard,
+  AppIcon,
 } from '../../components/ui/Primitives';
 import { downloadCsv } from '../../lib/download';
 import { staffDirectory, staffDesignation } from '../../lib/staffStructure';
@@ -35,9 +36,7 @@ export default function TeachersPage() {
   return (
     <>
       <PageHeading
-        eyebrow="THE PEOPLE BEHIND EVERY CLASSROOM"
         title="Teachers"
-        description="Quick access to teaching staff profiles and documents."
         actions={
           <>
             <Button
@@ -70,27 +69,27 @@ export default function TeachersPage() {
                 )
               }
             >
-              <Download size={15} />
+              <AppIcon name="download" size={15} />
               Export teachers
             </Button>
             <Link className="button primary" to="/staff?add=teacher">
-              <Plus size={16} /> Add teaching staff
+              <AppIcon name="teacher" size={16} /> Add teaching staff
             </Link>
           </>
         }
       />
-      <div className="stats-grid two">
+      <div className="stats-grid two teacher-summary">
         <StatCard
           label="Teaching team"
           value={teachers.length}
           detail="All staff profiles"
-          icon={<Users size={18} />}
+          icon={<AppIcon name="teacher" size={88} />}
         />
         <StatCard
           label="Active teachers"
           value={teachers.filter((t) => t.status === 'active').length}
           detail={`${teachers.filter((t) => t.status === 'inactive').length} inactive`}
-          icon={<UserCheck size={18} />}
+          icon={<AppIcon name="user-check" size={88} />}
           tone="green"
         />
       </div>

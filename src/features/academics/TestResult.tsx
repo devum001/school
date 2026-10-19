@@ -1,11 +1,12 @@
-import { tabKeyboard } from '../../lib/tabKeyboard';
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Download } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
-import { Badge, Button, EmptyState, Modal } from '../../components/ui/Primitives';
-import { savedSubjects, subjectResults } from '../../lib/academicSheets';
-import { subjectName } from '../../lib/classSubjects';
+import { AppIcon, Badge, Button, EmptyState, Modal } from '../../components/ui/Primitives';
+import {
+  overallLeaderboard,
+  savedSubjects,
+  sectionStats,
+  subjectResults,
+} from '../../lib/academicSheets';
 import { displayDate } from '../../lib/config';
 import { downloadCsv } from '../../lib/download';
 import { sectionLabel } from '../../lib/schoolLabels';
@@ -27,9 +28,27 @@ export default function TestResult({
 }) {
   const state = useSchool();
   const subjects = savedSubjects(state, exam, sectionId);
-  const [index, setIndex] = useState(0);
-  const subject = subjects[index] ?? subjects[0];
-  const data = subject ? subjectResults(state, exam, sectionId, subject) : null;
+  const columns = subjects.map((subject) => ({
+    subject,
+    ...subjectResults(state, exam, sectionId, subject),
+  }));
+  const students = columns[0]?.rows ?? [];
+  const ranked = overallLeaderboard(state, students, [exam]);
+  const ranks = new Map(ranked.map((student) => [student.enrollment.id, student]));
+  const rows = [...students].sort(
+    (a, b) =>
+      (ranks.get(a.enrollment.id)?.rank ?? Infinity) -
+        (ranks.get(b.enrollment.id)?.rank ?? Infinity) ||
+      a.enrollment.rollNumber - b.enrollment.rollNumber,
+  );
+  const stats = sectionStats(state, exam, sectionId);
+  const cells = columns.map(
+    (column) => new Map(column.rows.map((student) => [student.enrollment.id, student])),
+  );
+  const cellText = (enrollmentId: string, index: number) => {
+    const cell = cells[index].get(enrollmentId);
+    return !cell || cell.pending ? 'Pending' : cell.absent ? 'Absent' : cell.cell!.marks;
+  };
   const section = state.sections.find((s) => s.id === sectionId);
   const className = state.classes.find((c) => c.id === section?.classId)?.name;
   return (
@@ -40,92 +59,135 @@ export default function TestResult({
       description={`${displayDate(exam.date)} · ${className} · ${sectionLabel(section?.name ?? '')}`}
       onClose={onClose}
     >
-      <div className="academic-tabs" role="tablist" aria-label="Result subjects">
-        {subjects.map((s, i) => (
-          <button
-            role="tab"
-            id={`result-subject-${i}`}
-            tabIndex={i === index ? 0 : -1}
-            onKeyDown={(event) =>
-              tabKeyboard(
-                event,
-                i,
-                subjects.map((_, position) => String(position)),
-                (value) => setIndex(Number(value)),
-                (value) => `result-subject-${value}`,
-              )
-            }
-            aria-selected={i === index}
-            key={s.subjectId ?? s.name}
-            onClick={() => setIndex(i)}
-          >
-            {s.name}
-          </button>
-        ))}
-      </div>
-      {data && subject ? (
+      {subjects.length ? (
         <>
           <dl className="academic-subject-stats">
             <div>
-              <dt>Maximum Marks</dt>
-              <dd>{subject.maxMarks}</dd>
+              <dt>Students</dt>
+              <dd>{stats.students}</dd>
             </div>
             <div>
               <dt>Class Average</dt>
-              <dd>{data.average === null ? '—' : `${data.average.toFixed(1)}%`}</dd>
-            </div>
-            <div>
-              <dt>Highest</dt>
-              <dd>{data.highest === null ? '—' : `${data.highest}/${subject.maxMarks}`}</dd>
+              <dd>{stats.average === null ? '—' : `${stats.average.toFixed(1)}%`}</dd>
             </div>
             <div>
               <dt>Absent</dt>
-              <dd>{data.absent}</dd>
+              <dd>{stats.absent}</dd>
+            </div>
+            <div>
+              <dt>Pending</dt>
+              <dd>{stats.pending}</dd>
             </div>
           </dl>
-          <div className="table-wrap">
+          <div
+            className="table-wrap academic-class-result"
+            role="region"
+            aria-label="Class result by subject"
+            tabIndex={0}
+          >
             <table>
               <thead>
                 <tr>
-                  <th>Rank</th>
-                  <th>Roll No.</th>
-                  <th>Student</th>
-                  <th>Marks</th>
-                  <th>%</th>
+                  <th scope="col">Rank</th>
+                  <th scope="col">Roll No.</th>
+                  <th scope="col">Student</th>
+                  {subjects.map((subject) => (
+                    <th scope="col" key={subject.subjectId ?? subject.name}>
+                      {subject.name}
+                      <span className="academic-subject-maximum">Max {subject.maxMarks}</span>
+                    </th>
+                  ))}
+                  <th scope="col">Total</th>
+                  <th scope="col">Overall %</th>
                 </tr>
               </thead>
               <tbody>
-                {data.rows.map((r) => (
-                  <tr key={r.enrollment.id}>
-                    <td>{r.rank ? `#${r.rank}` : '—'}</td>
-                    <td>{r.enrollment.rollNumber}</td>
-                    <td>
-                      <Link
-                        className="text-link"
-                        to={studentHistoryUrl(r.student.id, exam.id, from)}
-                      >
-                        {r.student.name}
-                      </Link>
-                    </td>
-                    <td>
-                      {r.pending ? (
-                        <Badge tone="amber">Pending</Badge>
-                      ) : r.absent ? (
-                        <Badge>Absent</Badge>
-                      ) : (
-                        `${r.cell!.marks}/${subject.maxMarks}`
-                      )}
-                    </td>
-                    <td>{r.percentage === null ? '—' : `${r.percentage.toFixed(1)}%`}</td>
-                  </tr>
-                ))}
+                {rows.map((student) => {
+                  const total = ranks.get(student.enrollment.id);
+                  const pending = cells.some(
+                    (column) => column.get(student.enrollment.id)?.pending,
+                  );
+                  return (
+                    <tr key={student.enrollment.id}>
+                      <td>{total ? `#${total.rank}` : '—'}</td>
+                      <td>{student.enrollment.rollNumber}</td>
+                      <th scope="row">
+                        <Link
+                          className="text-link"
+                          to={studentHistoryUrl(student.student.id, exam.id, from)}
+                        >
+                          {student.student.name}
+                        </Link>
+                      </th>
+                      {columns.map((column, index) => {
+                        const text = cellText(student.enrollment.id, index);
+                        return (
+                          <td key={column.subject.subjectId ?? column.subject.name}>
+                            {typeof text === 'number' ? (
+                              `${text}/${column.subject.maxMarks}`
+                            ) : (
+                              <Badge tone={text === 'Absent' ? 'red' : 'neutral'}>{text}</Badge>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td>
+                        {total ? (
+                          <>
+                            <strong>
+                              {total.marks}/{total.maximum}
+                            </strong>
+                            {pending && <small className="academic-result-partial">Partial</small>}
+                          </>
+                        ) : (
+                          'Pending'
+                        )}
+                      </td>
+                      <td>{total ? `${total.percentage.toFixed(1)}%` : '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row" colSpan={3}>
+                    Class average
+                  </th>
+                  {columns.map((column) => (
+                    <td key={column.subject.subjectId ?? column.subject.name}>
+                      {column.average === null ? '—' : `${column.average.toFixed(1)}%`}
+                    </td>
+                  ))}
+                  <td>—</td>
+                  <td>{stats.average === null ? '—' : `${stats.average.toFixed(1)}%`}</td>
+                </tr>
+                <tr>
+                  <th scope="row" colSpan={3}>
+                    Highest marks
+                  </th>
+                  {columns.map((column) => (
+                    <td key={column.subject.subjectId ?? column.subject.name}>
+                      {column.highest === null
+                        ? '—'
+                        : `${column.highest}/${column.subject.maxMarks}`}
+                    </td>
+                  ))}
+                  <td>—</td>
+                  <td>—</td>
+                </tr>
+                <tr>
+                  <th scope="row" colSpan={3}>
+                    Absent students
+                  </th>
+                  {columns.map((column) => (
+                    <td key={column.subject.subjectId ?? column.subject.name}>{column.absent}</td>
+                  ))}
+                  <td>—</td>
+                  <td>—</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
-          <p className="panel-note">
-            Average includes recorded absences as zero. Pending marks are excluded. {data.pending}{' '}
-            pending.
-          </p>
           <div className="modal-actions">
             <Button
               variant="secondary"
@@ -137,42 +199,23 @@ export default function TestResult({
                     'Student',
                     ...subjects.flatMap((s) => [s.name, `${s.name} maximum`]),
                   ],
-                  data.rows.map((r) => [
-                    r.enrollment.rollNumber,
-                    r.student.name,
-                    ...subjects.flatMap((s) => {
-                      const mark = state.results
-                        .find(
-                          (result) =>
-                            result.examId === exam.id && result.enrollmentId === r.enrollment.id,
-                        )
-                        ?.subjects.find((cell) =>
-                          s.subjectId
-                            ? cell.subjectId === s.subjectId
-                            : subjectName(state, section?.classId ?? '', cell) === s.name,
-                        );
-                      return [
-                        !mark || mark.pending
-                          ? 'Pending'
-                          : mark.absent ||
-                              state.results.find(
-                                (result) =>
-                                  result.examId === exam.id &&
-                                  result.enrollmentId === r.enrollment.id,
-                              )?.absent
-                            ? 'Absent'
-                            : mark.marks,
-                        s.maxMarks,
-                      ];
-                    }),
+                  rows.map((student) => [
+                    student.enrollment.rollNumber,
+                    student.student.name,
+                    ...subjects.flatMap((subject, index) => [
+                      cellText(student.enrollment.id, index),
+                      subject.maxMarks,
+                    ]),
                   ]),
                 )
               }
             >
-              <Download size={15} />
+              <AppIcon name="download" size={16} />
               Export class result
             </Button>
-            <Button onClick={onEdit}>Edit Marks</Button>
+            <Button onClick={onEdit}>
+              <AppIcon name="edit" size={16} /> Edit Marks
+            </Button>
           </div>
         </>
       ) : (

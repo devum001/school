@@ -18,16 +18,14 @@ export const money = (paise: number) =>
 export const shortMoney = (paise: number) =>
   paise >= 10000000 ? `₹${(paise / 10000000).toFixed(2)}L` : money(paise);
 export const displayDate = (date: string) =>
-  displayPreferences().dateFormat === 'DD/MM/YYYY'
-    ? `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)}`
-    : new Date(`${date.slice(0, 10)}T12:00:00`).toLocaleDateString(
-        displayPreferences().language === 'Hindi' ? 'hi-IN' : 'en-IN',
-        {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-        },
-      );
+  new Date(`${date.slice(0, 10)}T12:00:00`).toLocaleDateString(
+    displayPreferences().language === 'Hindi' ? 'hi-IN' : 'en-IN',
+    {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    },
+  );
 export const initials = (name: string) =>
   name
     .split(' ')

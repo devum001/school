@@ -195,7 +195,7 @@ export default function CommunicationQueue({
         open={reviewing}
         onClose={() => setReviewing(false)}
         title="Review notifications"
-        description={`${chosen.length} messages · ${new Set(chosen.map((r) => r.recipient.id)).size} recipients. Delivery will be simulated.`}
+        description={`${chosen.length} messages · ${new Set(chosen.map((r) => r.recipient.id)).size} recipients. No external messages are sent.`}
         wide
       >
         {chosen[0] && (
@@ -245,7 +245,7 @@ export default function CommunicationQueue({
                 repository.dispatchCommunication(chosen.map((r) => r.id));
                 setReviewing(false);
                 setSelected([]);
-                notify('Demo notifications processed. Review delivery results in History.');
+                notify('Notifications prepared. Review History for details.');
                 onSent();
               } catch (cause) {
                 setError(communicationError(cause));
@@ -253,7 +253,7 @@ export default function CommunicationQueue({
               }
             }}
           >
-            Confirm demo send
+            Confirm
           </Button>
         </div>
       </Modal>

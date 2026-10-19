@@ -1,0 +1,1170 @@
+{
+  "count": 32,
+  "sizes": [
+    32,
+    48,
+    64,
+    96,
+    128,
+    256
+  ],
+  "formats": [
+    "webp"
+  ],
+  "transparent": true,
+  "padding": "approximately 6% per side; centered with aspect ratio preserved",
+  "icons": [
+    {
+      "name": "overview",
+      "label": "Overview",
+      "group": "school",
+      "originalCropSize": [
+        276,
+        279
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/overview.webp",
+          "bytes": 930
+        },
+        "48": {
+          "file": "webp/48/overview.webp",
+          "bytes": 1356
+        },
+        "64": {
+          "file": "webp/64/overview.webp",
+          "bytes": 1732
+        },
+        "96": {
+          "file": "webp/96/overview.webp",
+          "bytes": 2622
+        },
+        "128": {
+          "file": "webp/128/overview.webp",
+          "bytes": 3366
+        },
+        "256": {
+          "file": "webp/256/overview.webp",
+          "bytes": 7628
+        }
+      }
+    },
+    {
+      "name": "student",
+      "label": "Student",
+      "group": "school",
+      "originalCropSize": [
+        253,
+        300
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/student.webp",
+          "bytes": 1142
+        },
+        "48": {
+          "file": "webp/48/student.webp",
+          "bytes": 1678
+        },
+        "64": {
+          "file": "webp/64/student.webp",
+          "bytes": 2262
+        },
+        "96": {
+          "file": "webp/96/student.webp",
+          "bytes": 3556
+        },
+        "128": {
+          "file": "webp/128/student.webp",
+          "bytes": 4750
+        },
+        "256": {
+          "file": "webp/256/student.webp",
+          "bytes": 10988
+        }
+      }
+    },
+    {
+      "name": "teacher",
+      "label": "Teacher",
+      "group": "school",
+      "originalCropSize": [
+        344,
+        305
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/teacher.webp",
+          "bytes": 1106
+        },
+        "48": {
+          "file": "webp/48/teacher.webp",
+          "bytes": 1740
+        },
+        "64": {
+          "file": "webp/64/teacher.webp",
+          "bytes": 2394
+        },
+        "96": {
+          "file": "webp/96/teacher.webp",
+          "bytes": 3842
+        },
+        "128": {
+          "file": "webp/128/teacher.webp",
+          "bytes": 5372
+        },
+        "256": {
+          "file": "webp/256/teacher.webp",
+          "bytes": 12342
+        }
+      }
+    },
+    {
+      "name": "staff",
+      "label": "Staff",
+      "group": "school",
+      "originalCropSize": [
+        322,
+        246
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/staff.webp",
+          "bytes": 1214
+        },
+        "48": {
+          "file": "webp/48/staff.webp",
+          "bytes": 1678
+        },
+        "64": {
+          "file": "webp/64/staff.webp",
+          "bytes": 2486
+        },
+        "96": {
+          "file": "webp/96/staff.webp",
+          "bytes": 3622
+        },
+        "128": {
+          "file": "webp/128/staff.webp",
+          "bytes": 5324
+        },
+        "256": {
+          "file": "webp/256/staff.webp",
+          "bytes": 12076
+        }
+      }
+    },
+    {
+      "name": "attendance",
+      "label": "Attendance",
+      "group": "school",
+      "originalCropSize": [
+        266,
+        273
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/attendance.webp",
+          "bytes": 966
+        },
+        "48": {
+          "file": "webp/48/attendance.webp",
+          "bytes": 1504
+        },
+        "64": {
+          "file": "webp/64/attendance.webp",
+          "bytes": 1886
+        },
+        "96": {
+          "file": "webp/96/attendance.webp",
+          "bytes": 2996
+        },
+        "128": {
+          "file": "webp/128/attendance.webp",
+          "bytes": 3934
+        },
+        "256": {
+          "file": "webp/256/attendance.webp",
+          "bytes": 8666
+        }
+      }
+    },
+    {
+      "name": "fees",
+      "label": "Fees",
+      "group": "school",
+      "originalCropSize": [
+        313,
+        241
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/fees.webp",
+          "bytes": 1024
+        },
+        "48": {
+          "file": "webp/48/fees.webp",
+          "bytes": 1460
+        },
+        "64": {
+          "file": "webp/64/fees.webp",
+          "bytes": 1982
+        },
+        "96": {
+          "file": "webp/96/fees.webp",
+          "bytes": 3022
+        },
+        "128": {
+          "file": "webp/128/fees.webp",
+          "bytes": 4150
+        },
+        "256": {
+          "file": "webp/256/fees.webp",
+          "bytes": 9528
+        }
+      }
+    },
+    {
+      "name": "academics",
+      "label": "Academics",
+      "group": "school",
+      "originalCropSize": [
+        307,
+        286
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/academics.webp",
+          "bytes": 1274
+        },
+        "48": {
+          "file": "webp/48/academics.webp",
+          "bytes": 2050
+        },
+        "64": {
+          "file": "webp/64/academics.webp",
+          "bytes": 2808
+        },
+        "96": {
+          "file": "webp/96/academics.webp",
+          "bytes": 4324
+        },
+        "128": {
+          "file": "webp/128/academics.webp",
+          "bytes": 5932
+        },
+        "256": {
+          "file": "webp/256/academics.webp",
+          "bytes": 13780
+        }
+      }
+    },
+    {
+      "name": "notifications",
+      "label": "Notifications",
+      "group": "school",
+      "originalCropSize": [
+        290,
+        252
+      ],
+      "componentsKept": 3,
+      "webp": {
+        "32": {
+          "file": "webp/32/notifications.webp",
+          "bytes": 1212
+        },
+        "48": {
+          "file": "webp/48/notifications.webp",
+          "bytes": 2008
+        },
+        "64": {
+          "file": "webp/64/notifications.webp",
+          "bytes": 2624
+        },
+        "96": {
+          "file": "webp/96/notifications.webp",
+          "bytes": 4160
+        },
+        "128": {
+          "file": "webp/128/notifications.webp",
+          "bytes": 5670
+        },
+        "256": {
+          "file": "webp/256/notifications.webp",
+          "bytes": 12354
+        }
+      }
+    },
+    {
+      "name": "templates",
+      "label": "Templates",
+      "group": "school",
+      "originalCropSize": [
+        276,
+        276
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/templates.webp",
+          "bytes": 960
+        },
+        "48": {
+          "file": "webp/48/templates.webp",
+          "bytes": 1482
+        },
+        "64": {
+          "file": "webp/64/templates.webp",
+          "bytes": 1798
+        },
+        "96": {
+          "file": "webp/96/templates.webp",
+          "bytes": 2782
+        },
+        "128": {
+          "file": "webp/128/templates.webp",
+          "bytes": 3816
+        },
+        "256": {
+          "file": "webp/256/templates.webp",
+          "bytes": 8004
+        }
+      }
+    },
+    {
+      "name": "security",
+      "label": "Security",
+      "group": "school",
+      "originalCropSize": [
+        249,
+        284
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/security.webp",
+          "bytes": 1154
+        },
+        "48": {
+          "file": "webp/48/security.webp",
+          "bytes": 1650
+        },
+        "64": {
+          "file": "webp/64/security.webp",
+          "bytes": 2090
+        },
+        "96": {
+          "file": "webp/96/security.webp",
+          "bytes": 3266
+        },
+        "128": {
+          "file": "webp/128/security.webp",
+          "bytes": 4346
+        },
+        "256": {
+          "file": "webp/256/security.webp",
+          "bytes": 9474
+        }
+      }
+    },
+    {
+      "name": "search-dark",
+      "label": "Search Dark",
+      "group": "school",
+      "originalCropSize": [
+        307,
+        281
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/search-dark.webp",
+          "bytes": 1018
+        },
+        "48": {
+          "file": "webp/48/search-dark.webp",
+          "bytes": 1478
+        },
+        "64": {
+          "file": "webp/64/search-dark.webp",
+          "bytes": 1974
+        },
+        "96": {
+          "file": "webp/96/search-dark.webp",
+          "bytes": 3048
+        },
+        "128": {
+          "file": "webp/128/search-dark.webp",
+          "bytes": 4142
+        },
+        "256": {
+          "file": "webp/256/search-dark.webp",
+          "bytes": 9272
+        }
+      }
+    },
+    {
+      "name": "settings",
+      "label": "Settings",
+      "group": "school",
+      "originalCropSize": [
+        286,
+        284
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/settings.webp",
+          "bytes": 1308
+        },
+        "48": {
+          "file": "webp/48/settings.webp",
+          "bytes": 1910
+        },
+        "64": {
+          "file": "webp/64/settings.webp",
+          "bytes": 2606
+        },
+        "96": {
+          "file": "webp/96/settings.webp",
+          "bytes": 3916
+        },
+        "128": {
+          "file": "webp/128/settings.webp",
+          "bytes": 5190
+        },
+        "256": {
+          "file": "webp/256/settings.webp",
+          "bytes": 11802
+        }
+      }
+    },
+    {
+      "name": "edit",
+      "label": "Edit",
+      "group": "actions",
+      "originalCropSize": [
+        283,
+        292
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/edit.webp",
+          "bytes": 1074
+        },
+        "48": {
+          "file": "webp/48/edit.webp",
+          "bytes": 1528
+        },
+        "64": {
+          "file": "webp/64/edit.webp",
+          "bytes": 1982
+        },
+        "96": {
+          "file": "webp/96/edit.webp",
+          "bytes": 2970
+        },
+        "128": {
+          "file": "webp/128/edit.webp",
+          "bytes": 4136
+        },
+        "256": {
+          "file": "webp/256/edit.webp",
+          "bytes": 9090
+        }
+      }
+    },
+    {
+      "name": "receipt",
+      "label": "Receipt",
+      "group": "actions",
+      "originalCropSize": [
+        238,
+        281
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/receipt.webp",
+          "bytes": 762
+        },
+        "48": {
+          "file": "webp/48/receipt.webp",
+          "bytes": 1282
+        },
+        "64": {
+          "file": "webp/64/receipt.webp",
+          "bytes": 1568
+        },
+        "96": {
+          "file": "webp/96/receipt.webp",
+          "bytes": 2666
+        },
+        "128": {
+          "file": "webp/128/receipt.webp",
+          "bytes": 3606
+        },
+        "256": {
+          "file": "webp/256/receipt.webp",
+          "bytes": 8020
+        }
+      }
+    },
+    {
+      "name": "save",
+      "label": "Save",
+      "group": "actions",
+      "originalCropSize": [
+        283,
+        274
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/save.webp",
+          "bytes": 862
+        },
+        "48": {
+          "file": "webp/48/save.webp",
+          "bytes": 1292
+        },
+        "64": {
+          "file": "webp/64/save.webp",
+          "bytes": 1662
+        },
+        "96": {
+          "file": "webp/96/save.webp",
+          "bytes": 2336
+        },
+        "128": {
+          "file": "webp/128/save.webp",
+          "bytes": 3176
+        },
+        "256": {
+          "file": "webp/256/save.webp",
+          "bytes": 7116
+        }
+      }
+    },
+    {
+      "name": "balance",
+      "label": "Balance",
+      "group": "actions",
+      "originalCropSize": [
+        326,
+        292
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/balance.webp",
+          "bytes": 1454
+        },
+        "48": {
+          "file": "webp/48/balance.webp",
+          "bytes": 2358
+        },
+        "64": {
+          "file": "webp/64/balance.webp",
+          "bytes": 3202
+        },
+        "96": {
+          "file": "webp/96/balance.webp",
+          "bytes": 5158
+        },
+        "128": {
+          "file": "webp/128/balance.webp",
+          "bytes": 7082
+        },
+        "256": {
+          "file": "webp/256/balance.webp",
+          "bytes": 16078
+        }
+      }
+    },
+    {
+      "name": "search",
+      "label": "Search",
+      "group": "actions",
+      "originalCropSize": [
+        291,
+        281
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/search.webp",
+          "bytes": 1120
+        },
+        "48": {
+          "file": "webp/48/search.webp",
+          "bytes": 1696
+        },
+        "64": {
+          "file": "webp/64/search.webp",
+          "bytes": 2328
+        },
+        "96": {
+          "file": "webp/96/search.webp",
+          "bytes": 3342
+        },
+        "128": {
+          "file": "webp/128/search.webp",
+          "bytes": 4644
+        },
+        "256": {
+          "file": "webp/256/search.webp",
+          "bytes": 10442
+        }
+      }
+    },
+    {
+      "name": "send",
+      "label": "Send",
+      "group": "actions",
+      "originalCropSize": [
+        288,
+        264
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/send.webp",
+          "bytes": 1126
+        },
+        "48": {
+          "file": "webp/48/send.webp",
+          "bytes": 1648
+        },
+        "64": {
+          "file": "webp/64/send.webp",
+          "bytes": 2144
+        },
+        "96": {
+          "file": "webp/96/send.webp",
+          "bytes": 3276
+        },
+        "128": {
+          "file": "webp/128/send.webp",
+          "bytes": 4394
+        },
+        "256": {
+          "file": "webp/256/send.webp",
+          "bytes": 9778
+        }
+      }
+    },
+    {
+      "name": "verified",
+      "label": "Verified",
+      "group": "actions",
+      "originalCropSize": [
+        264,
+        291
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/verified.webp",
+          "bytes": 1140
+        },
+        "48": {
+          "file": "webp/48/verified.webp",
+          "bytes": 1700
+        },
+        "64": {
+          "file": "webp/64/verified.webp",
+          "bytes": 2166
+        },
+        "96": {
+          "file": "webp/96/verified.webp",
+          "bytes": 3290
+        },
+        "128": {
+          "file": "webp/128/verified.webp",
+          "bytes": 4414
+        },
+        "256": {
+          "file": "webp/256/verified.webp",
+          "bytes": 9860
+        }
+      }
+    },
+    {
+      "name": "tag",
+      "label": "Tag",
+      "group": "actions",
+      "originalCropSize": [
+        279,
+        278
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/tag.webp",
+          "bytes": 1034
+        },
+        "48": {
+          "file": "webp/48/tag.webp",
+          "bytes": 1556
+        },
+        "64": {
+          "file": "webp/64/tag.webp",
+          "bytes": 1928
+        },
+        "96": {
+          "file": "webp/96/tag.webp",
+          "bytes": 2950
+        },
+        "128": {
+          "file": "webp/128/tag.webp",
+          "bytes": 3950
+        },
+        "256": {
+          "file": "webp/256/tag.webp",
+          "bytes": 8990
+        }
+      }
+    },
+    {
+      "name": "delete",
+      "label": "Delete",
+      "group": "actions",
+      "originalCropSize": [
+        256,
+        279
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/delete.webp",
+          "bytes": 1024
+        },
+        "48": {
+          "file": "webp/48/delete.webp",
+          "bytes": 1482
+        },
+        "64": {
+          "file": "webp/64/delete.webp",
+          "bytes": 1850
+        },
+        "96": {
+          "file": "webp/96/delete.webp",
+          "bytes": 2904
+        },
+        "128": {
+          "file": "webp/128/delete.webp",
+          "bytes": 3810
+        },
+        "256": {
+          "file": "webp/256/delete.webp",
+          "bytes": 8368
+        }
+      }
+    },
+    {
+      "name": "trophy",
+      "label": "Trophy",
+      "group": "actions",
+      "originalCropSize": [
+        292,
+        277
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/trophy.webp",
+          "bytes": 1256
+        },
+        "48": {
+          "file": "webp/48/trophy.webp",
+          "bytes": 1824
+        },
+        "64": {
+          "file": "webp/64/trophy.webp",
+          "bytes": 2480
+        },
+        "96": {
+          "file": "webp/96/trophy.webp",
+          "bytes": 3808
+        },
+        "128": {
+          "file": "webp/128/trophy.webp",
+          "bytes": 5306
+        },
+        "256": {
+          "file": "webp/256/trophy.webp",
+          "bytes": 11810
+        }
+      }
+    },
+    {
+      "name": "upload",
+      "label": "Upload",
+      "group": "actions",
+      "originalCropSize": [
+        279,
+        260
+      ],
+      "componentsKept": 2,
+      "webp": {
+        "32": {
+          "file": "webp/32/upload.webp",
+          "bytes": 1170
+        },
+        "48": {
+          "file": "webp/48/upload.webp",
+          "bytes": 1738
+        },
+        "64": {
+          "file": "webp/64/upload.webp",
+          "bytes": 2232
+        },
+        "96": {
+          "file": "webp/96/upload.webp",
+          "bytes": 3298
+        },
+        "128": {
+          "file": "webp/128/upload.webp",
+          "bytes": 4296
+        },
+        "256": {
+          "file": "webp/256/upload.webp",
+          "bytes": 9494
+        }
+      }
+    },
+    {
+      "name": "user-check",
+      "label": "User Check",
+      "group": "actions",
+      "originalCropSize": [
+        323,
+        266
+      ],
+      "componentsKept": 2,
+      "webp": {
+        "32": {
+          "file": "webp/32/user-check.webp",
+          "bytes": 1054
+        },
+        "48": {
+          "file": "webp/48/user-check.webp",
+          "bytes": 1650
+        },
+        "64": {
+          "file": "webp/64/user-check.webp",
+          "bytes": 2050
+        },
+        "96": {
+          "file": "webp/96/user-check.webp",
+          "bytes": 3312
+        },
+        "128": {
+          "file": "webp/128/user-check.webp",
+          "bytes": 4508
+        },
+        "256": {
+          "file": "webp/256/user-check.webp",
+          "bytes": 9968
+        }
+      }
+    },
+    {
+      "name": "users",
+      "label": "Users",
+      "group": "general",
+      "originalCropSize": [
+        379,
+        320
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/users.webp",
+          "bytes": 1092
+        },
+        "48": {
+          "file": "webp/48/users.webp",
+          "bytes": 1686
+        },
+        "64": {
+          "file": "webp/64/users.webp",
+          "bytes": 2226
+        },
+        "96": {
+          "file": "webp/96/users.webp",
+          "bytes": 3540
+        },
+        "128": {
+          "file": "webp/128/users.webp",
+          "bytes": 4910
+        },
+        "256": {
+          "file": "webp/256/users.webp",
+          "bytes": 11044
+        }
+      }
+    },
+    {
+      "name": "wallet",
+      "label": "Wallet",
+      "group": "general",
+      "originalCropSize": [
+        373,
+        329
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/wallet.webp",
+          "bytes": 928
+        },
+        "48": {
+          "file": "webp/48/wallet.webp",
+          "bytes": 1424
+        },
+        "64": {
+          "file": "webp/64/wallet.webp",
+          "bytes": 1814
+        },
+        "96": {
+          "file": "webp/96/wallet.webp",
+          "bytes": 2960
+        },
+        "128": {
+          "file": "webp/128/wallet.webp",
+          "bytes": 4064
+        },
+        "256": {
+          "file": "webp/256/wallet.webp",
+          "bytes": 8764
+        }
+      }
+    },
+    {
+      "name": "copy",
+      "label": "Copy",
+      "group": "general",
+      "originalCropSize": [
+        326,
+        315
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/copy.webp",
+          "bytes": 848
+        },
+        "48": {
+          "file": "webp/48/copy.webp",
+          "bytes": 1216
+        },
+        "64": {
+          "file": "webp/64/copy.webp",
+          "bytes": 1608
+        },
+        "96": {
+          "file": "webp/96/copy.webp",
+          "bytes": 2534
+        },
+        "128": {
+          "file": "webp/128/copy.webp",
+          "bytes": 3368
+        },
+        "256": {
+          "file": "webp/256/copy.webp",
+          "bytes": 7576
+        }
+      }
+    },
+    {
+      "name": "download",
+      "label": "Download",
+      "group": "general",
+      "originalCropSize": [
+        333,
+        353
+      ],
+      "componentsKept": 2,
+      "webp": {
+        "32": {
+          "file": "webp/32/download.webp",
+          "bytes": 1230
+        },
+        "48": {
+          "file": "webp/48/download.webp",
+          "bytes": 1842
+        },
+        "64": {
+          "file": "webp/64/download.webp",
+          "bytes": 2408
+        },
+        "96": {
+          "file": "webp/96/download.webp",
+          "bytes": 3546
+        },
+        "128": {
+          "file": "webp/128/download.webp",
+          "bytes": 4874
+        },
+        "256": {
+          "file": "webp/256/download.webp",
+          "bytes": 10506
+        }
+      }
+    },
+    {
+      "name": "document",
+      "label": "Document",
+      "group": "general",
+      "originalCropSize": [
+        286,
+        330
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/document.webp",
+          "bytes": 718
+        },
+        "48": {
+          "file": "webp/48/document.webp",
+          "bytes": 1142
+        },
+        "64": {
+          "file": "webp/64/document.webp",
+          "bytes": 1454
+        },
+        "96": {
+          "file": "webp/96/document.webp",
+          "bytes": 2240
+        },
+        "128": {
+          "file": "webp/128/document.webp",
+          "bytes": 3100
+        },
+        "256": {
+          "file": "webp/256/document.webp",
+          "bytes": 6824
+        }
+      }
+    },
+    {
+      "name": "graduation-cap",
+      "label": "Graduation Cap",
+      "group": "general",
+      "originalCropSize": [
+        405,
+        305
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/graduation-cap.webp",
+          "bytes": 960
+        },
+        "48": {
+          "file": "webp/48/graduation-cap.webp",
+          "bytes": 1388
+        },
+        "64": {
+          "file": "webp/64/graduation-cap.webp",
+          "bytes": 1942
+        },
+        "96": {
+          "file": "webp/96/graduation-cap.webp",
+          "bytes": 2832
+        },
+        "128": {
+          "file": "webp/128/graduation-cap.webp",
+          "bytes": 3936
+        },
+        "256": {
+          "file": "webp/256/graduation-cap.webp",
+          "bytes": 8406
+        }
+      }
+    },
+    {
+      "name": "inbox",
+      "label": "Inbox",
+      "group": "general",
+      "originalCropSize": [
+        365,
+        277
+      ],
+      "componentsKept": 1,
+      "webp": {
+        "32": {
+          "file": "webp/32/inbox.webp",
+          "bytes": 826
+        },
+        "48": {
+          "file": "webp/48/inbox.webp",
+          "bytes": 1184
+        },
+        "64": {
+          "file": "webp/64/inbox.webp",
+          "bytes": 1642
+        },
+        "96": {
+          "file": "webp/96/inbox.webp",
+          "bytes": 2376
+        },
+        "128": {
+          "file": "webp/128/inbox.webp",
+          "bytes": 3378
+        },
+        "256": {
+          "file": "webp/256/inbox.webp",
+          "bytes": 7184
+        }
+      }
+    },
+    {
+      "name": "overview-grid",
+      "label": "Overview Grid",
+      "group": "general",
+      "originalCropSize": [
+        324,
+        316
+      ],
+      "componentsKept": 4,
+      "webp": {
+        "32": {
+          "file": "webp/32/overview-grid.webp",
+          "bytes": 1004
+        },
+        "48": {
+          "file": "webp/48/overview-grid.webp",
+          "bytes": 1642
+        },
+        "64": {
+          "file": "webp/64/overview-grid.webp",
+          "bytes": 2120
+        },
+        "96": {
+          "file": "webp/96/overview-grid.webp",
+          "bytes": 3596
+        },
+        "128": {
+          "file": "webp/128/overview-grid.webp",
+          "bytes": 4938
+        },
+        "256": {
+          "file": "webp/256/overview-grid.webp",
+          "bytes": 12022
+        }
+      }
+    }
+  ]
+}

@@ -37,6 +37,9 @@
   text-align: right;
   overflow-wrap: anywhere;
 }
+.templates-settings-panel .panel-padding {
+  padding-top: 24px;
+}
 .template-gallery {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -44,11 +47,15 @@
 }
 .template-option {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 12px;
-  background: #fff;
+  background: var(--surface-toolbar);
   text-align: left;
   color: var(--school-header);
+}
+.template-option:hover {
+  border-color: #93aaa1;
+  background: #e7eeea;
 }
 .template-option.selected {
   border-color: var(--school-forest);
@@ -306,7 +313,7 @@
   align-items: stretch;
   gap: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 14px;
   font-size: 13px;
 }
@@ -363,7 +370,7 @@
   overflow: auto;
   background: #eef2f3;
   padding: 18px;
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 .template-preview-canvas {
   min-width: 300px;
@@ -482,4 +489,26 @@
   width: 36px;
   height: 40px;
   object-fit: contain;
+}
+
+.finance-summary .stat-top {
+  min-height: 48px;
+}
+.finance-summary .stat-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+.finance-summary .stat-icon img {
+  width: 100%;
+  height: 100%;
+}
+@media (max-width: 1050px) {
+  .finance-summary .stat-top {
+    min-height: 40px;
+  }
+  .finance-summary .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
 }

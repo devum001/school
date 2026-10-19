@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, Modal } from '../../components/ui/Primitives';
+import { PickerInput, Button, Modal } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import { defaultStaffPayroll, staffPayrollSchema } from '../../lib/settings';
 import type { StaffPayrollConfig } from '../../types/domain';
@@ -121,7 +121,7 @@ export default function StaffPayrollDialog({
               ).map(([key, label]) => (
                 <Field key={key} name={`work.${key}`} label={label} error={errors[`work.${key}`]}>
                   {(id, describedBy) => (
-                    <input
+                    <PickerInput
                       id={id}
                       type="time"
                       required

@@ -46,11 +46,10 @@ it('adds and edits students with unique admission/roll numbers and keeps data im
   expect(original.students).toHaveLength(144);
   const added = state.students.at(-1)!;
   expect(() => saveStudent(state, student)).toThrow(/admission number/);
-  const duplicateRoll = saveStudent(state, { ...student, admissionNumber: 'OTHER', rollNumber: 1 });
-  const rolls = roster(duplicateRoll)
-    .filter((row) => row.enrollment.sectionId === student.sectionId)
-    .map((row) => row.enrollment.rollNumber);
-  expect(rolls).toEqual(Array.from({ length: rolls.length }, (_, index) => index + 1));
+  expect(() => saveStudent(state, { ...student, admissionNumber: 'OTHER', rollNumber: 1 })).toThrow(
+    /roll number/,
+  );
+  expect(state.enrollments.slice(0, -1)).toEqual(original.enrollments);
   state = saveStudent(state, { ...student, name: 'Aditi Mehta', status: 'inactive' }, added.id);
   expect(roster(state)).toHaveLength(143);
   expect(state.students.at(-1)?.name).toBe('Aditi Mehta');

@@ -13,7 +13,6 @@ test('one test covers multiple classes and sections, with scoped dropdowns and i
   await page.getByRole('button', { name: 'Add Test / Exam', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Test name', { exact: true }).fill('Combined Weekly Practice');
-  await dialog.getByLabel('Test type', { exact: true }).fill('Weekly Practice');
   await dialog.getByLabel('Grade 8 Section A', { exact: true }).check();
   await dialog.getByLabel('Grade 8 Section B', { exact: true }).check();
   await dialog.getByLabel('Select Grade 9', { exact: true }).check();
@@ -58,6 +57,7 @@ test('one test covers multiple classes and sections, with scoped dropdowns and i
   await expect(dialog.locator('tbody tr').first().locator('input').first()).toHaveValue('82');
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.getByRole('tab', { name: 'Results', exact: true }).click();
+  await page.getByRole('tab', { name: 'Recent Results', exact: true }).click();
   await page.getByLabel('Academic class').selectOption('class-9');
   await page.getByLabel('Recent results section').selectOption('class-9-b');
   const result = page
@@ -100,13 +100,11 @@ test('import preview stays with its selected class and rejects files for a diffe
   await expect(dialog.getByLabel('Marks class')).toHaveValue('class-8');
   await dialog.getByRole('button', { name: 'Cancel import', exact: true }).click();
   await dialog.getByLabel('Marks class').selectOption('class-9');
-  await dialog
-    .getByLabel('Import marks file')
-    .setInputFiles({
-      name: 'wrong-class.csv',
-      mimeType: 'text/csv',
-      buffer: Buffer.from(csv(grid)),
-    });
+  await dialog.getByLabel('Import marks file').setInputFiles({
+    name: 'wrong-class.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(csv(grid)),
+  });
   await expect(dialog.getByRole('alert')).toContainText('different class or section');
   expect((await savedAcademics(page)).results).toEqual([]);
 });

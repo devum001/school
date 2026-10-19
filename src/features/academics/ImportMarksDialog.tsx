@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, Upload } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Badge, Button, Modal } from '../../components/ui/Primitives';
+import { AppIcon, Badge, Button, Modal } from '../../components/ui/Primitives';
 import { testRoster } from '../../lib/academics';
 import { downloadCsv } from '../../lib/download';
 import {
@@ -164,14 +163,14 @@ export default function ImportMarksDialog({
                   disabled={Boolean(contextError)}
                   onClick={() => downloadTemplate('xlsx')}
                 >
-                  <Download size={16} /> Excel template
+                  <AppIcon name="download" size={16} /> Excel template
                 </Button>
                 <Button
                   variant="secondary"
                   disabled={Boolean(contextError)}
                   onClick={() => downloadTemplate('csv')}
                 >
-                  <Download size={16} /> CSV template
+                  <AppIcon name="download" size={16} /> CSV template
                 </Button>
               </div>
             </div>
@@ -233,7 +232,7 @@ export default function ImportMarksDialog({
           </p>
           {reading && (
             <p role="status">
-              <Upload size={16} /> Reading and validating {fileName}…
+              <AppIcon name="upload" size={16} /> Reading and validating {fileName}…
             </p>
           )}
           {preview && (
@@ -372,6 +371,7 @@ export default function ImportMarksDialog({
                 }
               }}
             >
+              <AppIcon name="save" size={16} />
               Confirm import{changes ? ` (${changes})` : ''}
             </Button>
           </div>

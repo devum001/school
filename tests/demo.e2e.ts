@@ -63,7 +63,7 @@ test('complete school presentation: attendance, simulation, profile, payments an
   await page.getByRole('button', { name: 'Confirm payment', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('₹17,000');
   await page.getByRole('button', { name: 'Done', exact: true }).click();
-  await page.getByRole('tab', { name: 'Academics', exact: true }).click();
+  await page.getByRole('tab', { name: 'Progress Report', exact: true }).click();
   await page.getByRole('button', { name: 'Report preview', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Ananya Sharma');
   await page.getByRole('button', { name: 'Close', exact: true }).click();
