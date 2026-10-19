@@ -87,23 +87,23 @@ export default function AcademicsPage() {
       {returnTo && (
         <Link className="text-link academic-back" to={returnTo}>
           <ArrowLeft size={15} />
-          Back to student academics
+          Back to student progress report
         </Link>
       )}
 
       <PageHeading
-        title="Academics"
+        title="Test and Result"
         actions={
           !resultsView ? (
             <Button onClick={() => setAdding(true)}>
-              <AppIcon name="academics" size={17} />
+              <AppIcon name="document" size={17} />
               Add Test / Exam
             </Button>
           ) : undefined
         }
       />
 
-      <TabRail className="academic-tabs academic-main-tabs" role="tablist" aria-label="Academics">
+      <TabRail className="academic-tabs academic-main-tabs" role="tablist" aria-label="Test and Result">
         <button
           role="tab"
           id="academics-tab-tests"
@@ -121,7 +121,7 @@ export default function AcademicsPage() {
           aria-selected={!resultsView}
           onClick={() => change({ view: null, test: null, marks: null })}
         >
-          <AppIcon name="academics" size={16} />
+          <AppIcon name="document" size={16} />
           Recent Tests / Exams
         </button>
         <button

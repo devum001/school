@@ -65,7 +65,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
       <Panel className="student-results-panel">
         <EmptyState
           title="No tests for this student yet"
-          description="Create a test for this class or section in Academics. Saved marks will appear here."
+          description="Create a test for this class or section in Test and Result. Saved marks will appear here."
           action={
             <Link className="button secondary" to={academicsPath}>
               Open class tests

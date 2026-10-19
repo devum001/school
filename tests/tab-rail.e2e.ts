@@ -111,7 +111,7 @@ test('mobile primary and secondary rails stay on one row and selected tabs remai
   ).toBeHidden();
   for (const [url, label] of [
     ['/fees', 'Finance'],
-    ['/academics', 'Academics'],
+    ['/academics', 'Test and Result'],
     ['/staff', 'Staff & HR'],
     ['/students/stu-001', 'Student profile tabs'],
     ['/attendance', 'Attendance registers'],
