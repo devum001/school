@@ -168,7 +168,7 @@ export default function AcademicsPage() {
         <>
           <div className="academic-test-list">
             {exams
-              .filter((e) => `${e.name} ${e.kind}`.toLowerCase().includes(query.toLowerCase()))
+              .filter((e) => e.name.toLowerCase().includes(query.toLowerCase()))
               .map((e) => {
                 const sections = examSections(state, e, '');
 
@@ -179,9 +179,7 @@ export default function AcademicsPage() {
                     </span>
                     <div className="academic-test-info">
                       <h3>{e.name}</h3>
-                      <p>
-                        {e.kind} · {displayDate(e.date)}
-                      </p>
+                      <p>{displayDate(e.date)}</p>
                       <div className="academic-test-scope">
                         {examClasses(state, e).map((c) => {
                           const assigned = examSections(state, e, c.id);
@@ -247,9 +245,7 @@ export default function AcademicsPage() {
               })}
           </div>
 
-          {!exams.some((e) =>
-            `${e.name} ${e.kind}`.toLowerCase().includes(query.toLowerCase()),
-          ) && (
+          {!exams.some((e) => e.name.toLowerCase().includes(query.toLowerCase())) && (
             <EmptyState
               title={query ? 'No matching tests' : 'No tests yet'}
               description="Create a test, then open its pencil to record marks."

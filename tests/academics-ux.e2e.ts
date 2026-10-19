@@ -66,7 +66,6 @@ test('test menu edits metadata and deletes marks after confirmation', async ({ p
   await page.getByLabel('More options for Daily Practice').click();
   await page.getByRole('button', { name: 'Edit Test', exact: true }).click();
   await page.getByLabel('Test name', { exact: true }).fill('Revised Practice');
-  await page.getByLabel('Test type', { exact: true }).fill('Revision');
   await page.getByRole('button', { name: 'Save test', exact: true }).click();
   await expect(page.locator('.academic-test-card')).toContainText('Revised Practice');
   await expect(page.locator('.academic-test-card')).toContainText('Marks Added');

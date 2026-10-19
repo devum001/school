@@ -160,6 +160,23 @@ export default function ResultsView({
             ))}
           </select>
         </label>
+        {recentView && (
+          <label className="field">
+            Month
+            <PickerInput
+              aria-label="Results month"
+              type="month"
+              value={month}
+              min={state.academicYear.start.slice(0, 7)}
+              max={
+                state.academicYear.end.slice(0, 7) < today.slice(0, 7)
+                  ? state.academicYear.end.slice(0, 7)
+                  : today.slice(0, 7)
+              }
+              onChange={(e) => change({ month: e.target.value, test: null })}
+            />
+          </label>
+        )}
       </div>
       <SectionNavigation
         label="Result views"
@@ -230,29 +247,7 @@ export default function ResultsView({
         </section>
       )}
       {recentView && (
-        <section className="academic-recent-results" aria-labelledby="recent-results-heading">
-          <div className="academic-list-heading">
-            <div>
-              <h2 id="recent-results-heading">Recent Results</h2>
-            </div>
-            <div className="academic-result-filters">
-              <label className="field">
-                Month
-                <PickerInput
-                  aria-label="Results month"
-                  type="month"
-                  value={month}
-                  min={state.academicYear.start.slice(0, 7)}
-                  max={
-                    state.academicYear.end.slice(0, 7) < today.slice(0, 7)
-                      ? state.academicYear.end.slice(0, 7)
-                      : today.slice(0, 7)
-                  }
-                  onChange={(e) => change({ month: e.target.value, test: null })}
-                />
-              </label>
-            </div>
-          </div>
+        <section className="academic-recent-results" aria-label="Recent test results">
           <div className="academic-test-list">
             {recent.map((e) => {
               const stats = sectionStats(state, e, section);
@@ -261,7 +256,6 @@ export default function ResultsView({
                   <div className="academic-result-card-heading">
                     <div>
                       <h3>{e.name}</h3>
-                      <p>{e.kind}</p>
                     </div>
                     <span>{displayDate(e.date)}</span>
                   </div>

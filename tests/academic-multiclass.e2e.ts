@@ -13,7 +13,6 @@ test('one test covers multiple classes and sections, with scoped dropdowns and i
   await page.getByRole('button', { name: 'Add Test / Exam', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Test name', { exact: true }).fill('Combined Weekly Practice');
-  await dialog.getByLabel('Test type', { exact: true }).fill('Weekly Practice');
   await dialog.getByLabel('Grade 8 Section A', { exact: true }).check();
   await dialog.getByLabel('Grade 8 Section B', { exact: true }).check();
   await dialog.getByLabel('Select Grade 9', { exact: true }).check();

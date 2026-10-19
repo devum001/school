@@ -2,11 +2,7 @@ import { examIncludes } from '../../lib/academicSheets';
 import { resolvedResult } from '../../lib/classSubjects';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import {
-  CalendarDays,
-  ChevronRight,
-  ArrowLeft,
-} from 'lucide-react';
+import { CalendarDays, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { AppIcon, Badge, Button, EmptyState, Modal, Panel } from '../../components/ui/Primitives';
 import { resultSummary, roster } from '../../lib/selectors';
@@ -186,9 +182,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
                 </option>
               ))}
             </select>
-            <small>
-              {displayDate(selected.date)} · {selected.kind}
-            </small>
+            <small>{displayDate(selected.date)}</small>
           </label>
           <div className="student-selected-marks">
             <span>Marks obtained</span>
@@ -271,9 +265,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
                 </span>
                 <span className="student-exam-name">
                   <strong>{e.name}</strong>
-                  <small>
-                    {displayDate(e.date)} <span aria-hidden="true">·</span> {e.kind}
-                  </small>
+                  <small>{displayDate(e.date)}</small>
                 </span>
                 <span className="student-exam-marks">
                   <small>Marks</small>

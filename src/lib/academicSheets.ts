@@ -4,6 +4,7 @@ import { testRoster, testResults } from './academics';
 import { classSubjects, subjectName } from './classSubjects';
 import { resultSummary } from './selectors';
 import { getSchoolDate } from './dates';
+import { isTestSubjectSelected } from './testSubjects';
 
 export type SheetColumn = { subjectId: string; name: string; maximum: string };
 export type SheetRow = { enrollmentId: string; cells: string[] };
@@ -22,14 +23,18 @@ export function savedSubjects(
   sectionId: string,
 ): TestSubject[] {
   const sheet = exam.sheets?.find((s) => s.sectionId === sectionId);
-  return (sheet ? sheet.subjects : exam.subjects).map((s) => ({
-    ...s,
-    name: subjectName(
-      state,
-      state.sections.find((section) => section.id === sectionId)?.classId ?? exam.classId,
-      s,
-    ),
-  }));
+  const classId =
+    state.sections.find((section) => section.id === sectionId)?.classId ?? exam.classId;
+  return (sheet ? sheet.subjects : exam.subjects)
+    .filter((s) => isTestSubjectSelected(state, exam, classId, s))
+    .map((s) => ({
+      ...s,
+      name: subjectName(
+        state,
+        state.sections.find((section) => section.id === sectionId)?.classId ?? exam.classId,
+        s,
+      ),
+    }));
 }
 export function sheetDraft(state: DemoState, exam: Examination, sectionId: string) {
   const students = testRoster(state, exam)
@@ -40,11 +45,18 @@ export function sheetDraft(state: DemoState, exam: Examination, sectionId: strin
   const configured = classSubjects(state, classId);
   const subjects = [
     ...configured.filter(
-      (s) => !s.archived || saved.some((p) => p.subjectId === s.id || p.name === s.name),
+      (s) =>
+        isTestSubjectSelected(state, exam, classId, { subjectId: s.id, name: s.name }) &&
+        (!s.archived ||
+          exam.subjectSelections?.some(
+            (selection) => selection.classId === classId && selection.subjectIds.includes(s.id),
+          ) ||
+          saved.some((p) => p.subjectId === s.id || p.name === s.name)),
     ),
   ];
   for (const s of saved)
     if (
+      isTestSubjectSelected(state, exam, classId, s) &&
       !subjects.some(
         (p) => p.id === s.subjectId || p.name === s.name || p.aliases?.includes(s.name),
       )

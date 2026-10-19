@@ -103,6 +103,6 @@ export function testAbsenceMessage(state: DemoState, row: RosterEntry, exam: Exa
     'Pre-board': 'प्री-बोर्ड परीक्षा',
     'Term exam': 'सत्र परीक्षा',
   };
-  const kind = kinds[exam.kind] ?? exam.kind;
+  const kind = kinds[exam.kind] ?? (exam.kind || 'परीक्षा');
   return `*${state.school.name}*\n\nआदरणीय अभिभावक,\n\nआपके बच्चे ${row.student.name} को दिनांक ${displayHindiDate(exam.date)} को आयोजित ${kind} में अनुपस्थित दर्ज किया गया है।\n\nपरीक्षा: ${exam.name}\nकक्षा: ${row.className} · अनुभाग: ${row.sectionName}\nरोल नंबर: ${row.enrollment.rollNumber}\n\nकृपया अनुपस्थिति का कारण कक्षा शिक्षक को बताएं और अगली प्रक्रिया की जानकारी प्राप्त करें। यदि यह जानकारी सही नहीं है, तो विद्यालय कार्यालय से संपर्क करें।\n\nधन्यवाद,\n${state.school.name}`;
 }

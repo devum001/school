@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { DemoState, Examination, ExamResult, RosterEntry } from '../types/domain';
 import { roster, resultSummary } from './selectors';
 import { getSchoolDate } from './dates';
+import { isTestSubjectSelected, validateTestSubjects } from './testSubjects';
 
 export const testKinds = ['Daily test', 'Monthly test', 'Pre-board', 'Term exam'] as const;
 const subjectSchema = z.object({
@@ -16,11 +17,14 @@ export const examinationSchema = z.object({
   academicYearId: z.string(),
   name: z.string().trim().min(1).max(100),
   date: z.iso.date(),
-  kind: z.string().trim().min(1).max(60),
+  kind: z.string().trim().max(60).default(''),
   classId: z.string(),
   sectionId: z.string(),
   classIds: z.array(z.string()).optional(),
   sectionIds: z.array(z.string()).optional(),
+  subjectSelections: z
+    .array(z.object({ classId: z.string(), subjectIds: z.array(z.string()).max(30) }))
+    .optional(),
   sheets: z.array(z.object({ sectionId: z.string(), subjects: z.array(subjectSchema) })).optional(),
   subjects: z.array(subjectSchema).max(30),
 });
@@ -43,8 +47,8 @@ export const examResultSchema = z.object({
 });
 export type NewTest = Omit<
   Examination,
-  'id' | 'schoolId' | 'academicYearId' | 'subjects' | 'sectionId'
-> & { subjects?: Examination['subjects']; sectionId?: string };
+  'id' | 'schoolId' | 'academicYearId' | 'subjects' | 'sectionId' | 'kind'
+> & { subjects?: Examination['subjects']; sectionId?: string; kind?: string };
 export type MarksEntry = { enrollmentId: string; marks: number[] | null; absent: boolean };
 
 export function testRoster(state: DemoState, exam: Examination): RosterEntry[] {
@@ -102,6 +106,7 @@ export function createTest(state: DemoState, input: NewTest): DemoState {
       }
     : parsed.data;
   validateTestScope(state, exam, true);
+  validateTestSubjects(state, exam);
   if (
     exam.date < state.academicYear.start ||
     exam.date > state.academicYear.end ||
@@ -229,6 +234,7 @@ export function updateTest(state: DemoState, examId: string, input: NewTest): De
       }
     : parsed.data;
   validateTestScope(state, exam, false);
+  validateTestSubjects(state, exam);
   if (
     exam.date < state.academicYear.start ||
     exam.date > state.academicYear.end ||
@@ -250,6 +256,20 @@ export function updateTest(state: DemoState, examId: string, input: NewTest): De
       )
       .map((e) => e.id),
   );
+  if (
+    exam.subjectSelections &&
+    recorded.some((result) => {
+      const classId =
+        state.enrollments.find((enrollment) => enrollment.id === result.enrollmentId)?.classId ??
+        '';
+      return result.subjects.some(
+        (subject) => !subject.pending && !isTestSubjectSelected(state, exam, classId, subject),
+      );
+    })
+  )
+    throw new Error(
+      'Keep subjects with saved marks selected. Clear their marks in the marks sheet before removing them.',
+    );
   if (input.subjects && recorded.length && exam.subjects.length !== existing.subjects.length)
     throw new Error('Keep the legacy subject count unchanged after marks are recorded.');
   if (recorded.some((r) => !allowed.has(r.enrollmentId)))
@@ -267,18 +287,47 @@ export function updateTest(state: DemoState, examId: string, input: NewTest): De
     throw new Error('A maximum cannot be lower than marks already recorded.');
   return {
     ...state,
-    exams: state.exams.map((e) => (e.id === examId ? exam : e)),
-    results: state.results.map((r) =>
-      r.schoolId === state.school.id && r.examId === examId
+    exams: state.exams.map((e) =>
+      e.id === examId
         ? {
-            ...r,
-            subjects: r.subjects.map((s, i) => ({
-              ...s,
-              ...(input.subjects ? exam.subjects[i] : {}),
+            ...exam,
+            sheets: exam.sheets?.map((sheet) => ({
+              ...sheet,
+              subjects: sheet.subjects.filter((subject) =>
+                isTestSubjectSelected(
+                  state,
+                  exam,
+                  state.sections.find((section) => section.id === sheet.sectionId)?.classId ?? '',
+                  subject,
+                ),
+              ),
             })),
           }
-        : r,
+        : e,
     ),
+    results: state.results
+      .map((r) =>
+        r.schoolId === state.school.id && r.examId === examId
+          ? {
+              ...r,
+              subjects: r.subjects
+                .map((s, i) => ({
+                  ...s,
+                  ...(input.subjects ? exam.subjects[i] : {}),
+                }))
+                .filter((subject) =>
+                  isTestSubjectSelected(
+                    state,
+                    exam,
+                    state.enrollments.find((enrollment) => enrollment.id === r.enrollmentId)
+                      ?.classId ?? '',
+                    subject,
+                  ),
+                ),
+            }
+          : r,
+      )
+      .filter((result) => result.subjects.length > 0),
   };
 }
 export function deleteTest(state: DemoState, examId: string): DemoState {

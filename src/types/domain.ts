@@ -263,6 +263,7 @@ export interface Examination {
   sectionId: string;
   classIds?: string[];
   sectionIds?: string[];
+  subjectSelections?: { classId: string; subjectIds: string[] }[];
   sheets?: { sectionId: string; subjects: TestSubject[] }[];
   subjects: TestSubject[];
 }

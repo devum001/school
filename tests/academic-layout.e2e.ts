@@ -14,7 +14,7 @@ test('class subject setup renames live results and keeps earlier marks', async (
   await page.getByRole('button', { name: 'Save subjects', exact: true }).click();
   await page.goto('/academics?class=class-8&view=results&resultsView=recent');
   await page.getByRole('button', { name: 'View Result', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'Applied Mathematics', exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: /Applied Mathematics/ })).toBeVisible();
   await expect(page.getByRole('dialog')).toContainText('18/20');
   await page.getByRole('dialog').getByRole('button', { name: 'Edit Marks', exact: true }).click();
   await expect(page.getByLabel('Applied Mathematics maximum marks', { exact: true })).toHaveValue(

@@ -1,20 +1,16 @@
 import { test, expect } from '@playwright/test';
 import { loadAcademicFixture, openSheet, savedAcademics } from './academicFixture';
 
-test('metadata-only creation uses a manual type and multiple sections; pencil opens marks later', async ({
+test('test creation uses subjects and multiple sections without a test type; pencil opens marks later', async ({
   page,
 }) => {
   await loadAcademicFixture(page);
   await page.goto('/academics?class=class-8');
   await page.getByRole('button', { name: 'Add Test / Exam', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByLabel('Test type', { exact: true })).toHaveJSProperty(
-    'tagName',
-    'INPUT',
-  );
+  await expect(dialog.getByLabel('Test type', { exact: true })).toHaveCount(0);
   await expect(dialog.getByText('Subjects & maximum marks')).toHaveCount(0);
   await dialog.getByLabel('Test name', { exact: true }).fill('October Learning Check');
-  await dialog.getByLabel('Test type', { exact: true }).fill('Teacher custom practice');
   await dialog.getByLabel('Grade 8 Section A', { exact: true }).check();
   await dialog.getByLabel('Grade 8 Section B', { exact: true }).check();
   await dialog.getByRole('button', { name: 'Create Test', exact: true }).click();
@@ -54,12 +50,11 @@ test('marks save numbers, A, pending cells and exclude blank subjects with secti
   await page.getByRole('tab', { name: 'Results', exact: true }).click();
   await page.getByRole('tab', { name: 'Recent Results', exact: true }).click();
   await page.getByRole('button', { name: 'View Result', exact: true }).click();
-  await expect(dialog.getByRole('tab', { name: 'Mathematics', exact: true })).toBeVisible();
-  await expect(dialog.getByRole('tab', { name: 'English', exact: true })).toBeVisible();
-  await expect(dialog.getByRole('tab', { name: 'Science', exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole('columnheader', { name: /Mathematics/ })).toBeVisible();
+  await expect(dialog.getByRole('columnheader', { name: /English/ })).toBeVisible();
+  await expect(dialog.getByRole('columnheader', { name: /Science/ })).toHaveCount(0);
   await expect(dialog).toContainText('18/20');
   await expect(dialog).toContainText('Absent');
-  await dialog.getByRole('tab', { name: 'English', exact: true }).click();
   await expect(dialog).toContainText('45/50');
   await expect(dialog).toContainText('Pending');
   await dialog.getByRole('button', { name: 'Close dialog' }).click();
