@@ -1,3 +1,5 @@
+import ImportSteps from '../setup/ImportSteps';
+import { formatRosterCell, formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import { useDraftGuard } from '../academics/useDraftGuard';
 import { useRef, useState } from 'react';
 import { useSchool } from '../../app/useSchool';
@@ -6,6 +8,7 @@ import { Button, Modal } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import { previewStudentImport, type StudentImportPreview } from '../../lib/studentImport';
 import { readStudentWorkbook, type ExcelCell } from '../../lib/xlsx';
+import { downloadClassStudentTemplate } from '../../lib/studentTemplate';
 import { sectionLabel } from '../../lib/schoolLabels';
 
 export default function StudentImportDialog({
@@ -23,6 +26,11 @@ export default function StudentImportDialog({
   const sections = state.sections.filter(
     (s) => s.schoolId === state.school.id && s.classId === classId,
   );
+  const [offset, setOffset] = useState(0);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [rowCells, setRowCells] = useState<string[]>([]);
+  const [target, setTarget] = useState(classId);
   const [grid, setGrid] = useState<ExcelCell[][] | null>(null);
   const [preview, setPreview] = useState<StudentImportPreview | null>(null);
   const [fileName, setFileName] = useState('');
@@ -36,13 +44,14 @@ export default function StudentImportDialog({
     <Modal
       open
       wide
+      className="student-import-modal"
       presentation={presentation}
       onClose={discard ? guard.keepEditing : close}
       title={discard ? 'Close this import preview?' : 'Import students from Excel'}
       description={
         discard
           ? 'The file has not been saved. You can choose it again later.'
-          : `${schoolClass?.name} · All sections. Each row uses its Section column. Preview and validate before adding students.`
+          : 'Import several classes in one workbook. Class and Section columns route each row. Preview and validate before adding students.'
       }
     >
       {discard ? (
@@ -61,49 +70,87 @@ export default function StudentImportDialog({
           </Button>
         </div>
       ) : (
-        <>
-          <label className="student-timing-field">
-            Excel file (.xlsx)
-            <input
-              type="file"
-              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                const attempt = ++request.current;
-                setGrid(null);
-                setPreview(null);
-                setError('');
-                setFileName(file?.name ?? '');
-                if (!file) {
-                  setReading(false);
-                  return;
+        <div className="student-import-content">
+          <ImportSteps step={step} />
+          {step === 1 && (
+            <>
+              <label className="field">
+                Default class for older workbooks without a Class column
+                <select
+                  value={target}
+                  disabled={reading}
+                  onChange={(e) => {
+                    setTarget(e.target.value);
+                    setGrid(null);
+                    setOffset(0);
+                    setPreview(null);
+                  }}
+                >
+                  {state.classes
+                    .filter((c) => c.schoolId === state.school.id)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  downloadClassStudentTemplate(
+                    schoolClass?.name ?? '',
+                    sections.map((s) => s.name),
+                  )
                 }
-                setReading(true);
-                try {
-                  const cells = await readStudentWorkbook(file);
-                  if (attempt !== request.current) return;
-                  setGrid(cells);
-                  setPreview(previewStudentImport(repository.getSnapshot(), classId, cells));
-                } catch (cause) {
-                  if (attempt === request.current)
-                    setError(
-                      cause instanceof Error
-                        ? cause.message
-                        : 'Unable to read this workbook. Use the sample Excel file.',
-                    );
-                } finally {
-                  if (attempt === request.current) setReading(false);
-                }
-              }}
-            />
-          </label>
-          <p className="class-timetable-note">
-            Use the Students sheet. Fill Admission Number, Roll Number and Section for every
-            student. Dates: YYYY-MM-DD or Excel date cells. Import up to 1,000 students across this
-            class's sections at once.
-          </p>
-          {reading && <p role="status">Reading and validating {fileName}…</p>}
-          {preview && (
+              >
+                Download Sample Excel
+              </Button>
+              <label className="student-timing-field">
+                Excel file (.xlsx)
+                <input
+                  type="file"
+                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    const attempt = ++request.current;
+                    setGrid(null);
+                    setOffset(0);
+                    setPreview(null);
+                    setError('');
+                    setFileName(file?.name ?? '');
+                    if (!file) {
+                      setReading(false);
+                      return;
+                    }
+                    setReading(true);
+                    try {
+                      const cells = await readStudentWorkbook(file);
+                      if (attempt !== request.current) return;
+                      setGrid(cells);
+                      setPreview(previewStudentImport(repository.getSnapshot(), target, cells));
+                    } catch (cause) {
+                      if (attempt === request.current)
+                        setError(
+                          cause instanceof Error
+                            ? cause.message
+                            : 'Unable to read this workbook. Use the sample Excel file.',
+                        );
+                    } finally {
+                      if (attempt === request.current) setReading(false);
+                    }
+                  }}
+                />
+              </label>
+              <p className="class-timetable-note">
+                Use the Students sheet. Fill Class, Admission Number and Roll Number for every
+                student. Leave Section blank when the class has no sections. Dates: DD-MM-YYYY or
+                Excel date cells. Import up to 1,000 students across classes at once.
+              </p>
+              {reading && <p role="status">Reading and validating {fileName}…</p>}
+            </>
+          )}
+          {preview && step > 1 && (
             <>
               <p className="import-summary">
                 {preview.rows.length} students ·{' '}
@@ -114,7 +161,9 @@ export default function StudentImportDialog({
               </p>
               {preview.errors.length > 0 && (
                 <div className="import-errors" role="alert">
-                  <strong>Fix these rows in Excel and choose the file again.</strong>
+                  <strong>
+                    Edit the flagged rows below, or go back and choose a corrected file.
+                  </strong>
                   <ul>
                     {preview.errors.slice(0, 20).map((message) => (
                       <li key={message}>{message}</li>
@@ -125,50 +174,95 @@ export default function StudentImportDialog({
                   )}
                 </div>
               )}
-              <div
-                className="import-preview-scroll"
-                tabIndex={0}
-                role="region"
-                aria-label="Scrollable student import preview"
-              >
-                <table className="import-preview">
-                  <caption>Student import preview</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Excel row</th>
-                      <th scope="col">Roll</th>
-                      <th scope="col">Student</th>
-                      <th scope="col">Section</th>
-                      <th scope="col">Admission number</th>
-                      <th scope="col">Birth date</th>
-                      <th scope="col">Check</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.rows.slice(0, 50).map((row) => (
-                      <tr key={row.row}>
-                        <td>{row.row}</td>
-                        <td>
-                          {Number.isFinite(row.input.rollNumber) ? row.input.rollNumber : '—'}
-                        </td>
-                        <td>{row.input.name || '—'}</td>
-                        <td>
-                          {sectionLabel(
-                            sections.find((item) => item.id === row.input.sectionId)?.name,
-                          )}
-                        </td>
-                        <td>{row.input.admissionNumber || '—'}</td>
-                        <td>{row.input.birthDate}</td>
-                        <td>{row.error ?? 'Ready'}</td>
+              {step === 2 && (
+                <div
+                  className="import-preview-scroll"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Scrollable student import preview"
+                >
+                  <table className="import-preview">
+                    <caption>Student import preview</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Excel row</th>
+                        <th scope="col">Roll</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Class</th>
+                        <th scope="col">Section</th>
+                        <th scope="col">Admission number</th>
+                        <th scope="col">Birth date</th>
+                        <th scope="col">Check</th>
+                        <th scope="col">Corrections</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {preview.rows.slice(offset, offset + 50).map((row) => (
+                        <tr key={row.row}>
+                          <td>{row.row}</td>
+                          <td>{row.input.rollNumber || '—'}</td>
+                          <td>{titleCase(row.input.name) || '—'}</td>
+                          <td>
+                            {state.classes.find((c) => c.id === row.input.classId)?.name ||
+                              'Unknown class'}
+                          </td>
+                          <td>
+                            {row.input.sectionId
+                              ? sectionLabel(
+                                  state.sections.find((s) => s.id === row.input.sectionId)?.name,
+                                )
+                              : 'No section'}
+                          </td>
+                          <td>{row.input.admissionNumber || '—'}</td>
+                          <td>{formatCalendarDate(row.input.birthDate)}</td>
+                          <td>{row.error ?? 'Ready'}</td>
+                          <td>
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingRow(row.row);
+                                setRowCells(
+                                  (grid?.[0] ?? []).map((header, index) => {
+                                    const value =
+                                      String(header) === 'Birth Date'
+                                        ? row.input.birthDate
+                                        : String(grid?.[row.row - 1][index] ?? '');
+                                    return formatRosterCell(String(header), value);
+                                  }),
+                                );
+                              }}
+                            >
+                              Edit row {row.row}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {step === 2 && preview.rows.length > 50 && (
+                <div className="modal-actions">
+                  <Button
+                    variant="secondary"
+                    disabled={!offset}
+                    onClick={() => setOffset(Math.max(0, offset - 50))}
+                  >
+                    Previous rows
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={offset + 50 >= preview.rows.length}
+                    onClick={() => setOffset(offset + 50)}
+                  >
+                    Next rows
+                  </Button>
+                </div>
+              )}
               {preview.rows.length > 50 && (
                 <p className="class-timetable-note">
-                  Showing the first 50 students. All {preview.rows.length} validated students will
-                  be imported.
+                  Showing rows {offset + 1}–{Math.min(offset + 50, preview.rows.length)}. All{' '}
+                  {preview.rows.length} validated students will be imported.
                 </p>
               )}
             </>
@@ -178,17 +272,33 @@ export default function StudentImportDialog({
               {error}
             </p>
           )}
+          {step === 3 && (
+            <p>
+              Import {preview?.rows.length} students into the classes shown in the preview.
+              Admission numbers match by numeric part across your school; roll numbers within each
+              class and section.
+            </p>
+          )}
           <div className="modal-actions">
+            {step > 1 && (
+              <Button variant="secondary" onClick={() => setStep(step === 3 ? 2 : 1)}>
+                Back
+              </Button>
+            )}
             <Button variant="secondary" onClick={close}>
               Cancel
             </Button>
             <Button
-              disabled={!grid || !preview || preview.errors.length > 0 || reading}
+              disabled={!grid || !preview || (step > 1 && preview.errors.length > 0) || reading}
               onClick={() => {
                 if (!grid || !preview) return;
+                if (step < 3) {
+                  setStep(step === 1 ? 2 : 3);
+                  return;
+                }
                 try {
-                  repository.importStudents(classId, grid);
-                  notify(`${preview.rows.length} students imported into ${schoolClass?.name}.`);
+                  repository.importStudents(target, grid);
+                  notify(`${preview.rows.length} students imported into their classes.`);
                   request.current++;
                   guard.complete();
                 } catch (cause) {
@@ -196,10 +306,59 @@ export default function StudentImportDialog({
                 }
               }}
             >
-              Import {preview?.rows.length ?? ''} students
+              {step === 1
+                ? 'Next: preview'
+                : step === 2
+                  ? 'Next: submit'
+                  : `Import ${preview?.rows.length ?? ''} students`}
             </Button>
           </div>
-        </>
+          {editingRow !== null && grid && (
+            <Modal
+              open
+              title={`Correct row ${editingRow}`}
+              description="Edit the workbook values. Saving validates the full preview before import."
+              onClose={() => setEditingRow(null)}
+            >
+              <form
+                className="live-form import-row-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const next = grid.map((row, index) =>
+                    index === editingRow - 1 ? rowCells : row,
+                  );
+                  try {
+                    setPreview(previewStudentImport(repository.getSnapshot(), target, next));
+                    setGrid(next);
+                    setEditingRow(null);
+                    setError('');
+                  } catch (cause) {
+                    setError(cause instanceof Error ? cause.message : 'Check row values.');
+                  }
+                }}
+              >
+                {grid[0].map((header, index) => (
+                  <label key={String(header)}>
+                    {String(header)}
+                    <input
+                      value={rowCells[index] ?? ''}
+                      maxLength={300}
+                      onChange={(event) =>
+                        setRowCells((old) =>
+                          old.map((cell, i) => (i === index ? event.target.value : cell)),
+                        )
+                      }
+                    />
+                  </label>
+                ))}
+                <Button type="button" variant="secondary" onClick={() => setEditingRow(null)}>
+                  Cancel
+                </Button>
+                <Button>Save correction</Button>
+              </form>
+            </Modal>
+          )}
+        </div>
       )}
     </Modal>
   );

@@ -1,0 +1,51 @@
+Student import modal layout repair — 2026-10-19
+
+Cause
+The preview squeezed many columns into a fixed 800px dialog. The shared error
+style added large horizontal margins/padding, while table cells allowed text to
+break anywhere. The result was the nearly one-character-wide error in the screenshot.
+
+Changes
+- Import-specific modal width up to 1200px, constrained to the viewport.
+- Persistent heading/close button with independently scrolling modal content.
+- Preview table scrolls horizontally and vertically within a bounded region.
+  Result/error and correction columns have explicit minimum readable widths.
+- Scoped error spacing, full-width progress, wrapping action controls and responsive
+  totals. Other modal layouts retain their existing styles.
+- Properly spaced upload controls and explanations of class selection and matching.
+- Row correction uses two columns on desktop, one on mobile, scrolling content,
+  an accessible close button and an explicit Cancel action.
+- Back to file selection accurately labels navigation inside the student modal.
+  Shared standalone import jobs retain Back to directory.
+- Import validation, permission checks, save behavior and data matching are unchanged.
+
+Files changed in this repair
+src/components/ui/Primitives.tsx — optional Modal className for scoped layouts
+src/features/students/LiveStudentImport.tsx — upload layout, labels, modal scope
+src/features/setup/ImportJob.tsx — preview/row-editor layout and accessible table region
+src/features/setup/import.css — new scoped stylesheet
+tests/phase1-repair.e2e.ts — appended responsive import/correction regression test
+docs/import-modal-repair-report.txt
+
+Validation actually run
+npm run typecheck — passed
+npm run lint — passed, 0 errors; 2 pre-existing Fast Refresh warnings in
+  AppIcon.tsx:3 and Primitives.tsx:7 remain
+npm test — 272 tests passed in 45 files
+npm run build — passed
+VITE_APP_MODE=live npm run build — passed
+PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test
+  --config=playwright.repair.config.ts -g 'student import modal keeps'
+  — 1 passed; tests upload at 1366/768/390px, readable validation errors,
+    contained horizontal scrolling, persistent close button, mobile row correction,
+    confirmation and completion against the real backend with an isolated test DB
+PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test
+  tests/phase1-demo.e2e.ts --workers=2
+  — 3 passed; original demo settings, class setup and mixed-class Excel import
+Desktop/mobile screenshots inspected for upload, preview and row correction.
+The first layout run detected a CSS specificity conflict narrowing the result
+column; the rule was corrected and the full workflow passed on rerun.
+
+No backend source, dependencies, environment values or real school data changed.
+The backend browser fixture used only a temporary local database. Existing staged
+and unstaged work was preserved. No manual configuration or migration is needed.

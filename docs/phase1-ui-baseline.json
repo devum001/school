@@ -1,0 +1,171 @@
+{
+  "reference": "Existing demo working tree, captured before Phase 1 repair",
+  "routes": [
+    "/",
+    "/students",
+    "/students/new",
+    "/students/import",
+    "/students/:studentId",
+    "/classes",
+    "/teachers",
+    "/teachers/:teacherId",
+    "/staff",
+    "/attendance",
+    "/attendance/staff",
+    "/fees",
+    "/academics",
+    "/notifications",
+    "/settings"
+  ],
+  "workspaceNavigation": [
+    "Overview",
+    "Students",
+    "Teachers",
+    "Staff & HR",
+    "Attendance",
+    "Finance",
+    "Academics"
+  ],
+  "administrationNavigation": [
+    "Notifications",
+    "School settings"
+  ],
+  "settings": {
+    "General": [
+      "School Profile",
+      "School Timing"
+    ],
+    "Classes, Sections & Grades": [
+      "Sections",
+      "Students",
+      "Subjects"
+    ],
+    "Staff & Payroll": [
+      "Departments",
+      "Work & Leave",
+      "Payroll"
+    ],
+    "Communication": [
+      "Channels",
+      "Message Templates"
+    ],
+    "Roles & Permissions": [
+      "Roles & Permissions",
+      "Staff Access"
+    ],
+    "Templates": [
+      "School Letterhead",
+      "Fee Receipt",
+      "Salary Slip"
+    ],
+    "Data & Security": [
+      "Data Export",
+      "Login & Sessions",
+      "Activity Log"
+    ],
+    "Preferences": [
+      "Regional & Display",
+      "Default Context"
+    ]
+  },
+  "profileFields": [
+    "School name",
+    "School motto",
+    "Location",
+    "School code",
+    "Board / Affiliation",
+    "Affiliation number",
+    "Principal",
+    "Phone",
+    "Email",
+    "Website",
+    "School logo",
+    "School opening time",
+    "School closing time",
+    "Working days"
+  ],
+  "classFields": [
+    "Class / Grade name",
+    "Grade / level (optional)"
+  ],
+  "sectionFields": [
+    "Section name",
+    "Class teacher"
+  ],
+  "classActions": [
+    "Add Class / Grade",
+    "Edit Class / Grade",
+    "Delete class",
+    "Add section",
+    "Edit section",
+    "Delete section"
+  ],
+  "subjectActions": [
+    "Subject name",
+    "Add subject",
+    "Remove subject",
+    "Save subjects",
+    "Discard subject changes"
+  ],
+  "studentsTab": [
+    "Search",
+    "Section filter",
+    "Download Sample Excel",
+    "Import Excel (.xlsx)",
+    "Add student",
+    "Edit",
+    "Delete"
+  ],
+  "studentProfileTabs": [
+    "Overview",
+    "Attendance",
+    "Fees",
+    "Academics",
+    "Documents"
+  ],
+  "teacherProfileTabs": [
+    "Overview",
+    "Documents"
+  ],
+  "staffTabs": [
+    "All Staff",
+    "Attendance",
+    "Leave"
+  ],
+  "studentForm": [
+    "Identity",
+    "Guardian",
+    "Class/section enrollment",
+    "Roll number",
+    "Status",
+    "Fee plan"
+  ],
+  "staffForm": [
+    "Photograph",
+    "Department",
+    "Staff name",
+    "Designation",
+    "Staff status",
+    "Teaching staff",
+    "Contact",
+    "Joining date",
+    "Qualification",
+    "Monthly salary"
+  ],
+  "importHeaders": [
+    "Student Name",
+    "Admission Number",
+    "Birth Date",
+    "Guardian Name",
+    "Relationship",
+    "Parent Mobile",
+    "Address",
+    "Roll Number",
+    "Section"
+  ],
+  "phase1Dependencies": [
+    "Student mutations/import/profile parity are Phase 2. Retain existing live integration until then.",
+    "Staff workflows and payroll/access settings are Phase 3.",
+    "Other settings and operational APIs remain explicit dependencies; no demo fallback."
+  ]
+}

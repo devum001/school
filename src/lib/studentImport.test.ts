@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { createSeed } from '../mocks/seed';
-import { STUDENT_IMPORT_HEADERS, previewStudentImport, importStudents } from './studentImport';
+import {
+  STUDENT_IMPORT_HEADERS as CURRENT_HEADERS,
+  previewStudentImport,
+  importStudents,
+} from './studentImport';
 import { saveSchoolClass, saveSchoolSection } from './classStructure';
 import { excelBirthDate, studentWorkbook } from './xlsx';
 import { orderedClasses, sectionLabel } from './schoolLabels';
 import type { ExcelCell } from './xlsx';
+const STUDENT_IMPORT_HEADERS = CURRENT_HEADERS.slice(0, -1); // Legacy class-scoped workbook compatibility.
 function emptySection() {
   let state = saveSchoolClass(createSeed(), { name: 'New class' });
   state = saveSchoolSection(state, { classId: state.classes.at(-1)!.id, name: 'A', teacherId: '' });
@@ -54,12 +59,24 @@ describe('Excel student import', () => {
     );
     expect(() => previewStudentImport(state, 'foreign', grid)).toThrow(/this school/);
   });
-  it('imports one class across sections and permits equal rolls only in different sections', () => {
+  it('accepts day-first dates and repeated person/guardian names while preserving identifiers', () => {
+    const state = emptySection(),
+      sectionId = state.sections.at(-1)!.id;
+    const batch = [
+      STUDENT_IMPORT_HEADERS,
+      ['rahul kumar', '0001-a', '21-05-2016', 'Raj Kumar', 'Father', '', '', '11'],
+      ['rahul kumar', '0002-a', '12-07-2016', 'Raj Kumar', 'Father', '', '', '12'],
+    ];
+    const next = importStudents(state, sectionId, batch);
+    expect(next.students.slice(-2).map((s) => s.birthDate)).toEqual(['2016-05-21', '2016-07-12']);
+    expect(next.students.slice(-2).map((s) => s.admissionNumber)).toEqual(['0001-a', '0002-a']);
+  });
+  it('allows the same roll in different sections but rejects repeats within a section', () => {
     const state = createSeed();
     const batch = [
       STUDENT_IMPORT_HEADERS,
       ['Class A Student', 'CLASS-A-01', '2016-05-21', 'Parent', '', '', '', 51, 'A'],
-      ['Class B Student', 'CLASS-B-01', '2016-05-21', 'Parent', '', '', '', 51, 'Section B'],
+      ['Class B Student', 'CLASS-B-02', '2016-05-21', 'Parent', '', '', '', 51, 'Section B'],
     ];
     const next = importStudents(state, 'class-5', batch);
     expect(next.enrollments.slice(-2).map((entry) => [entry.sectionId, entry.rollNumber])).toEqual([
@@ -82,7 +99,7 @@ describe('Excel student import', () => {
       );
     }
     const duplicateRoll = batch.map((row) => [...row]);
-    duplicateRoll[2][8] = 'A';
+    duplicateRoll[2][8] = 'Section A';
     expect(previewStudentImport(state, 'class-5', duplicateRoll).errors[0]).toMatch(/roll number/);
   });
   it('handles true Excel birth dates, creates a genuine XLSX, and orders numbers naturally', async () => {

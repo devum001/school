@@ -20,7 +20,7 @@ function storedSubjects(state: DemoState, exam: Examination, classId: string): S
   return [
     ...exam.subjects,
     ...(exam.sheets ?? [])
-      .filter((sheet) => sections.has(sheet.sectionId))
+      .filter((sheet) => sheet.classId === classId || sections.has(sheet.sectionId))
       .flatMap((sheet) => sheet.subjects),
     ...state.results
       .filter(

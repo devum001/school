@@ -1,0 +1,206 @@
+.hr-fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.hr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-width: 12rem;
+}
+.hr-location {
+  padding: 1rem;
+  border: 1px solid var(--border, #dce3e6);
+  border-radius: 0.5rem;
+  margin: 0.75rem 0;
+}
+.hr-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
+.hr-breakdown dd {
+  margin: 0;
+}
+@media print {
+  body:has(.hr-payslip) {
+    overflow: visible !important;
+  }
+  .modal:has(.hr-payslip) {
+    position: absolute;
+    inset: 0;
+    transform: none;
+    max-height: none;
+    overflow: visible;
+    width: 100%;
+    border: 0;
+    box-shadow: none;
+  }
+
+  body:has(.hr-payslip) * {
+    visibility: hidden;
+  }
+  .hr-payslip,
+  .hr-payslip * {
+    visibility: visible;
+  }
+  .hr-payslip {
+    position: absolute;
+    inset: 0;
+    background: white;
+    padding: 1cm;
+  }
+}
+
+/* Use the same cards, type, controls and spacing as the demo workspace. */
+.hr-workspace {
+  min-width: 0;
+}
+.hr-period-toolbar {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-panel);
+  align-items: flex-end;
+}
+.hr-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.hr-summary .stat-value {
+  font-size: clamp(20px, 2vw, 28px);
+  overflow-wrap: anywhere;
+}
+.hr-content > .field,
+.hr-content > p,
+.hr-content > h3,
+.hr-content > .toolbar {
+  margin: 16px 24px;
+}
+.hr-content > .field {
+  max-width: 320px;
+}
+.hr-content > h3 {
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.hr-content > p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.hr-content td small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.hr-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hr-actions {
+  max-width: 300px;
+  white-space: normal;
+}
+.hr-actions .button {
+  white-space: nowrap;
+}
+.hr-form .hr-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.hr-form .form-grid {
+  margin: 0;
+}
+.hr-form p {
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 12px;
+}
+.hr-form .form-error {
+  color: #9c4747;
+}
+.hr-form .modal-actions {
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  margin-top: 6px;
+}
+.hr-workdays {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.hr-workdays legend {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 6px;
+}
+.hr-workdays .toolbar {
+  padding: 0;
+  background: transparent;
+  gap: 12px;
+}
+.hr-workdays label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+@media (max-width: 1100px) {
+  .hr-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 540px) {
+  .hr-summary {
+    gap: 10px;
+  }
+  .hr-summary .stat-card {
+    padding: 14px;
+  }
+  .hr-content > .field {
+    max-width: none;
+  }
+  .hr-workspace .table-wrap {
+    max-width: 100%;
+  }
+}
+.hr-more-actions {
+  position: relative;
+  font-size: 12px;
+  align-self: center;
+}
+.hr-more-actions summary {
+  color: var(--muted);
+  cursor: pointer;
+  padding: 8px;
+}
+.hr-more-actions[open] {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-panel);
+}
+.hr-personal-salary {
+  margin: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+.hr-personal-salary h3 {
+  margin-bottom: 14px;
+}
+.hr-personal-salary p {
+  font-size: 12px;
+  color: var(--muted);
+}
+.hr-personal-salary-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.hr-personal-salary-card .button {
+  margin-top: 12px;
+}

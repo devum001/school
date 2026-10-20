@@ -1,22 +1,10 @@
 import '../../styles/navigation.css';
 import { useToday } from '../../app/useToday';
 import { displayDate } from '../../lib/config';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-  ChevronsUpDown,
-  ArrowUpRight,
-  Menu,
-  X,
-  ChevronDown,
-  CircleHelp,
-} from 'lucide-react';
-import { schoolLogoFor } from '../../lib/schoolBranding';
-import { useSchool } from '../../app/useSchool';
+import { ChevronsUpDown, ArrowUpRight, Menu, X, ChevronDown, CircleHelp } from 'lucide-react';
 import { Avatar, Button, Modal, AppIcon, type IconName } from '../ui/Primitives';
-import TopbarControls from './TopbarControls';
-import { notificationAttention } from '../../lib/communicationOverview';
-import { preferencesFor } from '../../lib/adminSettings';
 const hindiLabels: Record<string, string> = {
   Overview: 'अवलोकन',
   Students: 'विद्यार्थी',
@@ -37,11 +25,32 @@ const navigation: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/fees', label: 'Finance', icon: 'fees' },
   { to: '/academics', label: 'Academics', icon: 'academics' },
 ];
-export default function AppShell() {
-  const state = useSchool();
-  const schoolLogo = schoolLogoFor(state);
+export interface AppShellProps {
+  visibleRoute?: (path: string) => boolean;
+  school: { name: string; logo?: string };
+  user: { name: string; detail: string; avatarName?: string };
+  preferences: { language: string; landingPage: string };
+  attentionCount: number | null;
+  topbar: ReactNode;
+  schoolPicker?: ReactNode;
+  extraNavigation?: ReactNode;
+  children?: ReactNode;
+  studentSearchUrl?: (query: string) => string;
+}
+export default function AppShell({
+  school,
+  visibleRoute = () => true,
+  user,
+  preferences,
+  attentionCount,
+  topbar,
+  schoolPicker,
+  extraNavigation,
+  children,
+  studentSearchUrl = (query) => `/students?q=${encodeURIComponent(query)}`,
+}: AppShellProps) {
+  const schoolLogo = school.logo;
   const today = useToday();
-  const attention = notificationAttention(state);
   const [mobile, setMobile] = useState(false);
   const [help, setHelp] = useState(false);
   const [query, setQuery] = useState('');
@@ -58,8 +67,7 @@ export default function AppShell() {
   useEffect(() => {
     if (!location.hash && !focusPending) window.scrollTo({ top: 0, behavior: 'instant' });
   }, [featureRoute, location.hash, focusPending]);
-  const preferences = preferencesFor(state),
-    initialNavigation = useRef(false);
+  const initialNavigation = useRef(false);
   const label = (value: string) =>
     preferences.language === 'Hindi' ? (hindiLabels[value] ?? value) : value;
   useEffect(() => {
@@ -74,6 +82,7 @@ export default function AppShell() {
       });
   }, [preferences.landingPage, location.pathname, navigate]);
   const current = [
+    { to: '/staff/self', label: 'My attendance & salary' },
     ...navigation,
     { to: '/notifications', label: 'Notifications' },
     { to: '/settings', label: 'School settings' },
@@ -94,60 +103,65 @@ export default function AppShell() {
           </span>
           schoolwell<span className="brand-dot">.</span>
         </Link>
-        <button
-          className="school-switch"
-          onClick={() => {
-            navigate('/settings');
-            setMobile(false);
-          }}
-        >
-          <span className="school-initial">
-            {schoolLogo ? (
-              <img src={schoolLogo} alt="Workspace school logo" />
-            ) : (
-              state.school.name[0]
-            )}
-          </span>
-          <span>
-            <strong>{state.school.name}</strong>
-            <small>School workspace</small>
-          </span>
-          <ChevronsUpDown size={14} />
-        </button>
+        {schoolPicker ?? (
+          <button
+            className="school-switch"
+            onClick={() => {
+              navigate('/settings');
+              setMobile(false);
+            }}
+          >
+            <span className="school-initial">
+              {schoolLogo ? <img src={schoolLogo} alt="Workspace school logo" /> : school.name[0]}
+            </span>
+            <span>
+              <strong>{school.name}</strong>
+              <small>School workspace</small>
+            </span>
+            <ChevronsUpDown size={14} />
+          </button>
+        )}
         <div className="nav-label">WORKSPACE</div>
         <nav aria-label="Main navigation">
-          {navigation.map((n) => (
-            <NavLink
-              key={n.to}
-              end={n.to === '/'}
-              to={n.to}
-              onClick={() => setMobile(false)}
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            >
-              <AppIcon name={n.icon} size={20} />
-              <span>{label(n.label)}</span>
-              {n.to === '/attendance' && <span className="nav-dot" />}
-            </NavLink>
-          ))}
+          {navigation
+            .filter((n) => visibleRoute(n.to))
+            .map((n) => (
+              <NavLink
+                key={n.to}
+                end={n.to === '/'}
+                to={n.to}
+                onClick={() => setMobile(false)}
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              >
+                <AppIcon name={n.icon} size={20} />
+                <span>{label(n.label)}</span>
+                {n.to === '/attendance' && <span className="nav-dot" />}
+              </NavLink>
+            ))}
         </nav>
         <div className="nav-label second">COMMUNICATION & ADMIN</div>
         <nav aria-label="Administration">
-          <NavLink className="nav-link" to="/notifications" onClick={() => setMobile(false)}>
-            <AppIcon name="notifications" size={20} />
-            {label('Notifications')}
-            {attention.count > 0 && <span className="nav-count">{attention.count}</span>}
-          </NavLink>
+          {visibleRoute('/notifications') && (
+            <NavLink className="nav-link" to="/notifications" onClick={() => setMobile(false)}>
+              <AppIcon name="notifications" size={20} />
+              {label('Notifications')}
+              {attentionCount !== null && attentionCount > 0 && (
+                <span className="nav-count">{attentionCount}</span>
+              )}
+            </NavLink>
+          )}
           <NavLink className="nav-link" to="/settings" onClick={() => setMobile(false)}>
             <AppIcon name="settings" size={20} />
             {label('School settings')}
           </NavLink>
         </nav>
+        {extraNavigation}
         <div className="sidebar-bottom">
           <button className="sidebar-user" onClick={() => navigate('/settings')}>
-            <Avatar name="Nandita Rao" />
+            <Avatar name={user.avatarName ?? user.name} />
             <span>
-              <strong>Dr. Nandita Rao</strong>
-              <small>Principal</small>
+              <strong>{user.name}</strong>
+              <small>{user.detail}</small>
             </span>
             <ChevronDown size={15} />
           </button>
@@ -168,37 +182,37 @@ export default function AppShell() {
             <strong>{label(current?.label ?? 'Student profile')}</strong>
           </div>
           <div className="header-actions">
-            <form
-              className="global-search"
-              onSubmit={(e) => {
-                e.preventDefault();
-                navigate(`/students?q=${encodeURIComponent(query)}`);
-                setQuery('');
-              }}
-            >
-              <label className="global-search-field">
-                <AppIcon name="search-dark" size={17} aria-hidden="true" />
-                <input
-                  aria-label="Search the student directory"
-                  placeholder="Find a student…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-              </label>
-            </form>
-            <TopbarControls />
+            {visibleRoute('/students') && (
+              <form
+                className="global-search"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  navigate(studentSearchUrl(query));
+                  setQuery('');
+                }}
+              >
+                <label className="global-search-field">
+                  <AppIcon name="search-dark" size={17} aria-hidden="true" />
+                  <input
+                    aria-label="Search the student directory"
+                    placeholder="Find a student…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </label>
+              </form>
+            )}
+            {topbar}
             <Link to="/settings" aria-label="Account settings">
-              <Avatar name="Nandita Rao" />
+              <Avatar name={user.avatarName ?? user.name} />
             </Link>
           </div>
         </header>
-        <main>
-          <Outlet />
-        </main>
+        <main>{children ?? <Outlet />}</main>
         <footer>
           <span>Schoolwell · Thoughtfully connected.</span>
           <span>
-            <AppIcon name="security" size={14} /> {state.school.name}
+            <AppIcon name="security" size={14} /> {school.name}
           </span>
           <button onClick={() => setHelp(true)}>
             <CircleHelp size={14} />

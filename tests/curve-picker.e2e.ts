@@ -84,9 +84,13 @@ test('calendar fields work on dashboard, attendance, enrollment, time dialog and
     /date=2026-10-17/,
   );
   await page.goto('/attendance');
-  await openAt(page, page.locator('main input[type="date"]').first());
+  await openAt(page, page.locator('main .calendar-date-control input[type="text"]').first());
   await page.goto('/students/new');
-  await openAt(page, page.locator('main input[type="date"]').first(), 'left');
+  await openAt(
+    page,
+    page.locator('main .calendar-date-control input[type="text"]').first(),
+    'left',
+  );
   await page.goto('/settings?section=timing');
   await page.getByRole('button', { name: 'Edit Timing', exact: true }).click();
   await openAt(page, page.getByRole('dialog').locator('input[type="time"]').first());
@@ -94,7 +98,7 @@ test('calendar fields work on dashboard, attendance, enrollment, time dialog and
   await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
   await page.goto('/notifications?tab=Compose+Notice');
   await page.getByLabel('Delivery', { exact: true }).selectOption('Schedule');
-  await openAt(page, page.locator('input[type="datetime-local"]'));
+  await openAt(page, page.getByLabel('Schedule date and time'));
 });
 
 test('native fields preserve typing, readonly/disabled safeguards and unsupported-browser fallback', async ({

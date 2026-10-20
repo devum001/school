@@ -1498,6 +1498,113 @@
   grid-template-columns: minmax(0, 420px) 200px;
   gap: 18px;
 }
+.test-type-picker {
+  position: relative;
+  min-width: 0;
+}
+.test-type-control {
+  position: relative;
+}
+.test-type-control input {
+  width: 100%;
+  padding-right: 40px;
+}
+.test-type-toggle {
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+.test-type-options {
+  position: absolute;
+  z-index: 5;
+  inset: 100% 0 auto;
+  margin-top: 4px;
+  padding: 4px;
+  max-height: min(300px, 45dvh);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: white;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+.test-type-options button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.test-type-options button:hover,
+.test-type-options button.active {
+  background: #edf5f3;
+}
+.assessment-maximum-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.academic-class-subjects .assessment-maximum-field input {
+  width: 86px;
+  height: 36px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.assessment-maximum-confirm {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.sheet-import-preview .live-check {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  margin: 16px 0;
+}
+.assessment-pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+}
+.assessment-pagination .field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.assessment-result-page {
+  min-width: 0;
+}
+.assessment-result-page .academic-subject-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 16px;
+}
+.assessment-result-page .academic-class-result table {
+  min-width: 720px;
+}
 .academic-class-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

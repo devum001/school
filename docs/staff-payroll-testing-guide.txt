@@ -1,0 +1,115 @@
+STAFF & PAYROLL — MANUAL TEST FLOW
+
+Use a test school and clearly labelled test accounts. Payment entries record money
+actually paid; there is no payment-reversal workflow yet. Avoid test payments in a
+real school's books. The automated browser tests use a disposable local database,
+not your configured school database.
+
+1. ADMIN: CONFIGURE SCHOOL RULES
+Sign in as the school owner.
+School settings > Staff & Payroll:
+- Departments: Add Department to create a name; each row has Edit and Delete. Click a department
+  to see its staff. Assign that department when creating/editing a staff record.
+- Work & Leave: Edit Details. Configure timings, working days, leave allowance,
+  holidays and the campus centre latitude/longitude and permitted radius.
+- Payroll: Edit Details. Choose the next-month payment due day and deduction basis.
+Expected: values persist after refresh. No salary month selector in school-wide rules.
+
+2. ADD TWO TEST STAFF
+Staff & HR > All Staff > Add Staff (or Import staff with the existing template).
+A: Teaching staff, with the teaching checkbox selected.
+B: Non-teaching, salary-only staff.
+Use unique staff codes and truthful joining dates for the test scenario.
+Expected: records appear in the directory. Teaching staff also appear under Teachers.
+
+3. CREATE THE TEACHER LOGIN WITHIN THE SCHOOL
+A staff profile is not itself a login.
+- School settings > Roles & Permissions: create/edit a Teacher role with
+  "Own attendance and salary". Do not grant payroll management or approval.
+- Teachers or Staff & HR > All Staff: click Enable login next to the teacher.
+  Enter their login email and password and select the Teacher role.
+  Saving creates the account, active school membership and staff link together.
+  No Super Admin step is needed.
+- Staff & HR > Salary Expenses > the teacher's Salary setup:
+  select the effective month, enter salary, select "Teacher punch in / out" and save.
+  The login is already linked.
+- Set the other staff member to "Salary only — no attendance".
+Expected: the linked teacher has access to their own records, not everyone's salary.
+An email belonging to an existing account cannot be overwritten or taken over here.
+For an existing account, use the existing school membership/link workflow.
+Manual attendance is available when an administrator maintains the register.
+
+4. TEACHER: PUNCH IN AND OUT
+Use a separate browser profile/private window to sign in as the teacher.
+Open My attendance & salary (/staff/self).
+Allow browser location access while inside the configured campus.
+Punch in, then punch out at the end of work.
+Expected:
+- An accurate, fresh location inside the campus is accepted.
+- Outside-campus or inaccurate location is rejected with a message.
+- Repeated/out-of-order punches are rejected.
+- A very short test shift can show half-day / pending; this is expected.
+- Signing out of the app does NOT punch out.
+On a phone, use HTTPS; visiting a laptop's plain HTTP LAN address cannot reliably
+use browser geolocation. Browser GPS is not an anti-spoofing guarantee.
+
+5. LEAVE AND ATTENDANCE REVIEW
+Teacher > My attendance & salary > Request leave:
+select a future working date, leave type, duration and reason.
+Admin > Staff & HR > Leave:
+review the request; approve/reject and choose Paid or Unpaid with a reason.
+Admin > Staff & HR > Attendance:
+choose the date; Review / correct the teacher's record and decide salary treatment.
+Expected:
+- The request starts pending. The teacher cannot approve their own request.
+- Paid leave consumes the annual allowance; unpaid leave affects salary deductions.
+- Late/short/missing punches need admin review; they do not silently deduct salary.
+- Refresh both accounts to see the saved decision.
+
+6. PREPARE AND APPROVE SALARY
+Admin > Staff & HR > Salary Expenses (also available through Finance):
+select the salary month and department, then Prepare salary for a staff member.
+Review salary components, adjustments and any advance recovery. Save the draft.
+Resolve attendance warnings, then Recalculate draft if inputs changed.
+Review & approve freezes the calculation.
+Expected:
+- Payroll cannot be approved before the salary month ends.
+- Unresolved attendance blocks approval.
+- Approval does not mark the salary paid.
+To test this entire sequence immediately, use a completed month in a TEST school:
+the staff joining date and salary effective month must cover that month.
+For a simple payment test use salary-only staff; for attendance-based payroll every
+required day in that period must be resolved. Do not change your computer's clock
+or falsify real staff history to bypass approval rules.
+
+7. PARTIAL/FULL PAYMENTS AND STATEMENT
+For a test net salary of ₹30,000:
+- Record payment ₹10,000 with date, method and reference:
+  status becomes Partially paid; outstanding becomes ₹20,000.
+- Record the remaining ₹20,000:
+  status becomes Paid; outstanding becomes zero.
+- Open Statement to inspect components, deductions, payments and balance.
+  Print or save as PDF.
+Expected:
+- Overpayment is rejected. Refresh preserves the balance.
+- Payment due date alone never changes paid status.
+- Recording a payment does not transfer money through a bank.
+
+8. OPTIONAL ADVANCE CHECK
+Record an advance with amount, date, method and reason.
+Prepare a later salary draft with an advance recovery amount.
+Expected: recovery cannot exceed the outstanding advance; an approved payroll
+reserves that recovery. Advance history remains available.
+
+9. DEMO REGRESSION
+Run a separate frontend dev server with VITE_APP_MODE=demo and an unused port.
+Demo continues to use local storage and its original salary workflow.
+Live mode does not fall back to demo data.
+
+CURRENT LIMITATIONS
+There is no bank integration, payroll payment reversal, biometric/device-attestation
+system, statutory tax/PF/ESI calculation or overnight shift workflow.
+Live paid leave is a combined calendar-year allowance, not the demo's separate
+casual/sick academic-year quotas.
+This guide describes manual acceptance checks; it does not claim that real GPS
+hardware or all these steps were exercised against your actual school.

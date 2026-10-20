@@ -1,0 +1,95 @@
+School-owned staff login and HR corrections — 20 October 2026
+
+Behavior
+- Teachers/Staff & HR directory now offers Enable login for active, unlinked staff.
+  An authorized school administrator enters email/password and selects a role.
+  The account, active school membership and staff link are created atomically.
+  No platform administrator step is required. Existing links show Login linked.
+- Requires staff.manage and memberships.manage; role selection requires roles.view.
+  A role cannot exceed the acting administrator's grants. Owner roles are excluded.
+  Cross-school access, CSRF failures and attempts to overwrite an existing global
+  account are rejected. Passwords use the existing bcrypt helper; neither passwords
+  nor hashes are returned or audited.
+- Existing-account linking and membership role/suspension controls remain available.
+- Departments have Add Department, Edit and Delete actions with explicit dialogs.
+  Rename updates matching staff departments in the same transaction and increments
+  profile revisions. Historical approved payroll snapshots are preserved.
+  Delete rejects assigned staff (including archived profiles) until reassigned.
+  Names are compared case-insensitively; duplicate names and stale writes are rejected.
+- Department, role, staff and status labels use normal capitalization for display.
+  Email addresses, codes and identifiers are preserved.
+- Payroll continues to use saved payment day, deduction basis/divisor and work calendar.
+  Changed settings make previous drafts stale; recalculate before approval.
+  Approved payroll remains immutable rather than being silently recalculated.
+- Punch-out now considers the configured closing time: an early departure requires
+  administrator review even if the minimum duration was reached.
+  Existing geofence, working-day, late-arrival and leave-approval checks remain.
+
+Backend files changed
+src/api/controllers/hr.controller.ts
+src/api/controllers/requests/hr.request.ts
+src/api/services/staffLogin.service.ts (new)
+src/api/services/hrDepartments.service.ts (new)
+src/api/services/authorization.service.ts (reuse existing role-assignment check)
+src/api/services/hrSettings.service.ts
+src/api/services/hrAttendance.service.ts
+src/api/services/hrRules.ts
+src/api/services/peopleDirectory.service.ts (explicit linked user ID in staff DTO)
+src/test/hr.integration.test.ts
+
+Frontend files changed
+src/features/hr/StaffLoginDialog.tsx (new)
+src/features/hr/HrSettingsPanel.tsx
+src/features/hr/HrForms.tsx
+src/features/hr/HrWorkspace.tsx
+src/features/hr/EmploymentDialog.tsx
+src/features/teachers/LiveStaff.tsx
+src/features/live/LiveMembers.tsx
+src/features/live/LiveRoles.tsx
+src/services/apiService.ts
+src/services/onboardingService.ts
+tests/staff-payroll-live.e2e.ts
+docs/staff-payroll-testing-guide.txt
+
+API additions
+POST /api/v1/schools/:schoolId/hr/staff/:id/login
+  {email, password, roleId}
+PUT /api/v1/schools/:schoolId/hr/departments
+  {revision, action: add|rename|delete, name, previousName?}
+
+No migrations, new indexes, dependency changes or configured-school database writes.
+Use the existing testteach role when enabling the teacher login. It already has
+Own attendance and salary. After creating the login, configure Salary setup with
+Teacher punch in / out, then sign in with that teacher's email/password.
+
+Scope limits
+This does not add email invitations, password-recovery/reset workflows or bank
+transfers. Existing global accounts cannot be claimed or reset by another school.
+Physical GPS testing and actual school-account creation were not performed.
+The browser/DB tests use isolated fixtures. Demo remains on its local repository.
+
+Verification commands and outcomes
+Frontend:
+- npm test: 48 files / 282 tests passed.
+- npm run lint: zero errors; existing Fast Refresh warnings in AppIcon.tsx and
+  Primitives.tsx (two warnings).
+- VITE_APP_MODE=live npm run build: passed.
+- VITE_APP_MODE=demo npm run build: passed.
+- Playwright HR config: salary/payment and geofence flows passed; the new
+  school-owned login/department flow passed in its final focused rerun.
+  The test signs out as owner and successfully signs in as the newly created teacher.
+- Playwright hr-demo-preservation.e2e.ts: passed, no live API use.
+
+Backend:
+- npm run typecheck: passed.
+- npm run lint: passed.
+- yarn build: passed.
+- Focused HR integration suite: 13 tests passed.
+- git diff --check: passed in both repositories.
+
+Earlier failed attempts: a system clock change expired a test JWT; one test sent
+Mongo subdocument metadata to the strict HTTP validator; browser tests needed an
+accessible combobox selector, updated action labels, and a wait for login completion.
+Those issues were corrected and their focused checks rerun successfully.
+
+Final full backend rerun: 29 suites / 194 tests passed.

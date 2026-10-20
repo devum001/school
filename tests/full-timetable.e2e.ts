@@ -10,19 +10,16 @@ test('class setup owns flexible grades, sections and student enrollment, and per
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(setupUrl);
-  await page.getByRole('button', { name: 'Add Class / Grade', exact: true }).click();
-  await page.getByLabel('Class / Grade name', { exact: true }).fill('Nursery');
-  await page.getByLabel('Grade / level (optional)', { exact: true }).fill('Pre-primary');
-  await page.getByRole('button', { name: 'Save Class / Grade', exact: true }).click();
-  await page
-    .getByLabel('Setup class', { exact: true })
-    .selectOption({ label: 'Nursery · Pre-primary' });
-  await page.getByRole('button', { name: 'Add section', exact: true }).click();
-  await page.getByLabel('Section name', { exact: true }).fill('Lotus');
-  await page.getByRole('button', { name: 'Save section', exact: true }).click();
-  await page
-    .getByRole('button', { name: 'Students in Nursery Section Lotus', exact: true })
-    .click();
+  await page.getByRole('button', { name: 'Set up classes', exact: true }).click();
+  await page.getByLabel('Class 1 name', { exact: true }).fill('Nursery');
+  await page.getByLabel('Class 1 sections', { exact: true }).fill('Lotus');
+  await page.getByRole('button', { name: 'Create classes & sections', exact: true }).click();
+  await page.getByLabel('Setup class').selectOption({ label: 'Nursery' });
+  await page.getByRole('button', { name: 'Edit class', exact: true }).click();
+  await page.getByText('Curriculum level (optional)', { exact: true }).click();
+  await page.getByLabel('Level used for subject suggestions', { exact: true }).fill('Pre-primary');
+  await page.getByRole('button', { name: 'Save Class', exact: true }).click();
+  await page.getByRole('button', { name: 'View students in section Lotus', exact: true }).click();
   await page.getByRole('button', { name: 'Add student', exact: true }).click();
   await expect(
     page.getByLabel('Student section', { exact: true }).locator('option:checked'),
@@ -31,21 +28,19 @@ test('class setup owns flexible grades, sections and student enrollment, and per
     page.getByLabel('Student class', { exact: true }).locator('option:checked'),
   ).toHaveText('Nursery');
   await page.getByLabel('Student name', { exact: true }).fill('Asha Singh');
-  const admission = await page.getByLabel('Admission number', { exact: true }).inputValue();
+  const admission = 'NURSERY-001';
+  await page.getByLabel('Admission number', { exact: true }).fill(admission);
+  await page.getByLabel('Roll number', { exact: true }).fill('1');
   await page.getByLabel('Date of birth', { exact: true }).fill('2022-01-01');
   await page.getByLabel('Guardian name', { exact: true }).fill('Ravi Singh');
   await page.getByLabel('Total Fee', { exact: true }).fill('1000');
   await page.getByLabel('Fee due date').fill('2026-10-20');
   await page.getByRole('button', { name: 'Save student', exact: true }).click();
-  await expect(page.locator('.setup-students')).toContainText('Asha Singh');
+  await expect(page.locator('.class-students-panel')).toContainText('Asha Singh');
   await page.reload();
-  await page
-    .getByLabel('Setup class', { exact: true })
-    .selectOption({ label: 'Nursery · Pre-primary' });
-  await page
-    .getByRole('button', { name: 'Students in Nursery Section Lotus', exact: true })
-    .click();
-  await expect(page.locator('.setup-students')).toContainText('Asha Singh');
+  await page.getByLabel('Setup class', { exact: true }).selectOption({ label: 'Nursery' });
+  await expect(page.locator('.class-students-panel')).toContainText('Asha Singh');
+  await page.getByRole('tab', { name: 'Sections', exact: true }).click();
   await page.getByRole('button', { name: 'Delete section Lotus', exact: true }).click();
   await page.getByRole('button', { name: 'Delete permanently', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('has students');

@@ -1,3 +1,4 @@
+import CalendarDateInput from './CalendarDateInput';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, ArrowUpRight } from 'lucide-react';
 import type { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes } from 'react';
@@ -35,6 +36,8 @@ function openNativePicker(input: HTMLInputElement): boolean {
 }
 
 export function PickerInput({ type, onClick, onKeyDown, ...props }: PickerInputProps) {
+  if (type === 'date' || type === 'datetime-local')
+    return <CalendarDateInput type={type} {...props} onClick={onClick} onKeyDown={onKeyDown} />;
   return (
     <input
       {...props}
@@ -202,6 +205,7 @@ export function Modal({
   children,
   wide = false,
   presentation = 'dialog',
+  className = '',
 }: {
   open: boolean;
   onClose: () => void;
@@ -210,6 +214,7 @@ export function Modal({
   children: ReactNode;
   wide?: boolean;
   presentation?: 'dialog' | 'page';
+  className?: string;
 }) {
   if (presentation === 'page')
     return open ? (
@@ -230,7 +235,7 @@ export function Modal({
     <Dialog.Root open={open} onOpenChange={(v) => !v && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="modal-overlay" />
-        <Dialog.Content className={`modal ${wide ? 'wide' : ''}`}>
+        <Dialog.Content className={`modal ${wide ? 'wide' : ''} ${className}`}>
           <div className="modal-heading">
             <div>
               <Dialog.Title>{title}</Dialog.Title>

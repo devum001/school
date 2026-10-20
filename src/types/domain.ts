@@ -11,6 +11,7 @@ import type {
 } from './ledger';
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'half-day' | 'unmarked';
 export interface School {
+  timezone?: string;
   id: string;
   name: string;
   city: string;
@@ -167,6 +168,7 @@ export interface StaffMember {
   isTeachingStaff?: boolean;
 }
 export interface SchoolClass {
+  studentCount?: number;
   id: string;
   schoolId: string;
   name: string;
@@ -180,6 +182,7 @@ export interface ClassSubject {
   archived?: boolean;
 }
 export interface Section {
+  studentCount?: number;
   id: string;
   schoolId: string;
   classId: string;
@@ -216,7 +219,7 @@ export interface Enrollment {
   academicYearId: string;
   classId: string;
   sectionId: string;
-  rollNumber: number;
+  rollNumber: string | number;
 }
 export interface AttendanceRecord {
   schoolId: string;
@@ -263,8 +266,10 @@ export interface Examination {
   sectionId: string;
   classIds?: string[];
   sectionIds?: string[];
+  sectionlessClassIds?: string[];
   subjectSelections?: { classId: string; subjectIds: string[] }[];
-  sheets?: { sectionId: string; subjects: TestSubject[] }[];
+  subjectMaximums?: { classId: string; subjectId: string; maxMarks: number }[];
+  sheets?: { classId?: string; sectionId: string; subjects: TestSubject[] }[];
   subjects: TestSubject[];
 }
 export interface TestSubject {

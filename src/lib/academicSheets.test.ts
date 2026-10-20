@@ -77,7 +77,7 @@ describe('new Academics flow', () => {
     const second = next.results.find((r) => r.enrollmentId === draft.rows[1].enrollmentId)!;
     expect(second.absent).toBe(false);
     expect(second.subjects[0].absent).toBe(true);
-    expect(resultSummary(second)).toMatchObject({ marks: 45, maximum: 70 });
+    expect(resultSummary(second)).toMatchObject({ marks: 45, maximum: 50 });
     const maths = subjectResults(
       next,
       current,
@@ -87,7 +87,7 @@ describe('new Academics flow', () => {
     expect(maths.absent).toBe(1);
     expect(maths.pending).toBe(9);
     expect(maths.highest).toBe(18);
-    expect(maths.average).toBe(30);
+    expect(maths.average).toBe(45);
     expect(maths.rows.find((r) => r.enrollment.id === draft.rows[2].enrollmentId)?.percentage).toBe(
       0,
     );
@@ -100,8 +100,8 @@ describe('new Academics flow', () => {
     draft.rows[0].cells[math] = '18';
     let next = saveMarksSheet(state, exam.id, 'class-8-a', draft.columns, draft.rows);
     const b = sheetDraft(next, next.exams[0], 'class-8-b');
-    b.columns[math].maximum = '100';
-    b.rows[0].cells[math] = '80';
+    expect(b.columns[math].maximum).toBe('20');
+    b.rows[0].cells[math] = '16';
     next = saveMarksSheet(next, exam.id, 'class-8-b', b.columns, b.rows);
     const before = next.results.filter((r) =>
       b.rows.some((row) => row.enrollmentId === r.enrollmentId),
@@ -129,7 +129,7 @@ describe('new Academics flow', () => {
     );
     expect(JSON.stringify(state)).toBe(before);
   });
-  it('calculates cumulative weighted scores with absence zero and pending excluded, even on incomplete tests', () => {
+  it('calculates cumulative weighted scores with absent and pending excluded, even on incomplete tests', () => {
     const { state, exam, draft, math } = setup();
     draft.rows[0].cells[math] = '18';
     draft.rows[1].cells[math] = 'A';
@@ -158,8 +158,7 @@ describe('new Academics flow', () => {
       percentage: (60 / 70) * 100,
       rank: 1,
     });
-    expect(ranks[1]).toMatchObject({ marks: 0, maximum: 20, count: 1, rank: 2 });
-    expect(ranks).toHaveLength(2);
+    expect(ranks).toHaveLength(1);
     next.exams[1].date = '2026-10-16';
     expect(overallLeaderboard(next, roster(next), next.exams)[0].count).toBe(1);
   });
@@ -247,8 +246,8 @@ describe('new Academics flow', () => {
   it('previews bulk marks using roll number/name, A and pending cells; rejects stale names, duplicates, formulas and overflow', () => {
     const { draft, math, english } = setup();
     const grid = sheetTemplate(draft.columns, draft.students);
-    grid[2][math + 4] = 'A';
-    grid[2][english + 4] = '45';
+    grid[2][math + 5] = 'A';
+    grid[2][english + 5] = '45';
     const preview = previewSheetImport(draft.columns, draft.rows, draft.students, grid);
     expect(preview.changes).toHaveLength(1);
     expect(preview.rows[0].cells[math]).toBe('A');
@@ -261,15 +260,17 @@ describe('new Academics flow', () => {
         g.push(g[2]);
       },
       (g: typeof grid) => {
-        g[2][math + 4] = '=10';
+        g[2][math + 5] = '=10';
       },
       (g: typeof grid) => {
-        g[2][math + 4] = '21';
+        g[2][math + 5] = '21';
       },
     ]) {
       const bad = structuredClone(grid);
       mutate(bad);
-      expect(() => previewSheetImport(draft.columns, draft.rows, draft.students, bad)).toThrow();
+      expect(
+        previewSheetImport(draft.columns, draft.rows, draft.students, bad).issues.length,
+      ).toBeGreaterThan(0);
     }
   });
 });

@@ -1,0 +1,35 @@
+Staff & Payroll UI repair — 19 October 2026
+
+Changes
+- Extracted the demo's unchanged SetupSection and Rule presentation into
+  src/features/settings/StaffPolicySection.tsx; demo StaffPayrollSettings now imports
+  these shared components. No demo business rules or storage changed.
+- HrSettingsPanel.tsx reuses the demo policy cards and department table/detail layout.
+  Department counts come from live staff; work and payroll cards display API values.
+- HrWorkspace.tsx removes the irrelevant month selector from school-wide settings,
+  adds salary totals using shared StatCard, readable status badges and staff avatars.
+- HrForms.tsx uses readable attendance/deduction option labels without changing API
+  values. hr.css scopes form spacing, action wrapping and responsive summary layouts.
+- tests/staff-payroll-live.e2e.ts now checks the shared settings cards, hidden settings
+  month picker, mobile overflow, salary summaries and partial-to-full payment.
+- docs/staff-payroll-testing-guide.txt documents administrator/teacher testing steps,
+  expected results, account linking, month-end restrictions and current limitations.
+
+Executed verification
+- ./node_modules/.bin/tsc -b: passed.
+- npm run lint: passed, zero errors; existing Fast Refresh warnings in AppIcon.tsx
+  and Primitives.tsx remain (2 warnings).
+- npm test: 48 test files, 282 tests passed.
+- VITE_APP_MODE=live npm run build: passed.
+- VITE_APP_MODE=demo npm run build: passed.
+- PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test
+  --config=playwright.hr.config.ts: 2 passed, isolated local backend/database.
+- PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test
+  tests/hr-demo-preservation.e2e.ts --config=playwright.config.ts: 1 passed.
+- git diff --check: passed.
+- Inspected desktop settings, desktop salary and 390px mobile settings screenshots.
+
+No backend/API/schema changes in this repair. No configured-school DB records were
+created or modified. Physical GPS, actual teacher accounts and manual leave approval
+were not tested against the user's school. This is a presentation repair of the
+implemented HR flow, not a claim of complete feature parity with every demo setting.

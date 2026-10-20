@@ -1,7 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
+  outputDir: 'test-results/demo',
   testMatch: '**/*.e2e.ts',
+  testIgnore: [
+    'live-api.e2e.ts',
+    'phase1-repair.e2e.ts',
+    'staff-payroll-live.e2e.ts',
+    'product-correction-live.e2e.ts',
+  ],
   fullyParallel: true,
   reporter: 'list',
   use: {
@@ -16,6 +23,7 @@ export default defineConfig({
     },
   ],
   webServer: {
+    env: { VITE_APP_MODE: 'demo' },
     command: 'npm run dev -- --host 127.0.0.1 --port 5175 --strictPort',
     url: 'http://127.0.0.1:5175',
     reuseExistingServer: false,

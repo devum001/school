@@ -3,4 +3,4 @@ const naturalOrder = new Intl.Collator('en-IN', { numeric: true, sensitivity: 'b
 export const orderedClasses = (classes: SchoolClass[]) =>
   [...classes].sort((a, b) => naturalOrder.compare(a.name, b.name));
 export const sectionLabel = (name: string | undefined) =>
-  `Section ${(name ?? '').replace(/^(section\s+)+/i, '').trim()}`;
+  name ? `Section ${name.replace(/^(section\s+)+/i, '').trim()}` : 'No section';

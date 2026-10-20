@@ -93,7 +93,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
     (r) => r.schoolId === state.school.id && r.enrollmentId === enrollmentId && r.examId === examId,
   );
   const result = recordedResult ? resolvedResult(state, recordedResult) : undefined;
-  const summary = result && resultSummary(result).maximum ? resultSummary(result) : null;
+  const summary = result ? resultSummary(result) : null;
   const marksTable =
     result && summary ? (
       <div className="table-wrap" role="region" aria-label="Subject marks" tabIndex={0}>
@@ -137,10 +137,16 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
           <tfoot>
             <tr>
               <td>Total</td>
-              <td>{result.absent ? '—' : summary.marks}</td>
-              <td>{summary.maximum}</td>
-              <td>{result.absent ? '—' : `${summary.percentage}%`}</td>
-              <td>{result.absent ? 'Absent' : `Grade ${summary.grade}`}</td>
+              <td>{summary.maximum ? summary.marks : '—'}</td>
+              <td>{summary.maximum || '—'}</td>
+              <td>{summary.maximum ? `${summary.percentage.toFixed(1)}%` : '—'}</td>
+              <td>
+                {result.absent
+                  ? 'Absent'
+                  : !summary.maximum
+                    ? 'Awaiting marks'
+                    : `Grade ${summary.grade}`}
+              </td>
             </tr>
           </tfoot>
         </table>
@@ -201,13 +207,17 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
           </div>
           <div className="student-selected-score">
             <strong>
-              {!summary ? 'Pending' : result?.absent ? 'Absent' : `${summary.percentage}%`}
+              {result?.absent
+                ? 'Absent'
+                : !summary?.maximum
+                  ? 'Pending'
+                  : `${summary.percentage.toFixed(1)}%`}
             </strong>
-            <Badge tone={!summary || result?.absent ? 'amber' : 'green'}>
-              {!summary
-                ? 'Awaiting marks'
-                : result?.absent
-                  ? 'Recorded absence'
+            <Badge tone={!summary?.maximum || result?.absent ? 'amber' : 'green'}>
+              {result?.absent
+                ? 'Recorded absence'
+                : !summary?.maximum
+                  ? 'Awaiting marks'
                   : `Grade ${summary.grade}`}
             </Badge>
           </div>
@@ -274,7 +284,9 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
                   </strong>
                 </span>
                 <span className="student-exam-percentage">
-                  <strong>{result?.absent ? 'Absent' : data ? `${data.percentage}%` : '—'}</strong>
+                  <strong>
+                    {result?.absent ? 'Absent' : data ? `${data.percentage.toFixed(1)}%` : '—'}
+                  </strong>
                   <Badge tone={data && !result?.absent ? 'green' : 'amber'}>
                     {!data ? 'Pending' : result?.absent ? 'Absent' : `Grade ${data.grade}`}
                   </Badge>

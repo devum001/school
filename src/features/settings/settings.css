@@ -699,3 +699,46 @@
     transition: none;
   }
 }
+
+/* Shared class context stays above feature tabs in both modes. */
+.class-structure-actions {
+  justify-content: flex-end;
+  padding: 12px 20px;
+}
+.class-setup-fields {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.class-setup-paste {
+  border: 1px solid var(--border, #dce3eb);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.class-setup-paste summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.class-setup-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin: 16px 0;
+}
+.class-setup-row .field {
+  min-width: 0;
+}
+.class-setup-row textarea {
+  width: 100%;
+  resize: vertical;
+}
+@media (max-width: 640px) {
+  .class-setup-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.selected-class-name { font-size: 1.6rem; min-width: 3rem; }
+.selected-class-name sup { font-size: .55em; margin-left: 1px; }

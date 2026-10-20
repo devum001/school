@@ -11,3 +11,9 @@ describe('school calendar date', () => {
     expect(getSchoolDate(new Date('2026-12-31T18:30:00Z'))).toBe('2027-01-01');
   });
 });
+
+it('uses the configured school timezone independently of the browser day', () => {
+  const instant = new Date('2026-10-11T02:00:00Z');
+  expect(getSchoolDate(instant, 'America/Los_Angeles')).toBe('2026-10-10');
+  expect(getSchoolDate(instant, 'Pacific/Kiritimati')).toBe('2026-10-11');
+});

@@ -1,9 +1,9 @@
 export const SCHOOL_TIME_ZONE = 'Asia/Kolkata';
 
 /** Calendar dates follow the school timezone, regardless of the viewer's device timezone. */
-export function getSchoolDate(now: Date = new Date()): string {
+export function getSchoolDate(now: Date = new Date(), timezone = SCHOOL_TIME_ZONE): string {
   const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: SCHOOL_TIME_ZONE,
+    timeZone: timezone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

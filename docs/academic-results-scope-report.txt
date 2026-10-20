@@ -1,0 +1,115 @@
+Academic marks and results: class / section scope repair
+Date: 2026-10-19
+
+Scope and baseline
+The existing demo Academics page, test dialog, marks sheet, Results tabs,
+leaderboard, result dialog, imports and exports remain the UI baseline.
+No replacement screens or dependencies were introduced. Existing uncommitted
+work in both repositories was inspected and preserved.
+
+Implemented in the existing demo workflow
+- Results defaults to Whole class. Both Recent Results and Overall Leaderboard
+  also support a named section or Without section. Filter choices carry across
+  those views and survive refresh through URL parameters.
+- Combined exam reports include a Section column. Export includes Class and
+  Section so duplicate roll numbers in different sections remain distinguishable.
+- Classes without sections can create exams, record marks, import a marks sheet,
+  and reopen saved marks. Mixed classes can explicitly include students without
+  sections alongside selected named sections.
+- Marks sheets retain class identity in addition to section identity. Two classes
+  without sections cannot overwrite each other's sheet or accept each other's
+  imported rows. No artificial section records are created.
+- Numeric class headings reuse the existing raised ordinal label component.
+- Students, absences and pending counts use the same eligible active exam roster
+  for combined and section views. Combined totals equal the sum of those groups.
+  This preserves the existing academic rule: inactive students are excluded;
+  a class directory's count of all saved enrollments can therefore differ.
+- Subject percentages use each student's actual maximum marks. For sections with
+  different maxima, the header says the maximum varies; highest score is expressed
+  as a percentage. Pending, absent, zero and Not included remain distinct.
+- Existing weighted leaderboard scoring is preserved (pending excluded, absence
+  zero). Averages preserve the existing mean of recorded student percentages;
+  they are not averages of section averages.
+- Legacy name-only subjects and newer subject IDs merge without duplicate result
+  columns. Existing marks and old section-only sheets remain readable.
+
+Persistence semantics
+New optional examination.sectionlessClassIds explicitly selects sectionless
+students for exams whose sectionIds restrict participation. New sheets include
+classId; older sheets infer it from their section. In result helpers, an omitted
+section means the whole class, while an empty section ID means only sectionless
+students. The URL token 'unsectioned' is UI state, never a persisted section ID.
+No local-data reset or MongoDB migration is required for these demo changes.
+
+Files changed in this continuation (frontend repository)
+src/features/academics/AcademicsPage.tsx
+src/features/academics/TestDialog.tsx
+src/features/academics/MarksDialog.tsx
+src/features/academics/ResultsView.tsx
+src/features/academics/TestResult.tsx
+src/lib/academicGroups.ts (new scoped group helpers)
+src/lib/academicGroups.test.ts (new regression tests)
+src/lib/academicSheets.ts
+src/lib/academics.ts
+src/lib/testScope.ts
+src/lib/testSubjects.ts
+src/lib/repository.ts (marks-sheet class scope only; earlier class setup preserved)
+src/types/domain.ts
+tests/academic-optional-sections.e2e.ts (new browser checks)
+tests/academic-multiclass.e2e.ts (ordinal/scope label expectations)
+tests/combined-results.e2e.ts (export includes Class and Section)
+tests/academics.e2e.ts (whole-class default and scope label expectations)
+tests/live-api.e2e.ts (appended live/demo isolation check)
+docs/academic-results-scope-report.txt
+No backend source, environment, dependency or lockfile was modified.
+The obsolete requirement to create a section before creating a test was removed;
+its validation now accepts explicit sectionless class participation. All existing
+section-based workflows remain available.
+
+Live API dependency / remaining work
+This continuation does NOT implement live exam or marks persistence. Inspection
+of backend models and registered controllers confirmed that exam definitions,
+marks sheets and result APIs do not exist. /academics in live mode still uses the
+existing unavailable-capability route, with no demo fallback. Do not interpret
+the demo result checks as validation of real school results in MongoDB.
+
+To enable the same screens in live mode, the backend needs tenant/year-scoped
+exam CRUD, class/optional-section and subject validation, revision-controlled
+marks writes, result reads, and explicit academic view/manage permissions.
+Mutations must use the existing transactional authorization, CSRF and audit
+mechanisms. Supporting models/index provisioning, deletion-reference guards and
+an authenticated feature adapter are also required. No pretend endpoints or
+client-only authorization were added as a substitute.
+
+No manual environment changes are needed here. Review the working result UI in
+demo mode at /academics -> Results; do not switch a live deployment to demo to
+store real academic records. Earlier class/enrollment backend migration guidance
+in multi-class-import-report.txt remains separate from this change.
+
+Validation executed
+- npm test: 272 tests passed in 45 files (final run).
+- npm run typecheck: passed.
+- npm run lint: passed, 0 errors; the same 2 pre-existing Fast Refresh warnings
+  remain in src/components/ui/AppIcon.tsx:3 and Primitives.tsx:7.
+- npm run build: passed (demo).
+- VITE_APP_MODE=live npm run build: passed. Both builds were rerun successfully
+  after the final legacy-subject compatibility adjustment.
+- git diff --check: passed.
+- PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test
+  tests/academic-optional-sections.e2e.ts tests/combined-results.e2e.ts
+  tests/academic-multiclass.e2e.ts --workers=2: 6 passed.
+- Same Playwright command with tests/academics.e2e.ts --workers=2: 3 passed.
+- Same Playwright runner with --config=playwright.live.config.ts
+  -g 'academic results remain unavailable': 1 passed against a temporary local
+  replica set and the real backend authentication/tenant middleware.
+- The live test initially rejected a shared CSS file and useDraftGuard import
+  because its assertion matched all academics-folder modules. Inspection showed
+  no demo repository or demo screen load; the assertion was narrowed to the actual
+  demo repository, fixtures and academic data screens, then rerun successfully.
+- Final focused browser rerun of academic-optional-sections.e2e.ts and
+  combined-results.e2e.ts after the legacy-subject merge adjustment: 3 passed.
+  Result dialog desktop screenshot inspected; the existing report layout remains.
+  The combined-results test also passed its desktop/mobile layout and axe checks.
+No configured Atlas connection, real data writes, manual migrations, seed commands,
+or destructive commands were executed. The live test created only isolated fixture
+records. The full backend suite and full historical browser suite were not rerun.

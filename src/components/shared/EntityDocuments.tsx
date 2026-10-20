@@ -1,3 +1,4 @@
+import { displayTimestamp } from '../../lib/displayFormat';
 import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
@@ -105,11 +106,7 @@ export default function EntityDocuments({
                       </button>
                     </th>
                     <td>{entry.category}</td>
-                    <td>
-                      {new Date(entry.uploadedAt).toLocaleDateString('en-IN', {
-                        timeZone: 'Asia/Kolkata',
-                      })}
-                    </td>
+                    <td>{displayTimestamp(entry.uploadedAt)}</td>
                     <td>
                       <div className="inline-actions">
                         <Button

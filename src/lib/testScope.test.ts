@@ -130,7 +130,7 @@ describe('multiple classes with their selected sections', () => {
       d = sheetDraft(state, exam, 'class-8-a');
     d.columns[0].maximum = '20';
     const grid = sheetTemplate(d.columns, d.students);
-    grid[2][4] = '18';
+    grid[2][5] = '18';
     expect(previewSheetImport(d.columns, d.rows, d.students, grid).changes).toHaveLength(1);
     for (const [column, value] of [
       [2, 'Grade 9'],
@@ -138,9 +138,7 @@ describe('multiple classes with their selected sections', () => {
     ] as const) {
       const wrong = structuredClone(grid);
       wrong[2][column] = value;
-      expect(() => previewSheetImport(d.columns, d.rows, d.students, wrong)).toThrow(
-        /different class or section/,
-      );
+      expect(previewSheetImport(d.columns, d.rows, d.students, wrong).issues).toHaveLength(1);
     }
   });
   it('retains the meaning of older single-class and shared-school tests', () => {

@@ -1,0 +1,149 @@
+Product correction — Phase 1 — 20 October 2026
+
+Scope and status
+
+This phase repairs academic data integrity and the confirmed leave inbox defect. It preserves the existing Academics/Overview components, shell, demo repository, real live API adapter, school isolation, permissions, CSRF and audit behavior. It is a checkpoint, not completion of every item in the master request. The investigation and subsequent phases are in product-correction-20261020-investigation.txt.
+
+Confirmed causes and changes
+
+1. Test type was absent from TestDialog, dropped by LiveLearning.examBody and hardcoded as Test by backend serialization. The original form now has a searchable type dropdown, including daily, monthly, half-yearly, pre-board and yearly choices. Existing Term exam, Pre-board and custom values remain supported. kind is persisted separately from the name. Old records are shown as Assessment until explicitly classified; no type is guessed from a name.
+
+2. Maximum marks previously belonged to section sheets. A second section started blank and could use a different denominator. The additive subjectMaximums field defines each assessment/class/subject maximum across every included section. New tests configure maxima before marks entry. Legacy clients can establish missing maxima on their first valid marks save. Subsequent marks requests cannot change them. Edit Test explicitly confirms the effect on all sections and validates every stored result inside the existing schoolWrite transaction. Marks never rescale; lowering a maximum below a saved score is rejected. Revisions still prevent stale edits. Conflicting historical maxima remain unchanged until an authorized user explicitly reconciles them.
+
+3. Explicitly selected/configured subjects now stay pending when blank, including in another included section with no entered marks. They are not silently removed from the assessment. Original metadata-only legacy sheets retain their blank-column behavior. Only pending-only records may be removed when shrinking assessment scope; recorded marks, recorded zero and absence remain protected.
+
+4. resultSummary rounded during calculation and counted absence as zero in the denominator. Calculations now keep full precision, use only recorded scored subjects, and round to one decimal at presentation. Percentage = obtained / corresponding maximum * 100. An absent or pending subject contributes neither obtained nor maximum to a performance score. A recorded zero does contribute its maximum and can be ranked. Mixed scored/absent/pending subjects remain distinct in the result and exports. Parent report sharing and student academic totals preserve explicit absence rather than inventing a zero score or displaying it as pending.
+
+5. Overall already used weighted total marks, which is retained. Epsilon ties have been replaced with comparison of the unrounded score ratios. True ties use competition ranks. Overall tables, award cards and exports now include obtained/maximum marks and explain the selected year and aggregation rule. No scores are fabricated for unranked students.
+
+6. Marks entry now opens the whole selected class, combining its authorized sections. A section selector narrows the same draft and can return to All sections. Draft edits survive switches; maxima stay consistent. Rows show section and sort by section then valid unique numeric roll identity, with name/ID fallback where rolls are missing or ambiguous. No roll is invented. Existing per-subject teacher authorization disables inaccessible cells and is rechecked on the server. All changed sheets still save atomically.
+
+7. Full individual assessment results no longer use TestResult's modal wrapper. This small results presentation change was moved forward from Phase 2 because the supplied screenshot directly showed the confusing modal/footer. The original table and design styles are reused in a normal page at the existing /academics query URL, which survives reload and has Back to results. It shows marks/maximum and percentage, explicit summary labels, admission identifiers, name/roll/admission search, page sizes 20/50/100, empty search state and existing CSV export. The confusing subject footer has been removed. Absence is unranked and labelled separately. The responsive table scrolls inside the page; mobile was tested and inspected at 390px.
+
+IMPORTANT LIMIT: Result page search/pagination currently projects the existing academic snapshot. This is not server-side pagination and does not satisfy the requested large-history performance architecture. The existing learning snapshot still retrieves its bounded historical dataset. No 1,000-student runtime/load test is claimed. Phase 2 must add paginated scoped queries and replace the remaining overall-leaderboard modal before declaring that requirement complete.
+
+8. Excel matching formerly coerced rolls through Number(), breaking SH-12 and allowing ambiguity when sections reused rolls. The template adds Admission Number after the four existing identity columns and appends an assessment reference bound to school, academic year, assessment and class. Referenced rows from another scope are rejected. Older templates without that reference require explicit confirmation of the currently selected assessment. Existing four-identity templates remain accepted when class/section/roll identify exactly one current student. Matching follows the school's existing numeric-identity rules, and never uses name alone. New files match admission plus class/section/roll and verify the name. Duplicate, ambiguous, wrong-scope, formula, maximum-change and overflow rows are rejected with row numbers. All row errors are previewed together; any error blocks applying the import. Existing nonblank rows require replacement confirmation. Selecting another file clears the prior preview and confirmations; controls are disabled while a marks save is in progress. Blank rows keep saved marks, and preview reports prepared/replacing/skipped/rejected counts. Apply only stages the sheet; Save Marks persists the complete transaction. The live browser scenario downloads a real referenced CSV, changes a saved mark from 87 to 90, confirms replacement and verifies 90/100 after a server reload.
+
+9. Future leave was absent from the current-month admin view because hrWorkspace only queried requests overlapping that month. Both own and admin views now include all pending requests within the existing school/staff scope; decided requests follow the selected month. UI explains this scope and lists pending first. Paid-allowance and already-recorded-attendance approval failures have distinct actionable errors. No balance, payroll lock, state-transition or self-approval rule is bypassed.
+
+10. Existing punch fixes and assignment scopes were investigated, not replaced. Punching uses effective saved monthly policy, school work rules, valid staff linkage, campus accuracy/freshness, server time, school timezone, sequence/idempotency, prior open-day and payroll-lock checks. New teacher defaults never override an explicitly saved none/manual/future policy. Current assignments and role permissions are re-read on each request and revalidated inside writes. Regression tests cover denial after assignment removal and cross-school denial. The user's actual staff configuration/Atlas records were not inspected, so no claim is made that a particular teacher's real missing setting was repaired.
+
+Changed frontend files (relative to /home/devendra/schooool)
+
+src/types/domain.ts
+src/lib/assessmentMaximums.ts (new)
+src/lib/marksRoster.ts (new)
+src/lib/assessmentIntegrity.test.ts (new)
+src/lib/academicSheets.ts
+src/lib/academics.ts
+src/lib/selectors.ts
+src/lib/sheetImport.ts
+src/lib/reportShare.ts
+src/lib/academicSheets.test.ts
+src/lib/academicGroups.test.ts
+src/lib/academics.test.ts
+src/lib/testScope.test.ts
+src/lib/testSubjects.test.ts
+src/lib/reportShare.test.ts
+src/features/academics/TestDialog.tsx
+src/features/academics/MarksDialog.tsx
+src/features/academics/TestResult.tsx
+src/features/academics/ResultsView.tsx
+src/features/academics/StudentAcademics.tsx
+src/features/academics/academics.css
+src/features/live/LiveLearning.tsx
+src/features/hr/HrWorkspace.tsx
+tests/assessment-integrity-demo.e2e.ts (new)
+tests/academics.e2e.ts
+tests/academic-multiclass.e2e.ts
+tests/academic-optional-sections.e2e.ts
+tests/product-correction-live.e2e.ts
+tests/bulk-marks.e2e.ts
+docs/product-correction-20261020-investigation.txt (new)
+docs/product-correction-20261020-phase1.txt (new)
+
+Changed backend files (relative to /home/devendra/scholl backend/type-ORM-backend-Node)
+
+src/api/models/learning.models.ts
+src/api/controllers/requests/learning.request.ts
+src/api/services/examinationMaximums.ts (new)
+src/api/services/examinationSheets.service.ts
+src/api/services/examinations.service.ts
+src/api/services/learningSerialization.ts
+src/api/services/setupRules.ts
+src/api/services/hrRead.service.ts
+src/api/services/hrLeave.service.ts
+src/api/services/hrRules.ts
+src/security/learning.integration.test.ts
+src/test/hr.integration.test.ts
+
+API changes and compatibility
+
+POST/PUT /api/v1/schools/:schoolId/academic-years/:yearId/learning/exams[/examId]
+  Optional structured kind and subjectMaximums[{classId, subjectId, maxMarks}]. Supplied maxima must match all selected class subjects, be finite/positive and within 10,000. Omission/null preserves legacy compatibility. Explicit edits revalidate all existing scores. Foreign or unselected identifiers are rejected.
+PUT .../learning/exams/:examId/marks
+  Existing payload retained. Cannot alter persisted maxima; every selected configured subject stays pending when blank. Transaction, exact roster, revisions and subject scopes retained.
+GET .../learning?area=academics
+  Returns actual kind and scoped maximum definitions; no additional private identity or salary information.
+GET /api/v1/schools/:schoolId/hr/workspace?month=YYYY-MM[&self=true]
+  Adds future pending leave to the scoped inbox. Existing result fields retained.
+PUT .../hr/leave/:leaveId
+  Adds allowlisted HR_LEAVE_ALLOWANCE and HR_LEAVE_ATTENDANCE messages. Transitions, paid balance, own-approval denial, revisions and locks retained.
+New academic allowlisted conflicts: EXAM_MAXIMUM, EXAM_MAXIMUM_BELOW_MARKS. Driver errors/secrets remain sanitized.
+
+Verification commands actually executed
+
+Frontend:
+  npm test -- --reporter=dot
+  npm run lint
+  ./node_modules/.bin/tsc -b --pretty false
+  VITE_APP_MODE=live npm run build
+  VITE_APP_MODE=demo npm run build
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test --config=playwright.config.tstests/academics.e2e.tstests/academic-multiclass.e2e.tstests/academic-optional-sections.e2e.tstests/assessment-integrity-demo.e2e.ts tests/bulk-marks.e2e.ts --workers=2
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test --config=playwright.config.tstests/assessment-integrity-demo.e2e.tstests/hr-demo-preservation.e2e.tstests/navigation-refresh.e2e.ts --workers=2
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test --config=playwright.product-correction.config.ts
+  git diff --check
+
+Backend:
+  yarn build (runs backend ESLint and TypeScript compilation)
+  ./node_modules/.bin/jest --runInBand --cacheDirectory=/tmp/school-academic-final-jest-cache
+  Focused learning / hr / punch suites were also run during staging and repair.
+  git apply --check (each exact reviewed patch)
+  git diff --check
+
+Final results
+
+Frontend unit: 302 tests passed in 52 files.
+Frontend lint: 0 errors, 2 pre-existing Fast Refresh export warnings (AppIcon.tsx, Primitives.tsx).
+Frontend live/demo builds and build-time TypeScript checks passed.
+Demo academic/import browser final result: 13 passed on final frontend code. Separate demo navigation/local-salary run: 10 passed, including the same 2 academic scenarios (8 additional navigation/salary scenarios).
+Backend full suite: 208 tests passed in 31 suites on final backend code. Final live browser result: 4 passed, including referenced CSV replacement and persisted 90/100 after reload.
+
+Verification notes
+
+Database and live-browser checks use disposable, ownership-verified local MongoDB replica sets and fixture accounts, not the real .env/Atlas database. Real startup, real-school data correctness and production-scale latency are not claimed. Existing school data and indexes were not changed by us.
+
+Early checks exposed a sandbox loopback denial and read-only Jest cache; tests were rerun with the required local-process permission and temporary caches. A first full-suite process ended with signal 143 without results; subsequent full runs completed (206 and then 207 passing tests before the last pending-subject refinement). Early UI failures identified an obsolete test locator and a real confirmation-label layout issue; the label was fixed and the scenarios passed. The expanded live journey also exceeded its old 30-second whole-test budget during concurrent verification. Its limit is now scoped to 120 seconds for the multi-step journey; rerun alone passed in 22.5 seconds with all assertions retained. The staging copy initially lacked the repository's .prettierrc; it was copied before linting, so that temporary formatting diagnostic is not reported as a pre-existing repository failure.
+
+Safety / deployment
+
+Both working trees were inspected before edits. Existing staged/unstaged/untracked work and Git index were preserved. Backend patches were prepared in /tmp, hash-checked against the actual working files, git-apply checked, backed up and narrowly applied. Backups: /tmp/school-academic-integrity-before-apply, /tmp/school-academic-integrity-before-edge-apply and /tmp/school-academic-integrity-before-pending-apply.
+No .env, credentials, dependencies or lockfiles were changed. No real credentials/URIs were printed. No real database connection, initialization command, migration, seeding or destructive database operation was run. Test fixtures create/remove only their own disposable local databases.
+
+No new environment variable, collection, index or migration is required for these additive fields. Keep the existing learning initialization already applied to your environment. Restart the backend and frontend with their existing development commands, then refresh. Existing assessments need explicit classification/reconciliation only if their type or section maxima require correction. No automatic rewrite of historical marks occurs.
+
+Next phase / remaining requirements
+
+- Server-side scoped result/history filtering, sorting and pagination; default top-20 overall leaderboard, dedicated full leaderboard instead of its remaining modal, assessment-type/date/subject filters and bounded recent-15 history without deleting records.
+- 95% band/filter, year-wide support monitoring with visible defensible criteria and explanatory assessment trends. Current assessment summaries show 80/90/100 counts, not the full monitoring feature.
+- Large-roster performance/load verification and scalable export. Current page pagination alone is not the requested server solution.
+- Focused teacher login/routing/screens and mobile navigation using the existing auth system; improve the symmetric student/staff attendance switch.
+- Grouped View/Manage permission editor, staff bulk login/employment/salary provisioning and remaining salary/settings usability. Existing per-person school-owned login and payroll stay functional.
+- Broader unrelated fee/communication/profile-parity work from earlier reports is not claimed complete by this phase.
+
+
+Test-type selector follow-up
+
+The native datalist filtered against its prefilled Daily test value, hiding the other configured types. Replaced only that field with TestTypePicker: opening/focusing shows all choices; typing searches; keyboard navigation, existing/custom kinds and saved values are preserved. The existing design styles are reused. No backend, database or environment changes.
+Changed: src/features/academics/TestTypePicker.tsx (new), TestDialog.tsx, academics.css and tests/assessment-integrity-demo.e2e.ts.
+Verified: 4 focused browser scenarios passed (desktop/mobile choices, search, keyboard, custom/persisted kinds and existing assessment integrity flows); frontend lint has 0 errors and the same 2 prior warnings; live build and TypeScript checks passed. These are follow-up results, distinct from the phase checkpoint above.

@@ -1,12 +1,13 @@
+import { SetupSection, Rule } from './StaffPolicySection';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useSettingsSection } from './useSettingsSection';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { documentTemplatesFor } from '../../lib/documentData';
 import { TEMPLATE_LABELS } from '../../lib/documentRendering';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { AppIcon, type IconName, Badge, Button, Panel } from '../../components/ui/Primitives';
+import { Badge } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import { defaultStaffPayroll } from '../../lib/settings';
 import StaffPayrollDialog, { type StaffSettingsGroup } from './StaffPayrollDialog';
@@ -15,53 +16,6 @@ import StaffDepartments from './StaffDepartments';
 function formatTime(value: string) {
   const [hours, minutes] = value.split(':').map(Number);
   return `${String(hours % 12 || 12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${hours >= 12 ? 'PM' : 'AM'}`;
-}
-function SetupSection({
-  title,
-  subtitle,
-  icon,
-  onEdit,
-  children,
-}: {
-  title: string;
-  subtitle: string;
-  icon: IconName;
-  onEdit: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Panel className="settings-policy-section">
-      <div className="settings-policy-header">
-        <span className="settings-policy-icon">
-          <AppIcon name={icon} size={28} />
-        </span>
-        <div>
-          <div className="settings-policy-heading">
-            <h2>{title}</h2>
-          </div>
-          <p>{subtitle}</p>
-        </div>
-        <Button
-          variant="secondary"
-          className="settings-edit"
-          aria-label={`Edit ${title}`}
-          onClick={onEdit}
-        >
-          <AppIcon name="edit" size={14} />
-          Edit Details
-        </Button>
-      </div>
-      {children}
-    </Panel>
-  );
-}
-function Rule({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
 }
 function AutoRule({
   label,

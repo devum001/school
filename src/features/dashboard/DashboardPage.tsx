@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, ArrowRight, BookOpen } from 'lucide-react';
 import { AttendanceTrend } from './AttendanceTrend';
+import StudentRecordLink from '../../components/shared/StudentRecordLink';
+import { useSchoolFeature } from '../../app/schoolFeatureContext';
 import { useSchool } from '../../app/useSchool';
 import { attendanceSummary, roster, statusFor } from '../../lib/selectors';
 import {
@@ -20,9 +22,11 @@ import { defaultStaffPayroll } from '../../lib/settings';
 import '../../styles/admin-settings.css';
 export default function DashboardPage() {
   const state = useSchool();
+  const feature = useSchoolFeature();
   const today = useToday();
   const [selectedDate, setDate] = useState<string | null>(null);
-  const date = selectedDate ?? today;
+  const notificationsUnavailable = feature?.unavailable.includes('notifications');
+  const date = selectedDate ?? feature?.selectedDate ?? today;
   const rows = roster(state);
   const attendance = attendanceSummary(rows.map((r) => statusFor(state, r.enrollment.id, date)));
   const config = state.staffPayroll ?? defaultStaffPayroll;
@@ -59,13 +63,18 @@ export default function DashboardPage() {
               min={state.academicYear.start}
               max={today}
               onChange={(e) => {
-                if (e.target.value) setDate(e.target.value);
+                if (e.target.value) {
+                  setDate(e.target.value);
+                  feature?.refreshDate?.(e.target.value);
+                }
               }}
             />
-            <Link className="button primary" to={`/attendance?date=${date}`}>
-              <AppIcon name="attendance" size={17} />
-              Mark attendance
-            </Link>
+            {(!feature || feature.routeAllowed?.('/attendance')) && (
+              <Link className="button primary" to={`/attendance?date=${date}`}>
+                <AppIcon name="attendance" size={17} />
+                {feature && !feature.canMarkAttendance ? 'Open attendance' : 'Mark attendance'}
+              </Link>
+            )}
           </>
         }
       />
@@ -78,13 +87,13 @@ export default function DashboardPage() {
               <span>Across {state.sections.length} sections</span>
             </>
           }
-          href="/students?status=active"
+          href={feature && !feature.canViewStudentProfiles ? '/classes' : '/students?status=active'}
         />
         <StatCard
           label="Teaching team"
           value={state.teachers.filter((t) => t.status === 'active').length}
           detail="Active teaching staff"
-          href="/teachers"
+          href={feature && !feature.routeAllowed?.('/teachers') ? undefined : '/teachers'}
         />
         <StatCard
           label="Student attending today"
@@ -106,12 +115,22 @@ export default function DashboardPage() {
           label="Staff attending today"
           value={
             <>
-              {staffAttendance.attended}
-              <small> / {staffAttendance.total}</small>
+              {feature?.unavailable.includes('staffAttendance') ? '—' : staffAttendance.attended}
+              {!feature?.unavailable.includes('staffAttendance') && (
+                <small> / {staffAttendance.total}</small>
+              )}
             </>
           }
-          detail={`${staffAttendance.percentage}% of marked · ${staffAttendance.unmarked} unmarked`}
-          href={`/attendance/staff?date=${date}`}
+          detail={
+            feature?.unavailable.includes('staffAttendance')
+              ? 'Staff attendance access is required'
+              : `${staffAttendance.percentage}% of marked · ${staffAttendance.unmarked} unmarked`
+          }
+          href={
+            feature && !feature.routeAllowed?.('/attendance/staff')
+              ? undefined
+              : `/attendance/staff?date=${date}`
+          }
         />
       </div>
       <div className="dashboard-main">
@@ -124,7 +143,7 @@ export default function DashboardPage() {
           <div
             className="attendance-donut"
             style={{
-              background: `conic-gradient(#2c816e 0 ${(attendance.attended / attendance.total) * 100}%, #dca865 ${(attendance.attended / attendance.total) * 100}% ${((attendance.attended + attendance.absent) / attendance.total) * 100}%, #e8edf2 0)`,
+              background: `conic-gradient(#2c816e 0 ${(attendance.attended / (attendance.total || 1)) * 100}%, #dca865 ${(attendance.attended / (attendance.total || 1)) * 100}% ${((attendance.attended + attendance.absent) / (attendance.total || 1)) * 100}%, #e8edf2 0)`,
             }}
           >
             <div>
@@ -142,7 +161,22 @@ export default function DashboardPage() {
                 {attendance.present} / {attendance.late} / {attendance['half-day']}
               </strong>
             </Link>
-            <Link to={`/notifications?date=${date}&event=Student+Absent&focus=pending`}>
+            <Link
+              to={
+                notificationsUnavailable
+                  ? '#'
+                  : `/notifications?date=${date}&event=Student+Absent&focus=pending`
+              }
+              aria-disabled={notificationsUnavailable}
+              onClick={(e) => {
+                if (notificationsUnavailable) e.preventDefault();
+              }}
+              title={
+                notificationsUnavailable
+                  ? 'Notification delivery is not configured for live mode'
+                  : undefined
+              }
+            >
               <span>
                 <i className="legend-dot amber" />
                 Absent
@@ -210,12 +244,31 @@ export default function DashboardPage() {
           action={
             <Link
               className="text-link"
-              to={`/notifications?date=${date}&event=Student+Absent&focus=pending`}
+              to={
+                notificationsUnavailable
+                  ? '#'
+                  : `/notifications?date=${date}&event=Student+Absent&focus=pending`
+              }
+              aria-disabled={notificationsUnavailable}
+              onClick={(e) => {
+                if (notificationsUnavailable) e.preventDefault();
+              }}
+              title={
+                notificationsUnavailable
+                  ? 'Notification delivery is not configured for live mode'
+                  : undefined
+              }
             >
               Notify parents <ArrowUpRight size={14} />
             </Link>
           }
         >
+          {notificationsUnavailable && (
+            <p className="panel-note">
+              Notification delivery is not connected. Attendance records below are saved school
+              data.
+            </p>
+          )}
           <div className="table-wrap">
             <table>
               <thead>
@@ -230,13 +283,13 @@ export default function DashboardPage() {
                 {absent.slice(0, 4).map((r) => (
                   <tr key={r.enrollment.id}>
                     <td>
-                      <Link className="person" to={`/students/${r.student.id}`}>
+                      <StudentRecordLink className="person" to={`/students/${r.student.id}`}>
                         <Avatar name={r.student.name} />
                         <span>
                           <strong>{r.student.name}</strong>
                           <small>{r.student.admissionNumber}</small>
                         </span>
-                      </Link>
+                      </StudentRecordLink>
                     </td>
                     <td>
                       {r.className} · {r.sectionName}
@@ -247,9 +300,12 @@ export default function DashboardPage() {
                       </Badge>
                     </td>
                     <td>
-                      <Link aria-label={`View ${r.student.name}`} to={`/students/${r.student.id}`}>
-                        <ArrowUpRight size={17} />
-                      </Link>
+                      <StudentRecordLink
+                        aria-label={`View ${r.student.name}`}
+                        to={`/students/${r.student.id}`}
+                      >
+                        {(!feature || feature.canViewStudentProfiles) && <ArrowUpRight size={17} />}
+                      </StudentRecordLink>
                     </td>
                   </tr>
                 ))}
@@ -261,7 +317,20 @@ export default function DashboardPage() {
           </div>
           <Link
             className="panel-bottom-link"
-            to={`/notifications?date=${date}&event=Student+Absent&focus=pending`}
+            to={
+              notificationsUnavailable
+                ? '#'
+                : `/notifications?date=${date}&event=Student+Absent&focus=pending`
+            }
+            aria-disabled={notificationsUnavailable}
+            onClick={(e) => {
+              if (notificationsUnavailable) e.preventDefault();
+            }}
+            title={
+              notificationsUnavailable
+                ? 'Notification delivery is not configured for live mode'
+                : undefined
+            }
           >
             View all absent students <ArrowRight size={16} />
           </Link>

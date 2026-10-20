@@ -17,15 +17,13 @@ async function setHours(page: Page, start = '09:00', end = '16:00') {
 }
 async function emptyClass(page: Page) {
   await page.goto(setupUrl);
-  await page.getByRole('button', { name: 'Add Class / Grade', exact: true }).click();
-  await page.getByLabel('Class / Grade name', { exact: true }).fill('Class 1');
-  await page.getByRole('button', { name: 'Save Class / Grade', exact: true }).click();
+  await page.getByRole('button', { name: 'Set up classes', exact: true }).click();
+  await page.getByLabel('Class 1 name', { exact: true }).fill('Class 1');
+  await page.getByLabel('Class 1 sections', { exact: true }).fill('A');
+  await page.getByRole('button', { name: 'Create classes & sections', exact: true }).click();
   await page.getByLabel('Setup class', { exact: true }).selectOption({ label: 'Class 1' });
-  await page.getByRole('button', { name: 'Add section', exact: true }).click();
-  await page.getByLabel('Section name', { exact: true }).fill('Section A');
-  await page.getByRole('button', { name: 'Save section', exact: true }).click();
   await expect(page.locator('.setup-sections h3')).toHaveText('Section A');
-  await page.getByRole('button', { name: 'Students in Class 1 Section A', exact: true }).click();
+  await page.getByRole('button', { name: 'View students in section A', exact: true }).click();
 }
 
 test('simple school hours live inside General and drive attendance on selected weekdays', async ({

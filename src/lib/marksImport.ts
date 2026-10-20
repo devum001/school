@@ -1,3 +1,4 @@
+import { compareRolls, rollKey, validRoll } from './studentIdentifiers';
 import type { Examination, ExamResult, RosterEntry } from '../types/domain';
 import type { MarksEntry } from './academics';
 import type { ExcelCell } from './xlsx';
@@ -51,7 +52,7 @@ export function marksImportTemplate(exam: Examination, students: RosterEntry[]):
       .sort(
         (a, b) =>
           a.sectionName.localeCompare(b.sectionName, 'en-IN', { numeric: true }) ||
-          a.enrollment.rollNumber - b.enrollment.rollNumber,
+          compareRolls(a.enrollment.rollNumber, b.enrollment.rollNumber),
       )
       .map((student) => [
         student.sectionName,
@@ -176,7 +177,7 @@ export function previewMarksImport(
       (exam.sectionId && student.enrollment.sectionId !== exam.sectionId)
     )
       continue;
-    const key = `${sectionKey(student.sectionName)}|${student.enrollment.rollNumber}`;
+    const key = `${sectionKey(student.sectionName)}|${rollKey(student.enrollment.rollNumber)}`;
     byRoll.set(key, [...(byRoll.get(key) ?? []), student]);
   }
   const existingResults = new Map(
@@ -209,13 +210,12 @@ export function previewMarksImport(
     )
       errors.push('Extra values do not match the template columns.');
     if (!section) errors.push('Section is required.');
-    if (!/^\d+$/.test(roll) || !Number.isSafeInteger(Number(roll)) || Number(roll) < 1)
-      errors.push('Roll No. must be a positive whole number.');
+    if (!validRoll(roll)) errors.push('Enter a valid roll number, such as 12 or SH-12.');
     if (!studentName) errors.push('Student Name is required.');
-    const key = `${sectionKey(section)}|${Number(roll)}`;
-    if (section && /^\d+$/.test(roll)) repeated.set(key, [...(repeated.get(key) ?? []), row]);
+    const key = `${sectionKey(section)}|${rollKey(roll)}`;
+    if (section && validRoll(roll)) repeated.set(key, [...(repeated.get(key) ?? []), row]);
     const matches = byRoll.get(key) ?? [];
-    if (section && /^\d+$/.test(roll)) {
+    if (section && validRoll(roll)) {
       if (!matches.length)
         errors.push('No student matches this section and roll number in the selected class/test.');
       else if (matches.length > 1)

@@ -3,7 +3,7 @@ import type { DemoState } from '../types/domain';
 import type { AuditEntry, WorkspacePreferences, WorkspaceSecurity } from '../types/admin';
 export const preferencesSchema = z.object({
   language: z.enum(['English', 'Hindi']),
-  dateFormat: z.enum(['DD/MM/YYYY', 'DD MMM YYYY']),
+  dateFormat: z.enum(['DD-MM-YYYY', 'DD/MM/YYYY', 'DD MMM YYYY']),
   timeFormat: z.enum(['12-hour', '24-hour']),
   academicYearId: z.string(),
   weekStartsOn: z.enum(['Monday', 'Sunday']),
@@ -48,7 +48,7 @@ export const securityFor = (state: DemoState): WorkspaceSecurity =>
 export const preferencesFor = (state: DemoState): WorkspacePreferences =>
   state.preferences ?? {
     language: 'English',
-    dateFormat: 'DD MMM YYYY',
+    dateFormat: 'DD-MM-YYYY',
     timeFormat: '12-hour',
     academicYearId: state.academicYear.id,
     weekStartsOn: 'Monday',

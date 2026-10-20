@@ -1,0 +1,304 @@
+School product correction — implementation and verification
+20 October 2026
+
+Status
+This report records the completed repair slices and the remaining product work. It is
+not a claim that every final acceptance item in the master request is finished. The
+original demo Overview, Academics, attendance register and class cards now have live
+adapters. The existing staff/payroll implementation is retained and extended.
+
+Investigation / punch error
+Read docs/product-correction-investigation.txt for the initial code-path report supplied
+before broad edits. An isolated MongoDB/API test reproduced the old HR_PUNCH response
+for an active linked teacher whose employment policy had never been configured. No
+configured Atlas record was inspected, so the exact failing condition in the user's
+real teacher record has not been verified.
+New teaching profiles with no saved employment policy can punch before salary setup.
+An explicitly saved none/manual policy or a future effective policy still controls
+eligibility. Punch may be selected before creating the login; login and school/staff
+linking remain mandatory when actually punching. School working days, holidays,
+employment dates, approved leave, geofence/accuracy/freshness, payroll locks, reviewed
+records and punch sequence remain enforced. The self-service response exposes the
+actual eligibility reason and next action; disabled buttons explain missing setup.
+Distinct fixed error codes cover missing campus, disabled mode, dates, weekly off,
+approved leave, already in, not in, completed day and reviewed day. An earlier open,
+unreviewed day blocks a new session. Retry keys are retained on client failure. Server
+Date supplies both event time and its school-timezone work-date context. No browser
+punch timestamp is trusted. Duplicate retries return the existing event without a
+second punch, and invalid requests do not create events.
+
+Shared presentation and data boundaries
+- Original DashboardPage/AttendanceTrend: layout/cards/chart/donut/class pulse/absent
+  student table retained. Persisted student attendance drives the figures; empty real
+  schools remain empty. Missing notification delivery is explicitly identified.
+- Original AcademicsPage/TestDialog/MarksDialog/ResultsView/TestResult: existing tests,
+  configured subject choices, section/whole-class scopes, marks import/preview,
+  maximums, absent A, pending cells, rankings and exports are reused. Live writes use
+  authenticated APIs, revision checks and transactions. Both client and server enforce
+  the demo's rule that marked students or subjects cannot be removed by editing a test;
+  the user must clear marks explicitly first. Blank subjects are omitted exactly as in
+  the original marks-sheet workflow. No replacement curriculum is introduced.
+- Original AttendancePage/ClassFilters/ClassesPage: school/date/class/section context
+  and status controls are reused, including sectionless classes. Assigned users cannot
+  follow links into the school-wide private student profile area without permission.
+- SchoolFeatureContext is a typed boundary for live state and asynchronous writes;
+  the demo still uses its existing repository. The previous repository implementation
+  moved intact to demoRepository.ts, behind repository.ts's mode-aware lazy loader.
+  This removes eager demo seeds/persistence from live imports and rejects accidental
+  demo writes in live mode. Sample logos, signatures and other artwork are also loaded
+  only in demo; live branding never falls back to a sample school's artwork.
+- The shared class-settings grid now allows its table to scroll inside the available
+  width instead of expanding the whole mobile page. Layout/navigation are retained.
+- Lazy loading separates Overview, Academics, attendance and class bundles.
+
+Teacher assignments and privacy
+New capabilities distinguish school-wide access from assignment-scoped access:
+overview.view; teaching.self; student-attendance.view/manage;
+student-attendance.assigned; academics.view/manage; academics.assigned.view/manage.
+There are now 36 explicit school capabilities (the earlier catalogue had 27).
+Every learning API checks active school membership and current server assignments.
+Teaching assignments grant their class/section/subject; class-teacher designation
+provides the designated section's broader class responsibility. Ending an assignment
+revokes its protected data and writes on the next request, including forged direct
+requests. Learning reads bypass retained response caching to prevent stale authority.
+Teacher-scoped responses omit private guardian/contact data and all payroll data.
+Write scopes are rechecked inside the existing school authorization transaction.
+Sectionless teaching assignments are supported by the existing assignment entity.
+
+HR and permissions
+Teacher self-service has Attendance, Leave, Salary and My profile sections. The monthly
+calendar retains existing statuses, readable legends, selected-day details and school-
+timezone punch times, with previous/next month navigation. Future days are not absences.
+The teacher receives only their own HR records. The own-HR sidebar link is shown only
+when an active staff identity is actually linked. School administrators can open an
+individual calendar from the attendance register, filter by member/department/date and
+see present, late, explicitly reviewed absent, active punch, review and pending-leave
+counts. Missing attendance is not automatically made absent or unpaid.
+Pending leave can be cancelled by its own linked staff member before it starts; history
+is retained. Approved/rejected requests cannot be cancelled through that action. New
+requests and approval decisions appear in the appropriate leave month; leave approval
+feeds the same approved-date snapshot used by the attendance calendar and payroll.
+Existing salary versions, approval locks, partial payments, balances and audit checks
+remain. Teachers and non-teaching staff remain separated in teacher HR tabs.
+Role descriptions and affected-member counts were added. The existing View/Manage
+editor now includes assigned-class capabilities and read dependencies. Assigned roles
+cannot be deleted; protected owner roles and last-usable-owner transaction checks remain.
+Owners see the original complete settings tab and nested-section structure. Unsupported
+live sections are identified explicitly and never read or write demo persistence.
+
+API additions
+GET /schools/:schoolId/academic-years/:yearId/learning
+  area=overview|classes|attendance|academics; optional date=YYYY-MM-DD
+POST /.../learning/exams
+PUT /.../learning/exams/:id
+DELETE /.../learning/exams/:id (revision)
+PUT /.../learning/exams/:id/marks (revision, changed sheets)
+PUT /.../learning/attendance (date, classId, sectionId, rows and revisions)
+POST /schools/:schoolId/hr/leave/:id/cancel (revision)
+Existing onboarding status adds selfLinked. Existing roles add description/memberCount.
+All writes retain authentication, CSRF, school isolation and audit controls. Generic
+errors remain sanitized; only allowlisted domain messages cross the API boundary.
+Exam creation has a school/year-scoped idempotency key; replays must match the complete
+validated class/section/subject selection. A stale roster or revision rejects a write.
+Student deletion also clears its new attendance/results records. Moving an enrollment
+with learning history and deleting structure referenced by tests is guarded.
+
+Manual deployment step — NOT RUN on the configured database
+From the backend directory, first review:
+./node_modules/.bin/ts-node commands/initialize-school-learning.ts --preflight
+Then, during the intended deployment/maintenance window:
+./node_modules/.bin/ts-node commands/initialize-school-learning.ts --apply
+This installs the three learning collections and declared indexes, verifies no duplicate
+school/user-to-staff links, creates the unique link index and explicitly grants the nine
+new capabilities to protected owners of active schools, with audit records. Custom roles
+are unchanged. The script is repeatable and does not drop data/indexes. No seed data or
+credentials are created. Until installation, learning endpoints return LEARNING_NOT_READY
+instead of creating storage silently. Other school settings continue to work. Restart
+the backend/frontend after deploying code. Configure a campus in Staff & Payroll →
+Work & Leave and verify the teacher's joining date and selected attendance method.
+Existing owners need this explicit new-capability grant; no startup privilege backfill
+runs. Newly provisioned school owners receive the current full permission set.
+
+Preservation / operational limits
+Both working trees contained extensive prior changes. No git reset/clean/commit or
+user environment edits were performed. Initial blanket copying was rejected by automatic
+approval review; exact git-apply patches were then conflict-checked and applied only
+with matching SHA-256 baselines and byte-for-byte file backups under /tmp. Only the
+reviewed source/test/command paths changed in the backend. Production build output is
+regenerated, ignored output. Configured Atlas connections, school records, migrations
+and seeding were not run. Database/browser tests use isolated local replica sets.
+The geofence checks browser-provided location; device attestation/anti-spoofing is not
+provided. There is no claim of a real-school load test or production database test.
+Learning snapshots are bounded (200 classes, 1,000 sections, 10,000 enrolled students,
+500 staff, 1,000 exams and bounded attendance/results); exceeding a bound fails clearly
+instead of silently truncating data. Larger-school pagination/aggregation remains work.
+
+Remaining master-request dependencies
+- The full student-fee/receipt/finance workflows are not implemented as live APIs.
+  The pre-existing live Finance route still represents payroll, rather than all original
+  finance tabs. This needs its own complete financial vertical slice.
+- Notification delivery, communication/template settings, regional preferences and
+  some data/security settings still require live persistence/integration. Their original
+  owner settings locations remain visible; unsupported sections explain the dependency.
+- Student-directory/profile presentation is the existing earlier live implementation;
+  it has not been fully replaced by the original demo profile with every module tab.
+- Staff bulk imports retain preview/correction/profile persistence, but do not bulk
+  provision credential invitations or salaries. Login remains an explicit school-owned
+  per-staff action; existing global accounts require authorized membership/linking.
+- Department/designation settings do not yet reproduce every nested demo designation
+  operation. Full visual/workflow parity for all staff-profile fields still needs review.
+These are not marked complete, and unsupported operations do not silently use demo data.
+
+Verification actually executed
+- Backend: yarn build passed, including lint and production TypeScript compilation.
+- Backend: ./node_modules/.bin/jest --runInBand passed 203 tests in 31 suites.
+  This final full run includes the saved-mark safeguards, section validation and
+  structural-role privacy check. The final build/lint passed as well.
+- Frontend: npm test passed 294 tests in 51 files.
+- Frontend: npm run lint passed with zero errors and the two existing Fast Refresh
+  export warnings in AppIcon.tsx and Primitives.tsx.
+- Frontend: VITE_APP_MODE=live npm run build and VITE_APP_MODE=demo npm run build
+  passed, including TypeScript project compilation. The final role/privacy and school-
+  timezone adjustments were included in the final builds and live browser verification.
+- Browser: PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome
+  ./node_modules/.bin/playwright test --config=playwright.product-correction.config.ts
+  passed all 4 scenarios. They cover persisted Overview/Academics/student attendance,
+  teacher login and assignment revocation, school-owned login/departments, geofenced
+  punching, leave request -> admin approval -> own calendar, salary approval and
+  partial/full payment, responsive layout and no demo modules/storage in live mode.
+- Browser: the existing live-academics regression was updated for the now-connected
+  original screen and run independently with --config=playwright.live.config.ts
+  --grep 'live academics uses the original screens': 1 passed.
+- Demo browser command:
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test
+  --config=playwright.config.ts tests/academics.e2e.ts tests/academic-multiclass.e2e.ts
+  tests/academic-optional-sections.e2e.ts tests/hr-demo-preservation.e2e.ts
+  tests/navigation-refresh.e2e.ts --workers=2
+  Result: all 16 passed. Earlier runs found stale pre-stepper import/ordinal-heading
+  expectations and the actual shared-grid width issue. Assertions were reconciled with
+  the existing stepper and numeric identifier rule; the grid defect was repaired.
+- Desktop Overview/result dialogs and mobile teacher calendar were visually inspected.
+- git diff --check passed in both repositories.
+The entire legacy live/browser suite was not run or claimed green; the selected checks
+above are the actual verified scope. The old /finance placeholder assertion in that
+legacy suite still needs reconciliation with the existing /fees route/navigation.
+No real Atlas, deployment, email delivery or whole-school load test was performed.
+
+Changed-file inventory for this repair (prior unrelated work is not attributed here)
+Frontend:
+- src/app/schoolFeatureContext.ts
+- src/app/useSchool.ts
+- src/app/useToday.ts
+- src/app/liveRouter.tsx
+- src/components/shared/ClassFilters.tsx
+- src/components/shared/StudentRecordLink.tsx
+- src/features/live/LiveLearning.tsx
+- src/features/live/LiveSchoolWorkspace.tsx
+- src/features/live/LiveSchoolSettings.tsx
+- src/features/live/LiveRouteContent.tsx
+- src/features/live/LiveRoles.tsx
+- src/features/live/portalAccess.ts
+- src/features/live/portalAccess.test.ts
+- src/features/live/permissionChoices.ts
+- src/features/dashboard/DashboardPage.tsx
+- src/features/classes/ClassesPage.tsx
+- src/features/attendance/AttendancePage.tsx
+- src/features/academics/AcademicsPage.tsx
+- src/features/academics/TestDialog.tsx
+- src/features/academics/MarksDialog.tsx
+- src/features/academics/ResultsView.tsx
+- src/features/academics/TestResult.tsx
+- src/features/hr/HrWorkspace.tsx
+- src/features/hr/HrActions.tsx
+- src/features/hr/AttendanceCalendar.tsx
+- src/features/hr/EmploymentDialog.tsx
+- src/features/teachers/LiveStaff.tsx
+- src/features/setup/PeopleRelations.tsx
+- src/services/apiService.ts
+- src/services/hrService.ts
+- src/services/schoolAccessService.ts
+- src/services/schoolSetupService.ts
+- src/services/learningService.ts
+- src/services/learningService.test.ts
+- src/lib/repository.ts
+- src/lib/demoRepository.ts
+- src/lib/demoArtwork.ts
+- src/lib/schoolBranding.ts
+- src/lib/documentData.ts
+- src/styles/student-timings.css
+- playwright.config.ts
+- playwright.product-correction.config.ts
+- tests/product-correction-live.e2e.ts
+- tests/staff-payroll-live.e2e.ts
+- tests/navigation-refresh.e2e.ts
+- tests/live-api.e2e.ts
+- docs/product-correction-investigation.txt
+- docs/product-correction-report.txt
+
+Backend:
+- commands/initialize-school-learning.ts
+- src/api/controllers/academicYear.controller.ts
+- src/api/controllers/hr.controller.ts
+- src/api/controllers/learning.controller.ts
+- src/api/controllers/registeredControllers.ts
+- src/api/controllers/requests/foundation.request.ts
+- src/api/controllers/requests/learning.request.ts
+- src/api/controllers/requests/roster.request.ts
+- src/api/controllers/schoolAccess.controller.ts
+- src/api/middlewares/learningReady.middleware.ts
+- src/api/models/foundation.models.ts
+- src/api/models/hr.models.ts
+- src/api/models/learning.models.ts
+- src/api/models/people.models.ts
+- src/api/services/authorization.service.ts
+- src/api/services/deleteStructure.service.ts
+- src/api/services/examinationSheets.service.ts
+- src/api/services/examinations.service.ts
+- src/api/services/hrAttendance.service.ts
+- src/api/services/hrCommon.ts
+- src/api/services/hrLeave.service.ts
+- src/api/services/hrRead.service.ts
+- src/api/services/hrRules.ts
+- src/api/services/hrSettings.service.ts
+- src/api/services/learningRead.service.ts
+- src/api/services/learningScope.ts
+- src/api/services/learningSerialization.ts
+- src/api/services/peopleDirectory.service.ts
+- src/api/services/punchEligibility.ts
+- src/api/services/setupRules.ts
+- src/api/services/studentAttendance.service.ts
+- src/api/services/studentDelete.service.ts
+- src/api/services/studentWrite.service.ts
+- src/security/learning.integration.test.ts
+- src/security/permissions.ts
+- src/test/hr.integration.test.ts
+- src/test/prepareFoundation.ts
+- src/test/punchLifecycle.integration.test.ts
+
+Final review additions
+School timezone now flows from the validated live response into the original academic
+validation and leaderboard helpers. Midnight-boundary tests cover schools ahead of and
+behind the browser/default date. The independent demo retains its existing India default.
+A structure-only classes.view role receives actual class/section student counts without
+student identities, enrollment IDs, attendance revision IDs, staff directory records or
+ungranted subjects. The original class cards use those counts; unavailable attendance
+and navigation actions are represented according to the user's permissions. Assigned
+teachers retain access to their own class rosters. Unlinked/archived staff accounts with
+self-only permissions land in account settings instead of a broken HR screen.
+Additional frontend paths changed for these checks:
+- src/types/domain.ts
+- src/lib/dates.ts
+- src/lib/dates.test.ts
+- src/lib/academics.ts
+- src/lib/academicSheets.ts
+- src/lib/testSubjects.test.ts
+Final frontend logs: /tmp/final-school-product-unit.log (294 passed),
+/tmp/final-school-product-lint.log (zero errors, two existing warnings),
+/tmp/final-school-product-live-build.log and /tmp/final-school-product-demo-build.log.
+Final live workflow browser log: /tmp/final-school-product-live-browser.log (4 passed).
+The separate empty-school/no-demo regression passed once as documented above.
+
+Final backend verification: /tmp/final-school-product-backend-tests.log reports
+203 passed tests / 31 passed suites. /tmp/final-school-product-backend-build.log
+records the successful production build with clean linting. No required check is left
+running. Final Git whitespace checks passed in both repositories.

@@ -1,5 +1,7 @@
 import TabRail from '../../components/ui/TabRail';
 import { examClasses } from '../../lib/testScope';
+import { examGroups, matchesAcademicScope } from '../../lib/academicGroups';
+import ClassName from '../../components/shared/ClassName';
 import { tabKeyboard } from '../../lib/tabKeyboard';
 import { useState } from 'react';
 
@@ -22,14 +24,15 @@ import DeleteDialog from '../../components/shared/DeleteDialog';
 
 import { displayDate } from '../../lib/config';
 
-import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
+import { orderedClasses } from '../../lib/schoolLabels';
 
 import { testRoster } from '../../lib/academics';
 
-import { examSections, marksAdded, examIncludes } from '../../lib/academicSheets';
+import { marksAdded, examIncludes } from '../../lib/academicSheets';
 
 import { studentReturnPath } from '../../lib/academicNavigation';
 
+import { useSchoolFeature } from '../../app/schoolFeatureContext';
 import { repository } from '../../lib/repository';
 
 import type { Examination } from '../../types/domain';
@@ -44,6 +47,9 @@ import './academics.css';
 
 export default function AcademicsPage() {
   const state = useSchool();
+  const feature = useSchoolFeature(),
+    data = feature ?? repository,
+    canManage = feature?.canManage ?? true;
 
   const [params, setParams] = useSearchParams();
 
@@ -94,7 +100,7 @@ export default function AcademicsPage() {
       <PageHeading
         title="Academics"
         actions={
-          !resultsView ? (
+          !resultsView && canManage ? (
             <Button onClick={() => setAdding(true)}>
               <AppIcon name="academics" size={17} />
               Add Test / Exam
@@ -170,7 +176,7 @@ export default function AcademicsPage() {
             {exams
               .filter((e) => e.name.toLowerCase().includes(query.toLowerCase()))
               .map((e) => {
-                const sections = examSections(state, e, '');
+                const groups = examGroups(state, e);
 
                 return (
                   <article className="panel academic-test-card" key={e.id}>
@@ -182,13 +188,13 @@ export default function AcademicsPage() {
                       <p>{displayDate(e.date)}</p>
                       <div className="academic-test-scope">
                         {examClasses(state, e).map((c) => {
-                          const assigned = examSections(state, e, c.id);
+                          const assigned = groups.filter((g) => g.classId === c.id);
                           return (
                             <small key={c.id}>
-                              <strong>{c.name}</strong> ·{' '}
-                              {assigned.length === 1
-                                ? sectionLabel(assigned[0].name)
-                                : `Sections ${assigned.map((s) => s.name).join(', ')}`}
+                              <strong>
+                                <ClassName name={c.name} />
+                              </strong>{' '}
+                              · {assigned.map((s) => s.label).join(', ')}
                             </small>
                           );
                         })}
@@ -199,47 +205,51 @@ export default function AcademicsPage() {
                       {marksAdded(state, e) ? 'Marks Added' : 'Marks Not Added'}
                     </Badge>
 
-                    <div className="academic-test-actions">
-                      <Button
-                        variant="ghost"
-                        aria-label={`Add/Edit Marks for ${e.name}`}
-                        title="Add/Edit Marks"
-                        onClick={() =>
-                          change({
-                            class: sections[0]?.classId ?? null,
-                            test: e.id,
-                            marks: '1',
-                            section: sections[0]?.id ?? null,
-                          })
-                        }
-                      >
-                        <AppIcon name="edit" size={18} />
-                      </Button>
-                      <details className="academic-test-menu">
-                        <summary aria-label={`More options for ${e.name}`}>
-                          <MoreVertical size={19} />
-                        </summary>
-                        <div>
-                          <button
-                            onClick={(event) => {
-                              event.currentTarget.closest('details')?.removeAttribute('open');
-                              setEditing(e);
-                            }}
-                          >
-                            Edit Test
-                          </button>
-                          <button
-                            className="delete-action"
-                            onClick={(event) => {
-                              event.currentTarget.closest('details')?.removeAttribute('open');
-                              setDeleting(e);
-                            }}
-                          >
-                            Delete Test
-                          </button>
-                        </div>
-                      </details>
-                    </div>
+                    {canManage && (
+                      <div className="academic-test-actions">
+                        <Button
+                          variant="ghost"
+                          aria-label={`Add/Edit Marks for ${e.name}`}
+                          title="Add/Edit Marks"
+                          onClick={() =>
+                            change({
+                              class: groups[0]?.classId ?? null,
+                              test: e.id,
+                              marks: '1',
+                              section: groups[0]?.sectionId || 'unsectioned',
+                            })
+                          }
+                        >
+                          <AppIcon name="edit" size={18} />
+                        </Button>
+                        {(!feature?.canEditTest || feature.canEditTest(e.id)) && (
+                          <details className="academic-test-menu">
+                            <summary aria-label={`More options for ${e.name}`}>
+                              <MoreVertical size={19} />
+                            </summary>
+                            <div>
+                              <button
+                                onClick={(event) => {
+                                  event.currentTarget.closest('details')?.removeAttribute('open');
+                                  setEditing(e);
+                                }}
+                              >
+                                Edit Test
+                              </button>
+                              <button
+                                className="delete-action"
+                                onClick={(event) => {
+                                  event.currentTarget.closest('details')?.removeAttribute('open');
+                                  setDeleting(e);
+                                }}
+                              >
+                                Delete Test
+                              </button>
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    )}
                   </article>
                 );
               })}
@@ -259,7 +269,7 @@ export default function AcademicsPage() {
           classId={classId}
           onClose={() => setAdding(false)}
           onCreated={(id) => {
-            const created = repository.getSnapshot().exams.find((e) => e.id === id)!;
+            const created = data.getSnapshot().exams.find((e) => e.id === id)!;
             setAdding(false);
             change({
               class: created.classIds?.includes(classId)
@@ -278,7 +288,7 @@ export default function AcademicsPage() {
           exam={editing}
           onClose={() => setEditing(null)}
           onCreated={(id) => {
-            const updated = repository.getSnapshot().exams.find((e) => e.id === id)!;
+            const updated = data.getSnapshot().exams.find((e) => e.id === id)!;
             setEditing(null);
             change({
               class: updated.classIds?.includes(classId)
@@ -296,20 +306,24 @@ export default function AcademicsPage() {
           title={`Delete ${deleting.name}?`}
           description="This removes the test and its saved marks from every assigned section. Student histories and rankings will update."
           onClose={() => setDeleting(null)}
-          onDelete={() => {
-            repository.deleteTest(deleting.id);
+          onDelete={async () => {
+            await data.deleteTest(deleting.id);
             setDeleting(null);
             if (params.get('test') === deleting.id) change({ test: null, marks: null });
           }}
         />
       )}
 
-      {params.get('marks') === '1' && exam && (
+      {canManage && params.get('marks') === '1' && exam && (
         <MarksDialog
           key={exam.id}
           exam={exam}
-          students={testRoster(state, exam).filter(
-            (r) => !params.get('section') || r.enrollment.sectionId === params.get('section'),
+          students={testRoster(state, exam).filter((r) =>
+            matchesAcademicScope(
+              r.enrollment,
+              classId,
+              params.get('section') === 'unsectioned' ? '' : params.get('section') || undefined,
+            ),
           )}
           studentId={params.get('student') ?? undefined}
           onClose={() => change({ marks: null, student: null, test: resultsView ? exam.id : null })}

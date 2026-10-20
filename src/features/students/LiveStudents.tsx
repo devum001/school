@@ -1,0 +1,357 @@
+import { formatCalendarDate } from '../../lib/displayFormat';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Button, Panel, SearchInput, EmptyState } from '../../components/ui/Primitives';
+import { onboardingApi } from '../../services/onboardingService';
+import { productApi, type StudentRow } from '../../services/productService';
+import type { SchoolAccess } from '../../services/schoolAccessService';
+import { useRemote } from '../live/useRemote';
+import { useSetupList } from '../setup/useSetupList';
+import { LoadState, Paging } from '../setup/SetupControls';
+import { downloadClassStudentTemplate } from '../../lib/studentTemplate';
+import DeleteDialog from '../../components/shared/DeleteDialog';
+import LiveStudentImport from './LiveStudentImport';
+import StudentRosterTable from './StudentRosterTable';
+import LiveStudentForm from './LiveStudentForm';
+export default function LiveStudents({
+  access,
+  yearId,
+  classId,
+  mode = 'directory',
+  onChanged,
+}: {
+  access: SchoolAccess;
+  yearId: string | null;
+  classId?: string;
+  mode?: 'directory' | 'new' | 'import' | 'profile';
+  onChanged?: () => void;
+}) {
+  const load = useCallback(
+    async (signal: AbortSignal) =>
+      yearId ? productApi.studentContext(access.schoolId, yearId, signal) : null,
+    [access.schoolId, yearId],
+  );
+  const state = useRemote(load);
+  if (!yearId)
+    return (
+      <Panel title="Select an academic year">
+        <Link to="/settings?tab=Years">Open academic years</Link>
+      </Panel>
+    );
+  if (!state.data || state.error)
+    return (
+      <Panel>
+        <LoadState {...state} retry={state.reload} />
+      </Panel>
+    );
+  return (
+    <StudentWorkspace
+      key={`${yearId}:${classId ?? ''}:${mode}`}
+      access={access}
+      yearId={yearId}
+      classId={classId}
+      mode={mode}
+      snapshot={state.data}
+      onChanged={onChanged}
+    />
+  );
+}
+function StudentWorkspace({
+  access,
+  yearId,
+  classId,
+  mode,
+  snapshot,
+  onChanged,
+}: {
+  access: SchoolAccess;
+  yearId: string;
+  classId?: string;
+  mode: string;
+  onChanged?: () => void;
+  snapshot: Awaited<ReturnType<typeof onboardingApi.structure>>;
+}) {
+  const [inlineImport, setInlineImport] = useState(false);
+  const [params, setParams] = useSearchParams(),
+    location = useLocation(),
+    navigate = useNavigate();
+  const selectedClass = classId ?? params.get('classId') ?? '';
+  const section =
+      params.get('studentSection') === 'none' ? '' : (params.get('studentSection') ?? ''),
+    search = params.get('studentSearch') ?? '';
+  const studentId = mode === 'profile' ? location.pathname.split('/')[2] : undefined;
+  const load = useCallback(
+    (signal: AbortSignal, after?: string) =>
+      mode === 'new' || mode === 'import'
+        ? Promise.resolve({ items: [], nextCursor: null, total: 0 })
+        : productApi.students(access.schoolId, yearId, signal, {
+            classId: selectedClass || undefined,
+            sectionId: section || undefined,
+            search,
+            after,
+            studentId,
+          }),
+    [access.schoolId, yearId, selectedClass, section, search, studentId, mode],
+  );
+  const list = useSetupList(load),
+    [editing, setEditing] = useState<StudentRow | null>(null),
+    [deleting, setDeleting] = useState<StudentRow | null>(null);
+  const manage =
+    access.permissions.includes('students.manage') &&
+    snapshot.year.status !== 'closed' &&
+    !snapshot.truncated;
+  const current = snapshot.classes.find((c) => c.id === selectedClass),
+    sections = snapshot.children.filter((c) => c.classId === selectedClass);
+  const returnTo = params.get('returnTo'),
+    destination =
+      returnTo && /^\/(settings|students)(\?|$)/.test(returnTo) ? returnTo : '/students';
+  const close = () => navigate(destination, { replace: true });
+  const update = (key: string, value: string) =>
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      if (key === 'classId') next.delete('studentSection');
+      return next;
+    });
+  const firstPage = list.first;
+  const [searchDraft, setSearchDraft] = useState(search);
+  const [previousSearch, setPreviousSearch] = useState(search);
+  if (previousSearch !== search) {
+    setPreviousSearch(search);
+    setSearchDraft(search);
+  }
+  useEffect(() => {
+    if (searchDraft === search) return;
+    const timer = setTimeout(() => {
+      setParams(
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          if (searchDraft) next.set('studentSearch', searchDraft);
+          else next.delete('studentSearch');
+          return next;
+        },
+        { replace: true },
+      );
+      firstPage();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchDraft, search, setParams, firstPage]);
+  const filters = (
+    <div className="toolbar">
+      {!classId && (
+        <label className="field">
+          Class
+          <select
+            aria-label="Student directory class"
+            value={selectedClass}
+            onChange={(e) => update('classId', e.target.value)}
+          >
+            <option value="">{mode === 'import' ? 'Choose a class' : 'All classes'}</option>
+            {snapshot.classes
+              .filter((c) => c.status === 'active')
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+          </select>
+        </label>
+      )}
+      {mode === 'directory' && (
+        <>
+          <SearchInput
+            value={searchDraft}
+            onChange={setSearchDraft}
+            placeholder="Search class students…"
+          />
+          <label className="field">
+            Section
+            <select
+              aria-label="Class students section"
+              disabled={!selectedClass}
+              value={section}
+              onChange={(e) => update('studentSection', e.target.value)}
+            >
+              <option value="">Whole class · all students</option>
+              {sections.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                  {s.status === 'archived' ? ' (archived)' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
+    </div>
+  );
+  const closeImport = () => {
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('import');
+      return next;
+    });
+    setInlineImport(false);
+    if (onChanged) onChanged();
+    else list.reload();
+  };
+  const importer = (
+    <LiveStudentImport
+      schoolId={access.schoolId}
+      yearId={yearId}
+      name={current?.name ?? ''}
+      sections={sections.filter((s) => s.status === 'active').map((s) => s.name)}
+      close={mode === 'import' ? close : closeImport}
+    />
+  );
+  if (mode === 'new')
+    return manage ? (
+      <LiveStudentForm
+        schoolId={access.schoolId}
+        yearId={yearId}
+        snapshot={snapshot}
+        initialClassId={selectedClass}
+        initialSectionId={params.get('sectionId') ?? ''}
+        close={close}
+        saved={close}
+      />
+    ) : (
+      <Panel>Student management access is required.</Panel>
+    );
+  if (mode === 'import')
+    return manage ? importer : <Panel>Student management access is required.</Panel>;
+  return (
+    <>
+      <Panel
+        title={
+          mode === 'profile'
+            ? 'Student details'
+            : current
+              ? `${current.name} students`
+              : 'Student directory'
+        }
+        subtitle={`${snapshot.year.name} · ${list.data?.total ?? 0} saved enrollments`}
+        action={
+          mode !== 'profile' &&
+          manage && (
+            <div className="student-import-actions">
+              {current && (
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    downloadClassStudentTemplate(
+                      current.name,
+                      sections.filter((s) => s.status === 'active').map((s) => s.name),
+                    )
+                  }
+                >
+                  Download Sample Excel
+                </Button>
+              )}
+              <Button variant="secondary" onClick={() => setInlineImport(true)}>
+                Import Excel (.xlsx)
+              </Button>
+              <Link
+                className="button primary"
+                to={`/students/new?${new URLSearchParams({ year: yearId, classId: selectedClass, sectionId: section === 'none' ? '' : section, returnTo: location.pathname + location.search })}`}
+              >
+                Add student
+              </Link>
+            </div>
+          )
+        }
+      >
+        {mode !== 'profile' && filters}
+        <LoadState {...list} retry={list.reload} />
+        {list.data && !list.error && (
+          <>
+            {list.data.items.length ? (
+              <StudentRosterTable
+                studentHref={(id) => `/students/${id}?year=${yearId}`}
+                rows={list.data.items.map((r) => ({
+                  id: r.id,
+                  studentId: r.student.id,
+                  name: r.student.name,
+                  code: r.student.code,
+                  className: r.className,
+                  sectionName: r.sectionName,
+                  rollNumber: r.rollNumber,
+                  status: r.status,
+                }))}
+                onEdit={
+                  manage
+                    ? (id) => setEditing(list.data!.items.find((r) => r.id === id)!)
+                    : undefined
+                }
+                onDelete={
+                  manage
+                    ? (id) => setDeleting(list.data!.items.find((r) => r.id === id)!)
+                    : undefined
+                }
+              />
+            ) : (
+              <EmptyState
+                title="No matching students"
+                description="Add a student or import the class Excel workbook."
+              />
+            )}
+            <Paging {...list} nextCursor={list.data.nextCursor} />
+          </>
+        )}
+        {mode === 'profile' &&
+          list.data?.items.map((r) => (
+            <dl key={r.id} className="detail-list">
+              <div>
+                <dt>Birth date</dt>
+                <dd>
+                  {r.student.birthDate ? formatCalendarDate(r.student.birthDate) : 'Not provided'}
+                </dd>
+              </div>
+              <div>
+                <dt>Guardian</dt>
+                <dd>
+                  {r.student.guardianName} · {r.student.guardianRelation}
+                </dd>
+              </div>
+              <div>
+                <dt>Parent mobile</dt>
+                <dd>{r.student.guardianPhone || 'Not provided'}</dd>
+              </div>
+              <div>
+                <dt>Address</dt>
+                <dd>{r.student.address || 'Not provided'}</dd>
+              </div>
+            </dl>
+          ))}
+      </Panel>
+      {manage && (inlineImport || params.has('import')) && importer}
+      {editing && (
+        <LiveStudentForm
+          schoolId={access.schoolId}
+          yearId={yearId}
+          snapshot={snapshot}
+          existing={editing}
+          close={() => setEditing(null)}
+          saved={() => {
+            setEditing(null);
+            if (onChanged) onChanged();
+            else list.reload();
+          }}
+        />
+      )}
+      {deleting && (
+        <DeleteDialog
+          title={`Delete ${deleting.student.name}?`}
+          description="Permanently delete this student's profile and enrollments in every academic year. The audit entry is retained."
+          onClose={() => setDeleting(null)}
+          onDelete={async () => {
+            await productApi.deleteStudent(access.schoolId, yearId, deleting.student);
+            if (onChanged) onChanged();
+            else list.reload();
+          }}
+        />
+      )}
+    </>
+  );
+}

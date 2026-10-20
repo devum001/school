@@ -228,7 +228,7 @@ describe('presentation copy', () => {
     const message = notificationMessage('Willowbrook Academy', 'Ananya Sharma', DEMO_DATE);
     expect(message).toContain('आदरणीय अभिभावक');
     expect(message).toContain('Ananya Sharma');
-    expect(message).toContain('10 अक्टूबर 2026');
+    expect(message).toContain('10-10-2026');
     expect(message).toContain('अनुपस्थित');
     expect(message).toContain('Willowbrook Academy');
   });

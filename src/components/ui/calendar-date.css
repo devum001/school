@@ -1,0 +1,37 @@
+.calendar-date-control {
+  display: inline-flex;
+  align-items: stretch;
+  position: relative;
+  min-width: 0;
+  width: 100%;
+}
+.calendar-date-control > input[type='text'] {
+  min-width: 0;
+  width: 100%;
+  padding-right: 40px;
+}
+.calendar-date-button {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  bottom: 1px;
+  width: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.calendar-date-native {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+}

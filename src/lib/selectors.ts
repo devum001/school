@@ -137,17 +137,18 @@ export function installments(state: DemoState, enrollmentId: string) {
     });
 }
 export function resultSummary(result: ExamResult) {
-  const marks = result.subjects
-    .filter((s) => !s.pending)
-    .reduce((a, s) => a + (result.absent || s.absent ? 0 : s.marks), 0);
-  const maximum = result.subjects.filter((s) => !s.pending).reduce((a, s) => a + s.maxMarks, 0);
-  const percentage = maximum ? Math.round((marks / maximum) * 1000) / 10 : 0;
+  const scored = result.subjects.filter((s) => !s.pending && !s.absent && !result.absent);
+  const marks = scored.reduce((a, s) => a + s.marks, 0);
+  const maximum = scored.reduce((a, s) => a + s.maxMarks, 0);
+  // Calculate with full precision. Round only at the presentation boundary.
+  const percentage = maximum ? (marks / maximum) * 100 : 0;
   return {
     marks,
     maximum,
     percentage,
-    grade:
-      percentage >= 90
+    grade: !maximum
+      ? '—'
+      : percentage >= 90
         ? 'A+'
         : percentage >= 80
           ? 'A'

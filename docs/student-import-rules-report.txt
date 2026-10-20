@@ -1,0 +1,94 @@
+Student import dates, identity rules and presentation repair — 19 October 2026
+Updated after the section-based roll-number clarification.
+
+Behavior
+- Calendar dates display and accept DD-MM-YYYY. Shared date/time fields show DD-MM-YYYY HH:mm. Native calendar selection and keyboard entry remain available.
+- APIs and database dates remain ISO for comparisons and existing clients. Both DD-MM-YYYY text and genuine Excel dates are accepted in roster imports; legacy ISO workbooks remain supported. Invalid calendar dates and future birth/joining dates remain rejected.
+- Date columns in CSV/XLSX downloads and the backend import report use DD-MM-YYYY. Identifiers that resemble dates are not reformatted.
+- Names and guardian names may repeat. Admission Number is the school-local student identifier, compared using the existing case/whitespace normalization.
+- Roll Number is unique per school + academic year + class + section. Different sections of the same class, and different classes, can reuse a roll number. For a sectionless class, rolls are unique within that class/year. Both workbook duplicates and conflicts with saved enrollments are checked.
+- Live API writes retain school locking, transactions, permission checks, CSRF and audit behavior. The model index provides database-level enforcement after the maintenance step below.
+- Removed the import preview's Result column. Original spreadsheet columns remain. Validation messages appear with the row, and import outcomes remain available through progress counts and Download import report. These are import statuses, not academic marks.
+- Person names/descriptive roster text display in Title Case, such as Rahul Kumar. Admission numbers, roll numbers, emails, phone numbers and section identifiers are preserved. Stored historical profiles are not bulk-renamed.
+- Fresh demo seeds number each section independently. Existing browser data is preserved and never renumbered. Academic result matching remains section-aware so equal rolls in different sections map to the correct students.
+
+Database maintenance (NOT run against your configured database)
+From /home/devendra/scholl backend/type-ORM-backend-Node:
+  ./node_modules/.bin/ts-node commands/migrate-optional-sections.ts --preflight
+During maintenance, only if preflight is ready:
+  ./node_modules/.bin/ts-node commands/migrate-optional-sections.ts --apply
+Preflight reports only readiness and duplicate-group counts within each section (or sectionless class). Apply installs the school/year/class/section/roll unique index before removing the obsolete class-wide index and the older index missing classId. It does not delete, renumber or rewrite students. Run this if the earlier class-wide index was installed, or if the optional-section index has never been installed. The earlier migrate-class-roll-numbers.ts command remains a compatibility alias for the corrected section-scoped maintenance flow; it no longer installs a class-wide restriction. No new API endpoint or environment variable is required.
+
+Verification of the earlier date/import repair (see section-roll correction report for the latest checks)
+- Frontend npm run typecheck; npm run lint: passed, with the two existing Fast Refresh warnings in AppIcon.tsx and Primitives.tsx.
+- Frontend npm test: 275 tests / 46 files passed.
+- Frontend npm run build and VITE_APP_MODE=live npm run build: passed again after the export-format adjustment.
+- Backend tsc --noEmit --incremental false, eslint . --ext .ts and yarn build: passed again after the export-format adjustment.
+- Backend jest --runInBand: 175 tests / 27 suites passed using disposable local MongoDB replica sets. This includes new API duplicate/date tests, actual unique-index rejection, and migration conflict refusal/idempotency. After the export-format adjustment, both affected integration tests passed again.
+- Live Playwright repair config: 6 passed, including desktop/tablet/phone import layout, lowercase source-name display, DD-MM-YYYY correction, mixed classes and sectionless classes.
+- Demo Playwright selected date/curve-picker/phase1-demo checks: 6 passed, including valid/invalid dates, date/time controls, keyboard/calendar fallback, local demo shell and multi-class import.
+- Initial live browser run failed on two screens during a formatter import repair; the complete rerun passed after correcting the import.
+- A broader curve-picker run also exposed two existing academic test assertions for a Recent Results heading that the current academic screen no longer contains. Those unrelated assertions were not rewritten; they are excluded from the focused passing rerun. The calendar-specific tests in that file pass.
+- git diff --check passed in both repositories. All previously changed paths remain present.
+- No configured Atlas database, environment credentials or real student records were accessed or modified.
+
+Commands for browser checks
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test --config=playwright.repair.config.ts
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test tests/date-format.e2e.ts tests/curve-picker.e2e.ts tests/phase1-demo.e2e.ts --grep-invert 'recent-results month|surfaces use' --workers=2
+
+Frontend files touched in this repair (previous unrelated changes preserved)
+  src/app/useSchool.ts
+  src/components/shared/EntityDocuments.tsx
+  src/components/ui/CalendarDateInput.tsx
+  src/components/ui/Primitives.tsx
+  src/components/ui/calendar-date.css
+  src/features/live/LiveAccount.tsx
+  src/features/live/LiveAudit.tsx
+  src/features/notifications/CommunicationHistory.tsx
+  src/features/notifications/SendNotice.tsx
+  src/features/platform/PlatformDashboard.tsx
+  src/features/settings/StudentImportDialog.tsx
+  src/features/setup/AcademicYears.tsx
+  src/features/setup/ImportJob.tsx
+  src/features/setup/RosterWorkspace.tsx
+  src/features/setup/import.css
+  src/features/students/LiveStudents.tsx
+  src/lib/adminSettings.ts
+  src/lib/adminWorkspace.test.ts
+  src/lib/config.ts
+  src/lib/displayFormat.test.ts
+  src/lib/displayFormat.ts
+  src/lib/displayPreferences.ts
+  src/lib/domain.test.ts
+  src/lib/download.ts
+  src/lib/liveRosterImport.ts
+  src/lib/management.test.ts
+  src/lib/management.ts
+  src/lib/marksImport.test.ts
+  src/lib/reportShare.test.ts
+  src/lib/studentImport.test.ts
+  src/lib/studentImport.ts
+  src/lib/studentNumbering.test.ts
+  src/lib/studentTemplate.ts
+  src/lib/xlsx.ts
+  src/mocks/seed.ts
+  src/services/onboardingService.ts
+  src/types/admin.ts
+  tests/curve-picker.e2e.ts
+  tests/date-format.e2e.ts
+  tests/phase1-repair.e2e.ts
+
+Backend files touched in this repair
+  src/api/models/people.models.ts
+  src/api/services/demoStudentFormat.ts
+  src/api/services/rosterDate.ts
+  src/api/services/rosterFormat.ts
+  src/api/services/rosterImports.service.ts
+  src/api/services/rosterPeople.ts
+  src/api/services/rosterWorker.ts
+  src/database/migrations/classRollNumbers.ts
+  src/security/multiClassImport.integration.test.ts
+  src/security/rosterRules.integration.test.ts
+  commands/migrate-class-roll-numbers.ts
+
+Report: docs/student-import-rules-report.txt

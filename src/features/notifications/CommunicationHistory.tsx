@@ -1,3 +1,4 @@
+import { displayTimestamp } from '../../lib/displayFormat';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
@@ -160,15 +161,7 @@ export default function CommunicationHistory() {
             <tbody>
               {visible.map((record) => (
                 <tr key={record.id}>
-                  <td>
-                    {new Date(record.sentAt ?? record.createdAt).toLocaleString('en-IN', {
-                      timeZone: 'Asia/Kolkata',
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </td>
+                  <td>{displayTimestamp(record.sentAt ?? record.createdAt)}</td>
                   <td>
                     {record.event}
                     <small className="communication-cell-note">{record.title}</small>
@@ -279,8 +272,7 @@ export default function CommunicationHistory() {
         </div>
         <p className="communication-note">
           {viewing?.reason}
-          {viewing?.scheduledAt &&
-            ` Scheduled for ${new Date(viewing.scheduledAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}.`}
+          {viewing?.scheduledAt && ` Scheduled for ${displayTimestamp(viewing.scheduledAt)}.`}
         </p>
         <div className="modal-actions">
           <Button variant="secondary" onClick={() => setViewing(null)}>

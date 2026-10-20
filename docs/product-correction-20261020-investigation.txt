@@ -1,0 +1,27 @@
+Product correction — 20 October 2026
+
+Working-tree staged, unstaged and untracked changes were inspected before editing.
+Neither repository was reset. Local environment files and real database records are outside this repair.
+
+Confirmed investigation findings
+
+1. Test creation: TestDialog reuses the original demo form, but omits kind entirely. LiveLearning.examBody also drops it; learningSerialization hardcodes Test. The model has no kind. The original four demo kinds and custom values must remain readable alongside new supported examination types.
+2. Maximum marks: academicSheets and examinationSheets persist maxima on each section sheet. A newly selected section has a blank maximum and can save a different value. Changes do not revalidate other sections. This is a data-integrity defect.
+3. Overall ranking: overallLeaderboard already uses aggregate obtained/maximum rather than an average of test percentages. However absent subjects contribute zero to the denominator, ties use an epsilon, resultSummary rounds before other calculations, and presentation omits marks totals. An all-absent student receives a rank.
+4. Results: TestResult is a large modal. The footer places percentages and absence counts under subject columns. Overall shows ten ranked students and an unpaginated modal for the rest. Recent Results has a month filter but no display bound. Dedicated paginated server queries are a separate coherent phase.
+5. Excel: sheetImport matches Number(roll), so current alphanumeric roll numbers fail. Rolls repeat across sections, making the current match ambiguous for a whole-class sheet. The template lacks admission numbers. It previews prior to save, and live marks commit transactionally, but validation throws on the first invalid row. Row diagnostics and explicit replacement confirmation need improvement.
+6. Attendance: existing AttendanceTabs links students/staff, but the HR route has no symmetric selector. Calendars preserve approved dates, do not turn future days into absences, and use recorded times in the school timezone. Navigation refinements remain.
+7. Punch: punchEligibility resolves effective monthly policies; explicit none/manual/future policies disable punches. New teachers without configured salary default to punch. Settings, mapped identity, schedule, location, previous open day, reviewed day and payroll locks are enforced server-side. Existing tests cover the repair; no configuration or database values were inspected and no claim is made about the user's individual staff record.
+8. Leave: requestLeave/decideLeave use schoolWrite transactions, revisions, own staff mapping, overlap/balance/payroll checks, and self-approval denial. hrWorkspace reads only leaves overlapping the selected month: a future pending request is absent from the default current-month admin inbox. Generic HR_LEAVE errors also obscure paid-allowance failures.
+9. Assignments: learningScope checks current assignmentModel and section.teacherId every request, and writes recheck inside schoolWrite. Subject assignment and class-teacher designation are stored separately. Prior regression tests cover removal and tenant denial; these need rerunning.
+10. Teacher navigation: current portalAccess sends teaching.self to the shared overview; self calendar/leave/salary/profile are tabs on /staff/self. A dedicated teacher entry/login presentation and focused navigation are a later phase, using the same authentication.
+11. Permissions/settings: LiveRoles has View/Manage and delegation dependencies, but renders a long modal list rather than grouped modules. Protected owners/last owner and backend school membership checks already exist. Overview and Academics already use original components via SchoolFeatureData and loadLearning, with separate demo repository and no live seed fallback.
+
+Prioritized phases
+
+Phase 1: academic type and maximum data integrity, precision/ties/absence reporting, class-first combined marks entry, compatible Excel identity validation, and the future pending-leave inbox defect. Verify existing punch, leave, tenant and revocation behavior. Preserve old records with differing maxima; require an explicit validated reconciliation rather than silent rescaling.
+Phase 2: dedicated URL results/history, bounded recent assessments, server filtering/sorting/pagination, exports, bands and transparent year-wide support monitoring. Do not imply client pagination over the existing full snapshot satisfies the server requirement.
+Phase 3: focused teacher login/routing/screens and mobile navigation, symmetrical attendance navigation.
+Phase 4: grouped permissions editor and staff onboarding/settings usability. Preserve original demo structure.
+
+Phase boundaries keep server-side consistency, current UI design and the existing unrelated work reviewable. Each delivered phase needs tests and its own report; later items are not claimed complete by a successful build.

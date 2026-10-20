@@ -1,3 +1,4 @@
+import { identifierKey, rollKey, rollValue, validRoll } from './studentIdentifiers';
 import { z } from 'zod';
 import type { DemoState, Student, Teacher } from '../types/domain';
 import { getSchoolDate } from './dates';
@@ -24,7 +25,13 @@ export const enrollmentSchema = z.object({
   academicYearId: z.string(),
   classId: z.string(),
   sectionId: z.string(),
-  rollNumber: z.number().int().positive(),
+  rollNumber: z
+    .union([z.number(), z.string()])
+    .refine(
+      validRoll,
+      'Enter a roll number using letters, numbers, hyphens, slashes or underscores.',
+    )
+    .transform(rollValue),
 });
 export const teacherSchema = z.object({
   id: z.string(),
@@ -61,7 +68,7 @@ export const obligationSchema = z.object({
 export type StudentInput = Omit<Student, 'id' | 'schoolId'> & {
   classId: string;
   sectionId: string;
-  rollNumber: number;
+  rollNumber: string | number;
   feePlan?: FeePlanInput;
 };
 export type TeacherInput = Omit<Teacher, 'id' | 'schoolId'> & { sectionIds: string[] };
@@ -102,7 +109,7 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
       (s) =>
         s.schoolId === state.school.id &&
         s.id !== student.id &&
-        s.admissionNumber.toLowerCase() === student.admissionNumber.toLowerCase(),
+        identifierKey(s.admissionNumber) === identifierKey(student.admissionNumber),
     )
   )
     throw new Error('This admission number is already in use.');
@@ -117,7 +124,11 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
       s.id === input.sectionId && s.classId === input.classId && s.schoolId === state.school.id,
   );
   if (
-    !section ||
+    (input.sectionId
+      ? !section
+      : state.sections.some(
+          (s) => s.classId === input.classId && s.schoolId === state.school.id,
+        )) ||
     !state.classes.some((c) => c.id === input.classId && c.schoolId === state.school.id)
   )
     throw new Error('Choose a valid class and section.');
@@ -135,27 +146,32 @@ export function saveStudent(state: DemoState, input: StudentInput, studentId?: s
     throw new Error(
       'This enrollment has saved records. Its class and section must stay unchanged to preserve history.',
     );
-  if (!Number.isSafeInteger(input.rollNumber) || input.rollNumber <= 0)
-    throw new Error('Enter a positive whole roll number.');
+  if (!validRoll(input.rollNumber))
+    throw new Error(
+      'Enter a valid roll number: letters, numbers, hyphens, slashes or underscores; up to 40 characters.',
+    );
   if (
     state.enrollments.some(
       (entry) =>
         entry.schoolId === state.school.id &&
         entry.academicYearId === state.academicYear.id &&
-        entry.sectionId === section.id &&
+        entry.classId === input.classId &&
+        (entry.sectionId || '') === (input.sectionId || '') &&
         entry.studentId !== student.id &&
-        entry.rollNumber === input.rollNumber,
+        rollKey(entry.rollNumber) === rollKey(input.rollNumber),
     )
   )
-    throw new Error('This roll number is already in use in the selected section.');
+    throw new Error(
+      'This roll number is already in use in this section (or sectionless class) for this academic year.',
+    );
   const nextEnrollment = {
     id: enrollment?.id ?? crypto.randomUUID(),
     schoolId: state.school.id,
     studentId: student.id,
     academicYearId: state.academicYear.id,
     classId: input.classId,
-    sectionId: section.id,
-    rollNumber: input.rollNumber,
+    sectionId: section?.id ?? '',
+    rollNumber: rollValue(input.rollNumber),
   };
   const next: DemoState = {
     ...state,

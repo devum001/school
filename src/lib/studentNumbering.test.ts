@@ -32,6 +32,17 @@ describe('manual student identifiers', () => {
     expect(() =>
       saveStudent(next, { ...input, admissionNumber: 'OTHER', sectionId: 'class-5-b' }),
     ).not.toThrow();
+    expect(() =>
+      saveStudent(next, {
+        ...input,
+        admissionNumber: 'OTHER',
+        classId: 'class-6',
+        sectionId: 'class-6-a',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      saveStudent(next, { ...input, admissionNumber: 'OTHER', rollNumber: 100 }),
+    ).not.toThrow();
   });
   it('keeps other rolls and all linked records unchanged on rename, edit, deactivate, delete and restore', () => {
     const original = createSeed();

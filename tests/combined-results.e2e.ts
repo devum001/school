@@ -73,13 +73,15 @@ test('combined result shows every included subject, preserves absence/pending an
   expect(csv[0]).toEqual([
     'Roll No.',
     'Student',
+    'Class',
+    'Section',
     'Mathematics',
     'Mathematics maximum',
     'English',
     'English maximum',
   ]);
   const exported = csv.find((row) => row[1] === draft.students[0].student.name);
-  expect(exported?.slice(2)).toEqual(['18', '20', '45', '50']);
+  expect(exported?.slice(4)).toEqual(['18', '20', '45', '50']);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await region.focus();
