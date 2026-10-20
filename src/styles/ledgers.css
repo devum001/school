@@ -512,3 +512,20 @@
     height: 40px;
   }
 }
+
+.student-fees-toolbar > .search-input {
+  flex: 1 1 280px;
+  max-width: 360px;
+  min-width: 220px;
+}
+@media (max-width: 640px) {
+  .student-fees-toolbar > .search-input {
+    flex-basis: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+.workspace main .finance-workspace > :is(.page-heading, .tab-rail, .section-navigation) {
+  margin-bottom: 0;
+}

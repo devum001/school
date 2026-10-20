@@ -124,7 +124,6 @@ export default function FinanceWorkspace() {
       {(tab === 'Overview' || tab === 'Transactions') && (
         <div className="finance-period">
           <label className="field">
-            Period
             <select
               aria-label="Finance period"
               value={period}
