@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronsUpDown, LogOut } from 'lucide-react';
 import AppShell from '../../components/layout/AppShell';
-import { Button, Modal, Panel, AppLoader } from '../../components/ui/Primitives';
+import { Button, LoadingOverlay, Modal, PageHeading, Panel } from '../../components/ui/Primitives';
 import { getSchoolProfile } from '../../services/schoolProfileService';
 import { schoolAccessService } from '../../services/schoolAccessService';
 import { setupApi } from '../../services/schoolSetupService';
@@ -52,22 +52,39 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
         </Panel>
       </main>
     );
-  if (!state.data)
+  if (!session) return null;
+  const fallbackSchoolName =
+    session.memberships.find((m) => m.schoolId === schoolId)?.schoolName ?? 'School workspace';
+  if (!state.data) {
     return (
-      <main className="live-login">
-        <AppLoader
+      <AppShell
+        school={{ name: fallbackSchoolName }}
+        user={{ name: session.user.name, detail: session.user.email }}
+        preferences={{ language: 'English', landingPage: 'Dashboard' }}
+        attentionCount={null}
+        studentSearchUrl={(query) => `/students?studentSearch=${encodeURIComponent(query)}`}
+        schoolPicker={<SchoolPicker name={fallbackSchoolName} schoolId={schoolId} />}
+        topbar={null}
+      >
+        <LoadingOverlay
+          loading
           size="xl"
           label="Loading your school workspace…"
           message="Loading your school workspace…"
-        />
-      </main>
+        >
+          <PageHeading title="A good day starts with clarity." />
+          <Panel
+            title={fallbackSchoolName}
+            subtitle="Loading saved school configuration and records."
+          >
+            <div style={{ minHeight: 240 }} />
+          </Panel>
+        </LoadingOverlay>
+      </AppShell>
     );
-  if (!session) return null;
+  }
   const { profile, access, status } = state.data;
-  const schoolName =
-    profile?.school.name ??
-    session.memberships.find((m) => m.schoolId === schoolId)?.schoolName ??
-    'School workspace';
+  const schoolName = profile?.school.name ?? fallbackSchoolName;
   const navigation = portalAccess(access.permissions, { selfLinked: status.selfLinked });
   const context = { schoolId, access, profile, status, reload: state.reload };
   return (

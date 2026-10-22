@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Button, Modal, Panel, LoadingOverlay } from '../../components/ui/Primitives';
+import { Button, LoadingOverlay, Modal, Panel } from '../../components/ui/Primitives';
 import {
   schoolAccessService as api,
   canAssign,
@@ -70,45 +70,45 @@ function MemberPage({
     refreshAccess();
   };
   return (
-    <Panel
-      title="School members"
-      subtitle="Add existing accounts and manage their access to this school."
-      action={
-        manage && (
-          <Button disabled={!choices.length} onClick={() => setEditing('new')}>
-            Add member
-          </Button>
-        )
-      }
+    <LoadingOverlay
+      loading={state.loading}
+      size="xl"
+      label="Loading school members…"
+      message="Loading school members…"
     >
-      <div className="live-content">
-        <p>
-          Create and link staff accounts using Enable login in Teachers or Staff & HR. Use this area
-          to manage school access for existing accounts. Adding a member does not send an
-          invitation.
-        </p>
-        {manage && !access.permissions.includes('roles.view') && (
-          <p>
-            Viewing roles is required to choose and manage member roles here. Ask your administrator
-            for access.
-          </p>
-        )}
-        {notice && <p role="status">{notice}</p>}
-        {state.error && (
-          <p role="alert">
-            {state.error}{' '}
-            <Button variant="secondary" onClick={state.reload}>
-              Retry members
+      <Panel
+        title="School members"
+        subtitle="Add existing accounts and manage their access to this school."
+        action={
+          manage && (
+            <Button disabled={!choices.length} onClick={() => setEditing('new')}>
+              Add member
             </Button>
+          )
+        }
+      >
+        <div className="live-content">
+          <p>
+            Create and link staff accounts using Enable login in Teachers or Staff & HR. Use this area
+            to manage school access for existing accounts. Adding a member does not send an
+            invitation.
           </p>
-        )}
-        <LoadingOverlay
-          loading={state.loading}
-          size="xl"
-          label="Loading school members…"
-          message="Loading school members…"
-        >
-          {state.data ? (
+          {manage && !access.permissions.includes('roles.view') && (
+            <p>
+              Viewing roles is required to choose and manage member roles here. Ask your administrator
+              for access.
+            </p>
+          )}
+          {notice && <p role="status">{notice}</p>}
+          {state.error && (
+            <p role="alert">
+              {state.error}{' '}
+              <Button variant="secondary" onClick={state.reload}>
+                Retry members
+              </Button>
+            </p>
+          )}
+          {!state.error && (
             <>
               <div className="live-table-wrap">
                 <table className="live-table">
@@ -122,7 +122,7 @@ function MemberPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {state.data.members.items.map((member) => (
+                    {(state.data?.members.items ?? []).map((member) => (
                       <tr key={member.id}>
                         <th scope="row">
                           {member.user?.name ?? 'Account details unavailable'}
@@ -165,28 +165,27 @@ function MemberPage({
                   </tbody>
                 </table>
               </div>
-              {state.data.members.items.length === 0 && <p>No members on this page.</p>}
-              <div className="live-actions">
-                {cursor && (
-                  <Button variant="secondary" onClick={() => setCursor(undefined)}>
-                    First page
-                  </Button>
-                )}
-                {state.data.members.nextCursor && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setCursor(state.data!.members.nextCursor!)}
-                  >
-                    Next members
-                  </Button>
-                )}
-              </div>
+              {state.data && state.data.members.items.length === 0 && <p>No members on this page.</p>}
+              {state.data && (
+                <div className="live-actions">
+                  {cursor && (
+                    <Button variant="secondary" onClick={() => setCursor(undefined)}>
+                      First page
+                    </Button>
+                  )}
+                  {state.data.members.nextCursor && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setCursor(state.data!.members.nextCursor!)}
+                    >
+                      Next members
+                    </Button>
+                  )}
+                </div>
+              )}
             </>
-          ) : (
-            <div style={{ minHeight: '260px' }} />
           )}
-        </LoadingOverlay>
-      </div>
+        </div>
       {editing && (
         <MemberEditor
           member={editing === 'new' ? undefined : editing}
@@ -244,7 +243,8 @@ function MemberPage({
           </div>
         </div>
       </Modal>
-    </Panel>
+      </Panel>
+    </LoadingOverlay>
   );
 }
 function MemberEditor({

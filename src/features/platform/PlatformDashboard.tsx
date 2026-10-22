@@ -2,7 +2,7 @@ import { displayTimestamp } from '../../lib/displayFormat';
 import OwnerRecovery from './OwnerRecovery';
 import { useCallback, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Button, Modal, PageHeading, Panel } from '../../components/ui/Primitives';
+import { Button, LoadingOverlay, Modal, PageHeading, Panel } from '../../components/ui/Primitives';
 import {
   platformService as api,
   platformError,
@@ -161,115 +161,123 @@ function SchoolPage({
       action: () => api.updateSchool(school.id, { status }),
     });
   return (
-    <Panel
-      title="Registered schools"
-      subtitle="All schools, including suspended and archived registrations."
-      action={<Button onClick={() => setEditing('new')}>Create school</Button>}
+    <LoadingOverlay
+      loading={state.loading}
+      size="xl"
+      label="Loading schools…"
+      message="Loading schools…"
     >
-      <div className="live-content">
-        {notice && <p role="status">{notice}</p>}
-        {state.loading && <p role="status">Loading schools…</p>}
-        {state.error && (
-          <p role="alert">
-            {state.error} <Button onClick={state.reload}>Retry schools</Button>
-          </p>
-        )}
-        {state.data && (
-          <>
-            <div className="live-table-wrap">
-              <table className="live-table">
-                <caption className="sr-only">Platform school registrations</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">School</th>
-                    <th scope="col">Timezone</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.data.items.map((school) => (
-                    <tr key={school.id}>
-                      <th scope="row">
-                        {school.name}
-                        <small>
-                          {school.slug}
-                          {school.code ? ` · ${school.code}` : ''}
-                        </small>
-                      </th>
-                      <td>{school.timezone}</td>
-                      <td>
-                        {school.status === 'archived'
-                          ? 'Archived'
-                          : school.status === 'suspended'
-                            ? 'Suspended'
-                            : 'Active'}
-                      </td>
-                      <td>
-                        <div className="live-actions">
-                          <Button variant="secondary" onClick={() => setRecovering(school)}>
-                            Recover owner <span className="sr-only">{school.name}</span>
-                          </Button>
-                          <Button variant="secondary" onClick={() => setEditing(school)}>
-                            Edit <span className="sr-only">{school.name}</span>
-                          </Button>
-                          {school.status === 'active' ? (
-                            <Button variant="secondary" onClick={() => change(school, 'suspended')}>
-                              Suspend <span className="sr-only">{school.name}</span>
-                            </Button>
-                          ) : (
-                            <Button variant="secondary" onClick={() => change(school, 'active')}>
-                              Restore <span className="sr-only">{school.name}</span>
-                            </Button>
-                          )}
-                          {school.status !== 'archived' && (
-                            <Button
-                              variant="danger"
-                              onClick={() =>
-                                setConfirmation({
-                                  title: 'Remove school registration?',
-                                  description: `${school.name} will be archived and all school access blocked. School records are retained; you can restore access later.`,
-                                  action: () => api.archiveSchool(school.id),
-                                })
-                              }
-                            >
-                              Remove <span className="sr-only">{school.name}</span>
-                            </Button>
-                          )}
-                        </div>
-                      </td>
+      <Panel
+        title="Registered schools"
+        subtitle="All schools, including suspended and archived registrations."
+        action={<Button onClick={() => setEditing('new')}>Create school</Button>}
+      >
+        <div className="live-content">
+          {notice && <p role="status">{notice}</p>}
+          {state.error && (
+            <p role="alert">
+              {state.error} <Button onClick={state.reload}>Retry schools</Button>
+            </p>
+          )}
+          {!state.error && (
+            <>
+              <div className="live-table-wrap">
+                <table className="live-table">
+                  <caption className="sr-only">Platform school registrations</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">School</th>
+                      <th scope="col">Timezone</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!state.data.items.length && (
-              <p>
-                No schools have been registered. Create a school and assign its owner to get
-                started.
-              </p>
-            )}
-            <Pagination cursor={cursor} next={state.data.nextCursor} onChange={setCursor} />
-          </>
+                  </thead>
+                  <tbody>
+                    {(state.data?.items ?? []).map((school) => (
+                      <tr key={school.id}>
+                        <th scope="row">
+                          {school.name}
+                          <small>
+                            {school.slug}
+                            {school.code ? ` · ${school.code}` : ''}
+                          </small>
+                        </th>
+                        <td>{school.timezone}</td>
+                        <td>
+                          {school.status === 'archived'
+                            ? 'Archived'
+                            : school.status === 'suspended'
+                              ? 'Suspended'
+                              : 'Active'}
+                        </td>
+                        <td>
+                          <div className="live-actions">
+                            <Button variant="secondary" onClick={() => setRecovering(school)}>
+                              Recover owner <span className="sr-only">{school.name}</span>
+                            </Button>
+                            <Button variant="secondary" onClick={() => setEditing(school)}>
+                              Edit <span className="sr-only">{school.name}</span>
+                            </Button>
+                            {school.status === 'active' ? (
+                              <Button variant="secondary" onClick={() => change(school, 'suspended')}>
+                                Suspend <span className="sr-only">{school.name}</span>
+                              </Button>
+                            ) : (
+                              <Button variant="secondary" onClick={() => change(school, 'active')}>
+                                Restore <span className="sr-only">{school.name}</span>
+                              </Button>
+                            )}
+                            {school.status !== 'archived' && (
+                              <Button
+                                variant="danger"
+                                onClick={() =>
+                                  setConfirmation({
+                                    title: 'Remove school registration?',
+                                    description: `${school.name} will be archived and all school access blocked. School records are retained; you can restore access later.`,
+                                    action: () => api.archiveSchool(school.id),
+                                  })
+                                }
+                              >
+                                Remove <span className="sr-only">{school.name}</span>
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {state.data && !state.data.items.length && (
+                <p>
+                  No schools have been registered. Create a school and assign its owner to get
+                  started.
+                </p>
+              )}
+              {state.data && (
+                <Pagination cursor={cursor} next={state.data.nextCursor} onChange={setCursor} />
+              )}
+            </>
+          )}
+          <Button variant="secondary" disabled={state.loading} onClick={state.reload}>
+            Refresh schools
+          </Button>
+        </div>
+        {recovering && (
+          <OwnerRecovery school={recovering} close={() => setRecovering(null)} saved={saved} />
         )}
-        <Button variant="secondary" disabled={state.loading} onClick={state.reload}>
-          Refresh schools
-        </Button>
-      </div>
-      {recovering && (
-        <OwnerRecovery school={recovering} close={() => setRecovering(null)} saved={saved} />
-      )}
-      {editing && (
-        <SchoolForm
-          school={editing === 'new' ? undefined : editing}
-          close={() => setEditing(null)}
-          saved={saved}
-        />
-      )}
-      {confirmation && (
-        <ConfirmAction value={confirmation} close={() => setConfirmation(null)} saved={saved} />
-      )}
-    </Panel>
+        {editing && (
+          <SchoolForm
+            school={editing === 'new' ? undefined : editing}
+            close={() => setEditing(null)}
+            saved={saved}
+          />
+        )}
+        {confirmation && (
+          <ConfirmAction value={confirmation} close={() => setConfirmation(null)} saved={saved} />
+        )}
+      </Panel>
+    </LoadingOverlay>
   );
 }
 function PlatformUsers() {
@@ -345,109 +353,119 @@ function UserPage({
     state.reload();
   };
   return (
-    <Panel
-      title="Platform accounts"
-      subtitle="Create and maintain accounts. School owners assign school-specific roles and memberships."
-      action={<Button onClick={() => setEditing('new')}>Create account</Button>}
+    <LoadingOverlay
+      loading={state.loading}
+      size="xl"
+      label="Loading accounts…"
+      message="Loading accounts…"
     >
-      <div className="live-content">
-        {notice && <p role="status">{notice}</p>}
-        {state.loading && <p role="status">Loading accounts…</p>}
-        {state.error && (
-          <p role="alert">
-            {state.error} <Button onClick={state.reload}>Retry accounts</Button>
-          </p>
-        )}
-        {state.data && (
-          <>
-            <div className="live-table-wrap">
-              <table className="live-table">
-                <caption className="sr-only">Platform user accounts</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Account</th>
-                    <th scope="col">Access</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.data.items.map((user) => (
-                    <tr key={user.id}>
-                      <th scope="row">
-                        {user.name}
-                        <small>{user.email}</small>
-                      </th>
-                      <td>
-                        {user.platformRole === 'super_admin' ? 'Super Admin' : 'School account'}
-                      </td>
-                      <td>{user.status === 'active' ? 'Active' : 'Disabled'}</td>
-                      <td>
-                        {user.platformRole === 'super_admin' ? (
-                          <span>Protected platform identity</span>
-                        ) : (
-                          <div className="live-actions">
-                            <Button variant="secondary" onClick={() => setEditing(user)}>
-                              Edit <span className="sr-only">{user.name}</span>
-                            </Button>
-                            <Button variant="secondary" onClick={() => setReset(user)}>
-                              Reset password <span className="sr-only">{user.name}</span>
-                            </Button>
-                            {user.status === 'active' ? (
-                              <Button
-                                variant="danger"
-                                onClick={() =>
-                                  setConfirmation({
-                                    title: 'Remove account access?',
-                                    description: `${user.email} will be disabled across all schools and signed out of all devices. Its records are retained.`,
-                                    action: () => api.disableUser(user.id),
-                                  })
-                                }
-                              >
-                                Remove access <span className="sr-only">{user.name}</span>
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="secondary"
-                                onClick={() =>
-                                  setConfirmation({
-                                    title: 'Reactivate account?',
-                                    description: `${user.email} can sign in again with its current password. Existing school memberships will apply. Revoked sessions stay signed out.`,
-                                    action: () => api.updateUser(user.id, { status: 'active' }),
-                                  })
-                                }
-                              >
-                                Reactivate <span className="sr-only">{user.name}</span>
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </td>
+      <Panel
+        title="Platform accounts"
+        subtitle="Create and maintain accounts. School owners assign school-specific roles and memberships."
+        action={<Button onClick={() => setEditing('new')}>Create account</Button>}
+      >
+        <div className="live-content">
+          {notice && <p role="status">{notice}</p>}
+          {state.error && (
+            <p role="alert">
+              {state.error} <Button onClick={state.reload}>Retry accounts</Button>
+            </p>
+          )}
+          {!state.error && (
+            <>
+              <div className="live-table-wrap">
+                <table className="live-table">
+                  <caption className="sr-only">Platform user accounts</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Account</th>
+                      <th scope="col">Access</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!state.data.items.length && <p>No accounts match this page or email.</p>}
-            <Pagination cursor={cursor} next={state.data.nextCursor} onChange={setCursor} />
-          </>
+                  </thead>
+                  <tbody>
+                    {(state.data?.items ?? []).map((user) => (
+                      <tr key={user.id}>
+                        <th scope="row">
+                          {user.name}
+                          <small>{user.email}</small>
+                        </th>
+                        <td>
+                          {user.platformRole === 'super_admin' ? 'Super Admin' : 'School account'}
+                        </td>
+                        <td>{user.status === 'active' ? 'Active' : 'Disabled'}</td>
+                        <td>
+                          {user.platformRole === 'super_admin' ? (
+                            <span>Protected platform identity</span>
+                          ) : (
+                            <div className="live-actions">
+                              <Button variant="secondary" onClick={() => setEditing(user)}>
+                                Edit <span className="sr-only">{user.name}</span>
+                              </Button>
+                              <Button variant="secondary" onClick={() => setReset(user)}>
+                                Reset password <span className="sr-only">{user.name}</span>
+                              </Button>
+                              {user.status === 'active' ? (
+                                <Button
+                                  variant="danger"
+                                  onClick={() =>
+                                    setConfirmation({
+                                      title: 'Remove account access?',
+                                      description: `${user.email} will be disabled across all schools and signed out of all devices. Its records are retained.`,
+                                      action: () => api.disableUser(user.id),
+                                    })
+                                  }
+                                >
+                                  Remove access <span className="sr-only">{user.name}</span>
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="secondary"
+                                  onClick={() =>
+                                    setConfirmation({
+                                      title: 'Reactivate account?',
+                                      description: `${user.email} can sign in again with its current password. Existing school memberships will apply. Revoked sessions stay signed out.`,
+                                      action: () => api.updateUser(user.id, { status: 'active' }),
+                                    })
+                                  }
+                                >
+                                  Reactivate <span className="sr-only">{user.name}</span>
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {state.data && !state.data.items.length && (
+                <p>No accounts match this page or email.</p>
+              )}
+              {state.data && (
+                <Pagination cursor={cursor} next={state.data.nextCursor} onChange={setCursor} />
+              )}
+            </>
+          )}
+          <Button variant="secondary" disabled={state.loading} onClick={state.reload}>
+            Refresh accounts
+          </Button>
+        </div>
+        {editing && (
+          <UserForm
+            user={editing === 'new' ? undefined : editing}
+            close={() => setEditing(null)}
+            saved={saved}
+          />
         )}
-        <Button variant="secondary" disabled={state.loading} onClick={state.reload}>
-          Refresh accounts
-        </Button>
-      </div>
-      {editing && (
-        <UserForm
-          user={editing === 'new' ? undefined : editing}
-          close={() => setEditing(null)}
-          saved={saved}
-        />
-      )}
-      {reset && <PasswordReset user={reset} close={() => setReset(null)} saved={saved} />}
-      {confirmation && (
-        <ConfirmAction value={confirmation} close={() => setConfirmation(null)} saved={saved} />
-      )}
-    </Panel>
+        {reset && <PasswordReset user={reset} close={() => setReset(null)} saved={saved} />}
+        {confirmation && (
+          <ConfirmAction value={confirmation} close={() => setConfirmation(null)} saved={saved} />
+        )}
+      </Panel>
+    </LoadingOverlay>
   );
 }
 const eventNames: Record<string, string> = {
@@ -478,74 +496,82 @@ function ActivityPage({
   const load = useCallback((signal: AbortSignal) => api.events(signal, cursor), [cursor]);
   const state = useRemote(load);
   return (
-    <Panel
-      title="Platform activity"
-      subtitle="Platform administration changes, oldest first."
-      action={
-        <Button variant="secondary" disabled={state.loading} onClick={state.reload}>
-          Refresh activity
-        </Button>
-      }
+    <LoadingOverlay
+      loading={state.loading}
+      size="xl"
+      label="Loading platform activity…"
+      message="Loading platform activity…"
     >
-      <div className="live-content">
-        {state.loading && <p role="status">Loading platform activity…</p>}
-        {state.error && (
-          <p role="alert">
-            {state.error} <Button onClick={state.reload}>Retry activity</Button>
-          </p>
-        )}
-        {state.data && (
-          <>
-            <div className="live-table-wrap">
-              <table className="live-table">
-                <caption className="sr-only">Platform audit events</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Change</th>
-                    <th scope="col">When</th>
-                    <th scope="col">Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.data.items.map((event) => (
-                    <tr key={event.id}>
-                      <th scope="row">{eventNames[event.action] ?? event.action}</th>
-                      <td>
-                        <time dateTime={event.createdAt}>
-                          {displayTimestamp(event.createdAt)}
-                        </time>
-                      </td>
-                      <td>
-                        <details>
-                          <summary>Event references</summary>
-                          <dl>
-                            <dt>Actor</dt>
-                            <dd>{event.actorUserId ?? 'Trusted setup'}</dd>
-                            <dt>Record</dt>
-                            <dd>{event.targetId ?? '—'}</dd>
-                            <>
-                              {event.reason && (
-                                <>
-                                  <dt>Recovery reason</dt>
-                                  <dd>{event.reason}</dd>
-                                </>
-                              )}
-                            </>
-                            <dt>Support request</dt>
-                            <dd>{event.requestId}</dd>
-                          </dl>
-                        </details>
-                      </td>
+      <Panel
+        title="Platform activity"
+        subtitle="Platform administration changes, oldest first."
+        action={
+          <Button variant="secondary" disabled={state.loading} onClick={state.reload}>
+            Refresh activity
+          </Button>
+        }
+      >
+        <div className="live-content">
+          {state.error && (
+            <p role="alert">
+              {state.error} <Button onClick={state.reload}>Retry activity</Button>
+            </p>
+          )}
+          {!state.error && (
+            <>
+              <div className="live-table-wrap">
+                <table className="live-table">
+                  <caption className="sr-only">Platform audit events</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Change</th>
+                      <th scope="col">When</th>
+                      <th scope="col">Details</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!state.data.items.length && <p>No recorded platform changes.</p>}
-            <Pagination cursor={cursor} next={state.data.nextCursor} onChange={setCursor} />
-          </>
-        )}
-      </div>
-    </Panel>
+                  </thead>
+                  <tbody>
+                    {(state.data?.items ?? []).map((event) => (
+                      <tr key={event.id}>
+                        <th scope="row">{eventNames[event.action] ?? event.action}</th>
+                        <td>
+                          <time dateTime={event.createdAt}>
+                            {displayTimestamp(event.createdAt)}
+                          </time>
+                        </td>
+                        <td>
+                          <details>
+                            <summary>Event references</summary>
+                            <dl>
+                              <dt>Actor</dt>
+                              <dd>{event.actorUserId ?? 'Trusted setup'}</dd>
+                              <dt>Record</dt>
+                              <dd>{event.targetId ?? '—'}</dd>
+                              <>
+                                {event.reason && (
+                                  <>
+                                    <dt>Recovery reason</dt>
+                                    <dd>{event.reason}</dd>
+                                  </>
+                                )}
+                              </>
+                              <dt>Support request</dt>
+                              <dd>{event.requestId}</dd>
+                            </dl>
+                          </details>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {state.data && !state.data.items.length && <p>No recorded platform changes.</p>}
+              {state.data && (
+                <Pagination cursor={cursor} next={state.data.nextCursor} onChange={setCursor} />
+              )}
+            </>
+          )}
+        </div>
+      </Panel>
+    </LoadingOverlay>
   );
 }

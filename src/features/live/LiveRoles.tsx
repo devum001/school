@@ -2,7 +2,7 @@ import { permissionGroup, permissionDependencies, togglePermission } from './per
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { titleCase } from '../../lib/displayFormat';
 import { useCallback, useState } from 'react';
-import { Button, Modal, Panel, LoadingOverlay } from '../../components/ui/Primitives';
+import { Button, LoadingOverlay, Modal, Panel } from '../../components/ui/Primitives';
 import {
   schoolAccessService as api,
   canAssign,
@@ -43,34 +43,34 @@ export default function LiveRoles({
     refreshAccess();
   };
   return (
-    <Panel
-      title="Roles and permissions"
-      subtitle="Permissions apply only to the selected school."
-      action={
-        manage && (
-          <Button disabled={!state.data} onClick={() => setEditing('new')}>
-            Create role
-          </Button>
-        )
-      }
+    <LoadingOverlay
+      loading={state.loading}
+      size="xl"
+      label="Loading roles & permissions…"
+      message="Loading roles & permissions…"
     >
-      <div className="live-content">
-        {notice && <p role="status">{notice}</p>}
-        {state.error && (
-          <p role="alert">
-            {state.error}{' '}
-            <Button variant="secondary" onClick={state.reload}>
-              Retry roles
+      <Panel
+        title="Roles and permissions"
+        subtitle="Permissions apply only to the selected school."
+        action={
+          manage && (
+            <Button disabled={!state.data} onClick={() => setEditing('new')}>
+              Create role
             </Button>
-          </p>
-        )}
-        <LoadingOverlay
-          loading={state.loading}
-          size="xl"
-          label="Loading roles & permissions…"
-          message="Loading roles & permissions…"
-        >
-          {state.data ? (
+          )
+        }
+      >
+        <div className="live-content">
+          {notice && <p role="status">{notice}</p>}
+          {state.error && (
+            <p role="alert">
+              {state.error}{' '}
+              <Button variant="secondary" onClick={state.reload}>
+                Retry roles
+              </Button>
+            </p>
+          )}
+          {!state.error && (
             <div className="live-table-wrap">
               <table className="live-table">
                 <caption className="sr-only">School roles</caption>
@@ -82,7 +82,7 @@ export default function LiveRoles({
                   </tr>
                 </thead>
                 <tbody>
-                  {state.data.roles.map((role) => (
+                  {(state.data?.roles ?? []).map((role) => (
                     <tr key={role.id}>
                       <th scope="row">
                         {titleCase(role.name)}
@@ -119,73 +119,71 @@ export default function LiveRoles({
                   ))}
                 </tbody>
               </table>
-              {state.data.roles.length === 0 && <p>No roles have been created.</p>}
+              {state.data && state.data.roles.length === 0 && <p>No roles have been created.</p>}
             </div>
-          ) : (
-            <div style={{ minHeight: '260px' }} />
           )}
-        </LoadingOverlay>
-        {!manage && <p>You can view roles. Managing them requires additional permission.</p>}
-      </div>
-      {editing && state.data && (
-        <RoleEditor
-          key={editing === 'new' ? 'new' : editing.id}
-          role={editing === 'new' ? undefined : editing}
-          access={access}
-          catalog={state.data.catalog}
-          close={() => setEditing(null)}
-          saved={() => {
-            setEditing(null);
-            changed('Role saved.');
-          }}
-        />
-      )}
-      <Modal
-        open={!!deleting}
-        onClose={() => {
-          if (!busy) setDeleting(null);
-        }}
-        title="Delete role?"
-        description="Only unassigned custom roles can be deleted. Suspended members still count as assigned."
-      >
-        <div className="live-content">
-          <p>
-            Delete {deleting?.name}? {deleting?.memberCount ?? 0} school members currently use this
-            role.
-          </p>
-          {error && (
-            <p role="alert" className="form-error">
-              {error}
-            </p>
-          )}
-          <div className="live-actions">
-            <Button variant="secondary" disabled={busy} onClick={() => setDeleting(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              disabled={busy}
-              onClick={async () => {
-                if (!deleting) return;
-                setBusy(true);
-                setError('');
-                try {
-                  await api.deleteRole(access.schoolId, deleting.id);
-                  setDeleting(null);
-                  changed('Role deleted.');
-                } catch (cause) {
-                  setError(accessError(cause, 'role'));
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {busy ? 'Deleting…' : 'Confirm delete'}
-            </Button>
-          </div>
+          {!manage && <p>You can view roles. Managing them requires additional permission.</p>}
         </div>
-      </Modal>
-    </Panel>
+        {editing && state.data && (
+          <RoleEditor
+            key={editing === 'new' ? 'new' : editing.id}
+            role={editing === 'new' ? undefined : editing}
+            access={access}
+            catalog={state.data.catalog}
+            close={() => setEditing(null)}
+            saved={() => {
+              setEditing(null);
+              changed('Role saved.');
+            }}
+          />
+        )}
+        <Modal
+          open={!!deleting}
+          onClose={() => {
+            if (!busy) setDeleting(null);
+          }}
+          title="Delete role?"
+          description="Only unassigned custom roles can be deleted. Suspended members still count as assigned."
+        >
+          <div className="live-content">
+            <p>
+              Delete {deleting?.name}? {deleting?.memberCount ?? 0} school members currently use this
+              role.
+            </p>
+            {error && (
+              <p role="alert" className="form-error">
+                {error}
+              </p>
+            )}
+            <div className="live-actions">
+              <Button variant="secondary" disabled={busy} onClick={() => setDeleting(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                disabled={busy}
+                onClick={async () => {
+                  if (!deleting) return;
+                  setBusy(true);
+                  setError('');
+                  try {
+                    await api.deleteRole(access.schoolId, deleting.id);
+                    setDeleting(null);
+                    changed('Role deleted.');
+                  } catch (cause) {
+                    setError(accessError(cause, 'role'));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {busy ? 'Deleting…' : 'Confirm delete'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      </Panel>
+    </LoadingOverlay>
   );
 }
 function RoleEditor({

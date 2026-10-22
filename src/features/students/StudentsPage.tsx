@@ -116,7 +116,7 @@ export default function StudentsPage() {
               onClassChange={(v) => update('class', v)}
               onSectionChange={(v) => update('section', v)}
             />
-            <label className="field filter-label">
+            <label className="filter-label">
               <span>Status</span>
               <select
                 aria-label="Student status"

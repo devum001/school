@@ -69,8 +69,8 @@ export default function LiveStaff({
       onboardingApi.people(access.schoolId, 'staff', signal, after, query, teachersOnly),
     [access.schoolId, query, teachersOnly],
   );
-  const staffLoadingLabel = teachersOnly ? 'Loading teachers…' : 'Loading staff & HR…';
   const state = useSetupList(load);
+  const loadingLabel = teachersOnly ? 'Loading teachers…' : 'Loading staff & HR…';
   return (
     <div className="ledger-stack">
       {loginStaff && (
@@ -107,128 +107,130 @@ export default function LiveStaff({
       ) : section === 'assignments' ? (
         <PeopleRelations access={access} kind="teaching-assignments" yearId={yearId} />
       ) : (
-        <Panel
-          title={teachersOnly ? 'Teachers' : 'Staff & HR'}
-          action={
-            manage && (
-              <Button onClick={() => setEditing('new')}>
-                {teachersOnly ? 'Add Teacher' : 'Add Staff'}
-              </Button>
-            )
-          }
+        <LoadingOverlay
+          loading={state.loading}
+          size="xl"
+          label={loadingLabel}
+          message={loadingLabel}
         >
-          <div className="toolbar">
-            <SearchInput
-              value={query}
-              onChange={setQuery}
-              placeholder="Search staff name or code…"
-            />
-          </div>
-          <LoadState {...state} loading={!state.data && state.loading} retry={state.reload} />
-          {state.data && !state.error && (
-            <LoadingOverlay
-              loading={state.loading}
-              size="xl"
-              label={staffLoadingLabel}
-              message={staffLoadingLabel}
-            >
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Staff member</th>
-                      <th>Department</th>
-                      <th>Designation</th>
-                      <th>Contact</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {state.data.items.map((p) => (
-                      <tr key={p.id}>
-                        <td>
-                          <span className="avatar">
-                            {p.photoDataUrl ? (
-                              <img
-                                src={p.photoDataUrl}
-                                alt=""
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              />
-                            ) : (
-                              <Avatar name={p.name} />
-                            )}
-                          </span>
-                          <strong>{titleCase(p.name)}</strong>
-                          <small>
-                            {p.code}
-                            {p.teaching ? ' · Teaching' : ''}
-                          </small>
-                        </td>
-                        <td>{titleCase(p.department || '') || '—'}</td>
-                        <td>{titleCase(p.designation || '') || '—'}</td>
-                        <td>{p.email || p.phone || 'Not provided'}</td>
-                        <td>
-                          <Badge tone={p.status === 'active' ? 'green' : 'neutral'}>
-                            {titleCase(p.status)}
-                          </Badge>
-                        </td>
-                        <td>
-                          {manage && (
-                            <>
-                              {p.status === 'active' &&
-                                !p.userId &&
-                                access.permissions.includes('memberships.manage') &&
-                                access.permissions.includes('roles.view') && (
-                                  <Button variant="ghost" onClick={() => setLoginStaff(p)}>
-                                    Enable login
-                                  </Button>
-                                )}
-                              {p.userId && <Badge tone="green">Login linked</Badge>}
-                              {access.permissions.includes('payroll.view') &&
-                                access.permissions.includes('payroll.manage') && (
-                                  <Button
-                                    variant="ghost"
-                                    onClick={() =>
-                                      setParams((previous) => {
-                                        const next = new URLSearchParams(previous);
-                                        next.set('section', 'salary');
-                                        next.set('setupSalary', p.id);
-                                        return next;
-                                      })
-                                    }
-                                  >
-                                    Salary & attendance
-                                  </Button>
-                                )}
-                              <Button variant="ghost" onClick={() => setEditing(p)}>
-                                Edit
-                              </Button>
-                              <Button variant="ghost" onClick={() => setChange(p)}>
-                                {p.status === 'active' ? 'Archive' : 'Restore'}
-                              </Button>
-                            </>
-                          )}
-                        </td>
+          <Panel
+            title={teachersOnly ? 'Teachers' : 'Staff & HR'}
+            action={
+              manage && (
+                <Button onClick={() => setEditing('new')}>
+                  {teachersOnly ? 'Add Teacher' : 'Add Staff'}
+                </Button>
+              )
+            }
+          >
+            <div className="toolbar">
+              <SearchInput
+                value={query}
+                onChange={setQuery}
+                placeholder="Search staff name or code…"
+              />
+            </div>
+            {state.error && <LoadState {...state} loading={false} retry={state.reload} />}
+            {!state.error && (
+              <>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Staff member</th>
+                        <th>Department</th>
+                        <th>Designation</th>
+                        <th>Contact</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {!state.data.items.length && (
-                <EmptyState
-                  title="No staff found"
-                  description="Add a profile or import staff together. This does not create login accounts."
-                />
-              )}
-              <Paging {...state} nextCursor={state.data.nextCursor} />
-            </LoadingOverlay>
-          )}
-          <p className="panel-note">
-            Profiles and teaching assignments are saved to this school. Use the attendance and
-            salary tabs according to your account permissions.
-          </p>
-        </Panel>
+                    </thead>
+                    <tbody>
+                      {(state.data?.items ?? []).map((p) => (
+                        <tr key={p.id}>
+                          <td>
+                            <span className="avatar">
+                              {p.photoDataUrl ? (
+                                <img
+                                  src={p.photoDataUrl}
+                                  alt=""
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                <Avatar name={p.name} />
+                              )}
+                            </span>
+                            <strong>{titleCase(p.name)}</strong>
+                            <small>
+                              {p.code}
+                              {p.teaching ? ' · Teaching' : ''}
+                            </small>
+                          </td>
+                          <td>{titleCase(p.department || '') || '—'}</td>
+                          <td>{titleCase(p.designation || '') || '—'}</td>
+                          <td>{p.email || p.phone || 'Not provided'}</td>
+                          <td>
+                            <Badge tone={p.status === 'active' ? 'green' : 'neutral'}>
+                              {titleCase(p.status)}
+                            </Badge>
+                          </td>
+                          <td>
+                            {manage && (
+                              <>
+                                {p.status === 'active' &&
+                                  !p.userId &&
+                                  access.permissions.includes('memberships.manage') &&
+                                  access.permissions.includes('roles.view') && (
+                                    <Button variant="ghost" onClick={() => setLoginStaff(p)}>
+                                      Enable login
+                                    </Button>
+                                  )}
+                                {p.userId && <Badge tone="green">Login linked</Badge>}
+                                {access.permissions.includes('payroll.view') &&
+                                  access.permissions.includes('payroll.manage') && (
+                                    <Button
+                                      variant="ghost"
+                                      onClick={() =>
+                                        setParams((previous) => {
+                                          const next = new URLSearchParams(previous);
+                                          next.set('section', 'salary');
+                                          next.set('setupSalary', p.id);
+                                          return next;
+                                        })
+                                      }
+                                    >
+                                      Salary & attendance
+                                    </Button>
+                                  )}
+                                <Button variant="ghost" onClick={() => setEditing(p)}>
+                                  Edit
+                                </Button>
+                                <Button variant="ghost" onClick={() => setChange(p)}>
+                                  {p.status === 'active' ? 'Archive' : 'Restore'}
+                                </Button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {state.data && !state.data.items.length && !state.loading && (
+                  <EmptyState
+                    title="No staff found"
+                    description="Add a profile or import staff together. This does not create login accounts."
+                  />
+                )}
+                {state.data && <Paging {...state} nextCursor={state.data.nextCursor} />}
+              </>
+            )}
+            <p className="panel-note">
+              Profiles and teaching assignments are saved to this school. Use the attendance and
+              salary tabs according to your account permissions.
+            </p>
+          </Panel>
+        </LoadingOverlay>
       )}
       {editing && (
         <StaffEditor

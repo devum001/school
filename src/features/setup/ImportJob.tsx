@@ -1,7 +1,7 @@
 import ImportSteps from './ImportSteps';
 import { formatRosterCell } from '../../lib/displayFormat';
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Modal, Panel } from '../../components/ui/Primitives';
+import { Button, LoadingOverlay, Modal, Panel } from '../../components/ui/Primitives';
 import { onboardingApi, type ImportDetail } from '../../services/onboardingService';
 import { accessError } from '../../services/schoolAccessService';
 import { isCancelled } from '../../services/apiService';
@@ -68,26 +68,32 @@ export default function ImportJob({
     }
   }
   return (
-    <Panel
-      className="import-job"
-      title={wizard ? 'Student import' : 'Saved import'}
-      subtitle="You can leave this page and return through Import history. Processing continues in the background."
+    <LoadingOverlay
+      loading={!job && !error}
+      size="xl"
+      label="Loading import…"
+      message="Loading import…"
     >
-      <div className="live-content">
-        <Button variant="secondary" onClick={close}>
-          {backLabel}
-        </Button>
-        {error && (
-          <div>
-            <p role="alert" className="form-error">
-              {error}
-            </p>
-            <Button variant="secondary" onClick={reload}>
-              Retry loading import
-            </Button>
-          </div>
-        )}
-        {!job && !error && <p role="status">Loading import…</p>}
+      <Panel
+        className="import-job"
+        title={wizard ? 'Student import' : 'Saved import'}
+        subtitle="You can leave this page and return through Import history. Processing continues in the background."
+      >
+        <div className="live-content">
+          <Button variant="secondary" onClick={close}>
+            {backLabel}
+          </Button>
+          {error && (
+            <div>
+              <p role="alert" className="form-error">
+                {error}
+              </p>
+              <Button variant="secondary" onClick={reload}>
+                Retry loading import
+              </Button>
+            </div>
+          )}
+          {!job && !error && <div style={{ minHeight: 180 }} />}
         {job && (
           <>
             {wizard && (
@@ -311,7 +317,8 @@ export default function ImportJob({
           </Modal>
         )}
       </div>
-    </Panel>
+      </Panel>
+    </LoadingOverlay>
   );
 }
 function RowEditor({

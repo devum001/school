@@ -19,11 +19,13 @@ export function LazyBoundary() {
   return (
     <Suspense
       fallback={
-        <AppLoader
-          size="xl"
-          label="Opening your workspace…"
-          message="Opening your workspace…"
-        />
+        <div className="loading-state" role="status">
+          <AppLoader
+            size="xl"
+            label="Opening your workspace…"
+            message="Opening your workspace…"
+          />
+        </div>
       }
     >
       <Outlet />

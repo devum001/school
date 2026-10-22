@@ -1,7 +1,14 @@
 import { formatCalendarDate } from '../../lib/displayFormat';
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Modal, Panel, PickerInput, LoadingOverlay } from '../../components/ui/Primitives';
+import {
+  Badge,
+  Button,
+  LoadingOverlay,
+  Modal,
+  Panel,
+  PickerInput,
+} from '../../components/ui/Primitives';
 import {
   setupApi,
   yearValidation,
@@ -38,94 +45,95 @@ export default function AcademicYears({
     setNotice('Academic year saved.');
   };
   return (
-    <Panel
-      title="Academic years"
-      subtitle="Create a draft, review its dates, then explicitly select the current year."
-      action={manage && <Button onClick={() => setEditing('new')}>Create academic year</Button>}
+    <LoadingOverlay
+      loading={state.loading}
+      size="xl"
+      label="Loading academic years…"
+      message="Loading academic years…"
     >
-      <div className="live-content">
-        <LoadState {...state} loading={!state.data && state.loading} retry={state.reload} />
-        {notice && <p role="status">{notice}</p>}
-        {state.data && !state.error && (
-          <LoadingOverlay
-            loading={state.loading}
-            size="xl"
-            label="Loading academic years…"
-            message="Loading academic years…"
-          >
-            <div className="live-table-wrap">
-              <table className="live-table">
-                <thead>
-                  <tr>
-                    <th>Academic year</th>
-                    <th>Dates</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.data.items.map((year) => (
-                    <tr key={year.id}>
-                      <td>
-                        <strong>{year.name}</strong>
-                        {status.currentAcademicYearId === year.id && <small>Current year</small>}
-                      </td>
-                      <td>
-                        {formatCalendarDate(year.start)} → {formatCalendarDate(year.end)}
-                      </td>
-                      <td>
-                        <Badge tone={year.status === 'active' ? 'green' : 'neutral'}>
-                          {year.status}
-                        </Badge>
-                      </td>
-                      <td>
-                        <div className="live-actions">
-                          {access.permissions.includes('classes.view') && (
-                            <Link
-                              className="button secondary"
-                              to={`/settings?tab=Classes&year=${year.id}`}
-                            >
-                              View structure
-                            </Link>
-                          )}
-                          {manage && year.status !== 'closed' && (
-                            <>
-                              <Button variant="secondary" onClick={() => setEditing(year)}>
-                                Edit
-                              </Button>
-                              {status.currentAcademicYearId !== year.id && (
-                                <>
-                                  <Button onClick={() => setConfirm({ year, kind: 'select' })}>
-                                    Set current
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    onClick={() => setConfirm({ year, kind: 'close' })}
-                                  >
-                                    Close year
-                                  </Button>
-                                </>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </td>
+      <Panel
+        title="Academic years"
+        subtitle="Create a draft, review its dates, then explicitly select the current year."
+        action={manage && <Button onClick={() => setEditing('new')}>Create academic year</Button>}
+      >
+        <div className="live-content">
+          {state.error && <LoadState {...state} loading={false} retry={state.reload} />}
+          {notice && <p role="status">{notice}</p>}
+          {!state.error && (
+            <>
+              <div className="live-table-wrap">
+                <table className="live-table">
+                  <thead>
+                    <tr>
+                      <th>Academic year</th>
+                      <th>Dates</th>
+                      <th>Status</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!state.data.items.length && (
-              <p>No academic years yet. Create your first year to begin.</p>
-            )}
-            <Paging {...state} nextCursor={state.data.nextCursor} />
-          </LoadingOverlay>
-        )}
-        <p className="panel-note">
-          Dates cannot overlap another year. Selecting a draft activates it; previous years keep
-          their records. Close a non-current year when it should become permanently read-only.
-        </p>
-      </div>
+                  </thead>
+                  <tbody>
+                    {(state.data?.items ?? []).map((year) => (
+                      <tr key={year.id}>
+                        <td>
+                          <strong>{year.name}</strong>
+                          {status.currentAcademicYearId === year.id && <small>Current year</small>}
+                        </td>
+                        <td>
+                          {formatCalendarDate(year.start)} → {formatCalendarDate(year.end)}
+                        </td>
+                        <td>
+                          <Badge tone={year.status === 'active' ? 'green' : 'neutral'}>
+                            {year.status}
+                          </Badge>
+                        </td>
+                        <td>
+                          <div className="live-actions">
+                            {access.permissions.includes('classes.view') && (
+                              <Link
+                                className="button secondary"
+                                to={`/settings?tab=Classes&year=${year.id}`}
+                              >
+                                View structure
+                              </Link>
+                            )}
+                            {manage && year.status !== 'closed' && (
+                              <>
+                                <Button variant="secondary" onClick={() => setEditing(year)}>
+                                  Edit
+                                </Button>
+                                {status.currentAcademicYearId !== year.id && (
+                                  <>
+                                    <Button onClick={() => setConfirm({ year, kind: 'select' })}>
+                                      Set current
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      onClick={() => setConfirm({ year, kind: 'close' })}
+                                    >
+                                      Close year
+                                    </Button>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {state.data && !state.data.items.length && !state.loading && (
+                <p>No academic years yet. Create your first year to begin.</p>
+              )}
+              {state.data && <Paging {...state} nextCursor={state.data.nextCursor} />}
+            </>
+          )}
+          <p className="panel-note">
+            Dates cannot overlap another year. Selecting a draft activates it; previous years keep
+            their records. Close a non-current year when it should become permanently read-only.
+          </p>
+        </div>
       {editing && (
         <YearForm
           year={editing === 'new' ? undefined : editing}
@@ -153,7 +161,8 @@ export default function AcademicYears({
           saved={saved}
         />
       )}
-    </Panel>
+      </Panel>
+    </LoadingOverlay>
   );
 }
 function YearForm({

@@ -2,7 +2,15 @@ import StaffLoginDialog from './StaffLoginDialog';
 import AttendanceCalendar from './AttendanceCalendar';
 import { useSearchParams } from 'react-router-dom';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Badge, Button, Modal, Panel, StatCard, Avatar, LoadingOverlay } from '../../components/ui/Primitives';
+import {
+  Badge,
+  Button,
+  LoadingOverlay,
+  Modal,
+  Panel,
+  StatCard,
+  Avatar,
+} from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useToday } from '../../app/useToday';
@@ -94,16 +102,6 @@ export function HrWorkspace({
     [adapter, month, self, allowed],
   );
   const state = useRemote(load);
-  const hrLoadingMessage =
-    tab === 'attendance'
-      ? 'Loading staff attendance…'
-      : tab === 'leave'
-        ? 'Loading leave requests…'
-        : tab === 'salary'
-          ? 'Loading salary expenses…'
-          : tab === 'self'
-            ? 'Loading your records…'
-            : 'Loading staff records…';
   const items = [
     ...(can('payroll.view') ? [{ id: 'salary', label: 'Salary Expenses' }] : []),
     ...(can('attendance.manage')
@@ -114,6 +112,51 @@ export function HrWorkspace({
       : []),
     ...(can('attendance.self') ? [{ id: 'self', label: 'My attendance & salary' }] : []),
   ];
+  const loadingMessage = settings
+    ? 'Loading staff & payroll settings…'
+    : tab === 'self'
+      ? 'Loading my attendance & salary…'
+      : tab === 'attendance'
+        ? 'Loading staff attendance…'
+        : tab === 'leave'
+          ? 'Loading leave requests…'
+          : 'Loading salary expenses…';
+  const targetKey = `${month}:${self}`;
+  const isReady = Boolean(state.data && state.data.key === targetKey);
+  const fallbackWorkspace = useMemo<Workspace>(
+    () => ({
+      today,
+      settings: {
+        id: 'default',
+        schoolId: 'default',
+        revision: 0,
+        departments: ['Academic', 'Administration', 'Operations'],
+        start: '08:30',
+        end: '15:30',
+        lateAfter: '08:45',
+        halfDayMinutes: 210,
+        workingDays: [1, 2, 3, 4, 5, 6],
+        holidays: [],
+        paymentDay: 5,
+        deductionBasis: 'basic',
+        divisor: '30',
+        paidLeaveDays: 12,
+        maxAccuracy: 120,
+        locations: [],
+      },
+      staff: [],
+      employment: [],
+      attendance: [],
+      leaves: [],
+      payroll: [],
+      payments: [],
+      advances: [],
+    }),
+    [today],
+  );
+  const activeWorkspace = isReady
+    ? state.data!.value
+    : (state.data?.value ?? fallbackWorkspace);
   return (
     <div className="ledger-stack hr-workspace">
       {!settings && !hideNavigation && items.length > 1 && (
@@ -159,27 +202,23 @@ export function HrWorkspace({
         <p role="alert" className="form-error">
           {state.error}
         </p>
-      ) : !state.data || state.data.key !== `${month}:${self}` ? (
-        <LoadingOverlay
-          loading
-          size="xl"
-          label={hrLoadingMessage}
-          message={hrLoadingMessage}
-        >
-          <Panel>
-            <div style={{ minHeight: '300px' }} />
-          </Panel>
-        </LoadingOverlay>
       ) : settings ? (
         can('payroll.manage') ? (
-          <HrSettingsPanel
-            key={section}
-            settings={state.data.value.settings}
-            staff={state.data.value.staff}
-            section={section ?? 'departments'}
-            adapter={adapter}
-            saved={state.reload}
-          />
+          <LoadingOverlay
+            loading={!isReady || state.loading}
+            size="xl"
+            label={loadingMessage}
+            message={loadingMessage}
+          >
+            <HrSettingsPanel
+              key={`${section ?? 'departments'}:${isReady ? activeWorkspace.settings.revision : 'loading'}`}
+              settings={activeWorkspace.settings}
+              staff={activeWorkspace.staff}
+              section={section ?? 'departments'}
+              adapter={adapter}
+              saved={state.reload}
+            />
+          </LoadingOverlay>
         ) : (
           <Panel>
             <p>Payroll management permission is required to edit these settings.</p>
@@ -187,19 +226,19 @@ export function HrWorkspace({
         )
       ) : (
         <LoadingOverlay
-          loading={state.loading}
+          loading={!isReady || state.loading}
           size="xl"
-          label={hrLoadingMessage}
-          message={hrLoadingMessage}
+          label={loadingMessage}
+          message={loadingMessage}
         >
           <HrContent
             key={`${month}:${tab}`}
             adapter={adapter}
             data={{
-              ...state.data.value,
+              ...activeWorkspace,
               staff: teachersOnly
-                ? state.data.value.staff.filter((p) => p.teaching)
-                : state.data.value.staff,
+                ? activeWorkspace.staff.filter((p) => p.teaching)
+                : activeWorkspace.staff,
             }}
             tab={tab}
             month={month}

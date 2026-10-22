@@ -4,7 +4,7 @@ import PeopleRelations from './PeopleRelations';
 import { useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Check, Circle, ArrowRight } from 'lucide-react';
-import { Button, Panel } from '../../components/ui/Primitives';
+import { Button, LoadingOverlay, Panel } from '../../components/ui/Primitives';
 import { setupApi, type SetupStatus } from '../../services/schoolSetupService';
 import type { SchoolAccess } from '../../services/schoolAccessService';
 import { useRemote } from '../live/useRemote';
@@ -35,18 +35,23 @@ export default function SchoolSetup({
   const state = useRemote(load),
     [params] = useSearchParams();
   if (!state.data || state.error)
-    return (
+    return state.loading ? (
+      <LoadingOverlay
+        loading
+        size="xl"
+        label="Loading saved school setup…"
+        message="Loading saved school setup…"
+      >
+        <Panel title="School setup" subtitle="Loading saved school configuration and setup steps.">
+          <div style={{ minHeight: 200 }} />
+        </Panel>
+      </LoadingOverlay>
+    ) : (
       <Panel>
         <div className="live-content">
-          {state.loading ? (
-            <p role="status">Loading saved school setup…</p>
-          ) : (
-            <>
-              <h2>School setup unavailable</h2>
-              <p role="alert">{state.error}</p>
-              <Button onClick={state.reload}>Retry school setup</Button>
-            </>
-          )}
+          <h2>School setup unavailable</h2>
+          <p role="alert">{state.error}</p>
+          <Button onClick={state.reload}>Retry school setup</Button>
         </div>
       </Panel>
     );

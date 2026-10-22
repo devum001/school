@@ -1,9 +1,9 @@
 import { portalAccess } from './portalAccess';
 import type { DemoState } from '../../types/domain';
-import { lazy, Suspense, useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SchoolFeatureContext, type SchoolFeatureData } from '../../app/schoolFeatureContext';
-import { Button, Panel, LoadingOverlay, AppLoader } from '../../components/ui/Primitives';
+import { Button, LoadingOverlay, Panel } from '../../components/ui/Primitives';
 import {
   createTest as validateNewTest,
   updateTest as validateTestChange,
@@ -16,35 +16,93 @@ import {
   type LearningArea,
   type LearningSnapshot,
 } from '../../services/learningService';
+import DashboardPage from '../dashboard/DashboardPage';
+import AcademicsPage from '../academics/AcademicsPage';
+import AttendancePage from '../attendance/AttendancePage';
+import ClassesPage from '../classes/ClassesPage';
 import { useLiveSchool } from './schoolContext';
 import { useRemote } from './useRemote';
-const DashboardPage = lazy(() => import('../dashboard/DashboardPage'));
-const AcademicsPage = lazy(() => import('../academics/AcademicsPage'));
-const AttendancePage = lazy(() => import('../attendance/AttendancePage'));
-const ClassesPage = lazy(() => import('../classes/ClassesPage'));
+
+function learningAreaMessage(area: LearningArea): string {
+  if (area === 'overview') return 'Loading overview…';
+  if (area === 'academics') return 'Loading test & results…';
+  if (area === 'attendance') return 'Loading attendance…';
+  return 'Loading class settings…';
+}
+
+function createEmptyLearningSnapshot(
+  schoolId: string,
+  schoolName: string,
+  yearId: string,
+  yearName: string,
+): LearningSnapshot {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    state: {
+      version: 1,
+      school: {
+        id: schoolId,
+        name: schoolName,
+        city: '',
+        motto: '',
+      },
+      academicYear: {
+        id: yearId,
+        schoolId,
+        name: yearName,
+        start: `${today.slice(0, 4)}-04-01`,
+        end: `${Number(today.slice(0, 4)) + 1}-03-31`,
+      },
+      classes: [],
+      sections: [],
+      students: [],
+      teachers: [],
+      staffMembers: [],
+      enrollments: [],
+      attendance: [],
+      staffAttendance: [],
+      exams: [],
+      results: [],
+      obligations: [],
+      payments: [],
+      notifications: [],
+      activities: [],
+    },
+    today,
+    timezone: 'Asia/Kolkata',
+    canManage: false,
+    unavailable: ['fees', 'notifications'],
+    attendanceRevisions: {},
+    assignments: [],
+  };
+}
+
 export default function LiveLearning({ area }: { area: LearningArea }) {
-  const { schoolId, status, access } = useLiveSchool(),
+  const { schoolId, status, access, profile } = useLiveSchool(),
     [params] = useSearchParams();
   const yearId = params.get('year') || status.currentAcademicYearId || '';
   const [date, setDate] = useState<string>();
   const requestedDate = params.get('date') || date;
+  const targetKey = `${yearId}:${area}:${requestedDate || ''}`;
   const load = useCallback(
     async (signal: AbortSignal) => ({
       value: await loadLearning(schoolId, yearId, area, requestedDate, signal),
-      key: `${yearId}:${area}:${requestedDate || ''}`,
+      key: targetKey,
     }),
-    [schoolId, yearId, area, requestedDate],
+    [schoolId, yearId, area, requestedDate, targetKey],
   );
   const remote = useRemote(load);
-  const learningLoadingMessage =
-    area === 'overview'
-      ? 'Loading overview…'
-      : area === 'academics'
-        ? 'Loading test and results…'
-        : area === 'attendance'
-          ? 'Loading attendance…'
-          : 'Loading class workspace…';
-
+  const loadingMessage = learningAreaMessage(area);
+  const fallbackSnapshot = useMemo(
+    () =>
+      createEmptyLearningSnapshot(
+        schoolId,
+        profile?.school.name ?? 'School workspace',
+        yearId || 'current',
+        profile?.academicYear?.name ?? 'Current Academic Year',
+      ),
+    [schoolId, profile?.school.name, yearId, profile?.academicYear?.name],
+  );
   if (!yearId)
     return (
       <Panel title="Select an academic year">
@@ -60,30 +118,26 @@ export default function LiveLearning({ area }: { area: LearningArea }) {
         <Button onClick={remote.reload}>Retry</Button>
       </Panel>
     );
-  if (!remote.data || remote.data.key !== `${yearId}:${area}:${requestedDate || ''}`)
-    return (
-      <LoadingOverlay
-        loading
-        size="xl"
-        label={learningLoadingMessage}
-        message={learningLoadingMessage}
-      >
-        <div style={{ minHeight: '400px' }} />
-      </LoadingOverlay>
-    );
+  const isReady = Boolean(remote.data && remote.data.key === targetKey);
+  const activeSnapshot = isReady ? remote.data!.value : (remote.data?.value ?? fallbackSnapshot);
   return (
-    <LearningContent
-      key={`${schoolId}:${yearId}:${area}:${requestedDate || ''}`}
-      initial={remote.data.value}
-      permissions={access.permissions}
-      area={area}
-      schoolId={schoolId}
-      yearId={yearId}
-      date={requestedDate}
-      setDate={setDate}
-      loading={remote.loading}
-      loadingMessage={learningLoadingMessage}
-    />
+    <LoadingOverlay
+      loading={!isReady || remote.loading}
+      size="xl"
+      label={loadingMessage}
+      message={loadingMessage}
+    >
+      <LearningContent
+        key={`${schoolId}:${targetKey}:${isReady ? 'ready' : 'loading'}`}
+        initial={activeSnapshot}
+        permissions={access.permissions}
+        area={area}
+        schoolId={schoolId}
+        yearId={yearId}
+        date={requestedDate}
+        setDate={setDate}
+      />
+    </LoadingOverlay>
   );
 }
 function LearningContent({
@@ -94,8 +148,6 @@ function LearningContent({
   yearId,
   date,
   setDate,
-  loading = false,
-  loadingMessage = 'Loading…',
 }: {
   initial: LearningSnapshot;
   permissions: readonly string[];
@@ -104,8 +156,6 @@ function LearningContent({
   yearId: string;
   date?: string;
   setDate: (date: string) => void;
-  loading?: boolean;
-  loadingMessage?: string;
 }) {
   const [data, setSaved] = useState(initial),
     latest = useRef(initial);
@@ -214,32 +264,15 @@ function LearningContent({
   }
   return (
     <SchoolFeatureContext.Provider value={feature}>
-      <LoadingOverlay
-        loading={loading}
-        size="xl"
-        label={loadingMessage}
-        message={loadingMessage}
-      >
-        <Suspense
-          fallback={
-            <AppLoader
-              size="xl"
-              label={loadingMessage}
-              message={loadingMessage}
-            />
-          }
-        >
-          {area === 'overview' ? (
-            <DashboardPage />
-          ) : area === 'academics' ? (
-            <AcademicsPage />
-          ) : area === 'attendance' ? (
-            <AttendancePage />
-          ) : (
-            <ClassesPage />
-          )}
-        </Suspense>
-      </LoadingOverlay>
+      {area === 'overview' ? (
+        <DashboardPage />
+      ) : area === 'academics' ? (
+        <AcademicsPage />
+      ) : area === 'attendance' ? (
+        <AttendancePage />
+      ) : (
+        <ClassesPage />
+      )}
     </SchoolFeatureContext.Provider>
   );
 }

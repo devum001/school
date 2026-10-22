@@ -1,7 +1,13 @@
 import { formatCalendarDate } from '../../lib/displayFormat';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Panel, SearchInput, EmptyState, LoadingOverlay } from '../../components/ui/Primitives';
+import {
+  Button,
+  Panel,
+  SearchInput,
+  EmptyState,
+  LoadingOverlay,
+} from '../../components/ui/Primitives';
 import { onboardingApi } from '../../services/onboardingService';
 import { productApi, type StudentRow } from '../../services/productService';
 import type { SchoolAccess } from '../../services/schoolAccessService';
@@ -38,12 +44,34 @@ export default function LiveStudents({
         <Link to="/settings?tab=Years">Open academic years</Link>
       </Panel>
     );
-  if (!state.data || state.error)
+  const loadingMessage =
+    mode === 'profile'
+      ? 'Loading student profile…'
+      : mode === 'new'
+        ? 'Loading student admission form…'
+        : mode === 'import'
+          ? 'Loading student import…'
+          : 'Loading students…';
+  if (state.error)
     return (
       <Panel>
-        <LoadState {...state} retry={state.reload} />
+        <LoadState {...state} label={loadingMessage} retry={state.reload} />
       </Panel>
     );
+  const fallbackSnapshot: Awaited<ReturnType<typeof onboardingApi.structure>> = {
+    year: {
+      id: yearId,
+      schoolId: access.schoolId,
+      name: 'Current academic year',
+      start: '',
+      end: '',
+      status: 'active',
+      revision: 0,
+    },
+    classes: [],
+    children: [],
+    truncated: false,
+  };
   return (
     <StudentWorkspace
       key={`${yearId}:${classId ?? ''}:${mode}`}
@@ -51,7 +79,8 @@ export default function LiveStudents({
       yearId={yearId}
       classId={classId}
       mode={mode}
-      snapshot={state.data}
+      snapshot={state.data ?? fallbackSnapshot}
+      contextLoading={state.loading || !state.data}
       onChanged={onChanged}
     />
   );
@@ -62,12 +91,14 @@ function StudentWorkspace({
   classId,
   mode,
   snapshot,
+  contextLoading = false,
   onChanged,
 }: {
   access: SchoolAccess;
   yearId: string;
   classId?: string;
   mode: string;
+  contextLoading?: boolean;
   onChanged?: () => void;
   snapshot: Awaited<ReturnType<typeof onboardingApi.structure>>;
 }) {
@@ -137,7 +168,6 @@ function StudentWorkspace({
     }, 300);
     return () => clearTimeout(timer);
   }, [searchDraft, search, setParams, firstPage]);
-  const loadingLabel = current ? `Loading ${current.name} students…` : 'Loading students…';
   const filters = (
     <div className="toolbar live-students-toolbar">
       {mode === 'directory' && (
@@ -152,7 +182,7 @@ function StudentWorkspace({
       )}
       <div className="students-filters-group">
         {!classId && (
-          <label className="field filter-label">
+          <label className="filter-label">
             <span>Class</span>
             <select
               aria-label="Student directory class"
@@ -171,7 +201,7 @@ function StudentWorkspace({
           </label>
         )}
         {mode === 'directory' && (
-          <label className="field filter-label">
+          <label className="filter-label">
             <span>Section</span>
             <select
               aria-label="Class students section"
@@ -212,7 +242,18 @@ function StudentWorkspace({
     />
   );
   if (mode === 'new')
-    return manage ? (
+    return contextLoading ? (
+      <LoadingOverlay
+        loading
+        size="xl"
+        label="Loading student admission form…"
+        message="Loading student admission form…"
+      >
+        <Panel title="Add student" subtitle="Prepare student admission details.">
+          <div style={{ minHeight: 220 }} />
+        </Panel>
+      </LoadingOverlay>
+    ) : manage ? (
       <LiveStudentForm
         schoolId={access.schoolId}
         yearId={yearId}
@@ -226,116 +267,140 @@ function StudentWorkspace({
       <Panel>Student management access is required.</Panel>
     );
   if (mode === 'import')
-    return manage ? importer : <Panel>Student management access is required.</Panel>;
+    return contextLoading ? (
+      <LoadingOverlay
+        loading
+        size="xl"
+        label="Loading student import…"
+        message="Loading student import…"
+      >
+        <Panel title="Student import" subtitle="Prepare class student workbook import.">
+          <div style={{ minHeight: 220 }} />
+        </Panel>
+      </LoadingOverlay>
+    ) : manage ? (
+      importer
+    ) : (
+      <Panel>Student management access is required.</Panel>
+    );
+  const loadingLabel =
+    mode === 'profile'
+      ? 'Loading student profile…'
+      : current
+        ? `Loading ${current.name} students…`
+        : 'Loading students…';
+  const isBusy = contextLoading || list.loading;
   return (
     <>
-      <Panel
-        title={
-          mode === 'profile'
-            ? 'Student details'
-            : current
-              ? `${current.name} students`
-              : 'Student directory'
-        }
-        subtitle={`${snapshot.year.name} · ${list.data?.total ?? 0} saved enrollments`}
-        action={
-          mode !== 'profile' &&
-          manage && (
-            <div className="student-import-actions">
-              {current && (
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    downloadClassStudentTemplate(
-                      current.name,
-                      sections.filter((s) => s.status === 'active').map((s) => s.name),
-                    )
-                  }
-                >
-                  Download Sample Excel
-                </Button>
-              )}
-              <Button variant="secondary" onClick={() => setInlineImport(true)}>
-                Import Excel (.xlsx)
-              </Button>
-              <Link
-                className="button primary"
-                to={`/students/new?${new URLSearchParams({ year: yearId, classId: selectedClass, sectionId: section === 'none' ? '' : section, returnTo: location.pathname + location.search })}`}
-              >
-                Add student
-              </Link>
-            </div>
-          )
-        }
+      <LoadingOverlay
+        loading={isBusy}
+        size="xl"
+        label={loadingLabel}
+        message={loadingLabel}
       >
-        {mode !== 'profile' && filters}
-        <LoadState {...list} loading={!list.data && list.loading} retry={list.reload} />
-        {list.data && !list.error && (
-          <LoadingOverlay
-            loading={list.loading}
-            size="xl"
-            label={loadingLabel}
-            message={loadingLabel}
-          >
-            {list.data.items.length ? (
-              <StudentRosterTable
-                studentHref={(id) => `/students/${id}?year=${yearId}`}
-                rows={list.data.items.map((r) => ({
-                  id: r.id,
-                  studentId: r.student.id,
-                  name: r.student.name,
-                  code: r.student.code,
-                  className: r.className,
-                  sectionName: r.sectionName,
-                  rollNumber: r.rollNumber,
-                  status: r.status,
-                }))}
-                onEdit={
-                  manage
-                    ? (id) => setEditing(list.data!.items.find((r) => r.id === id)!)
-                    : undefined
-                }
-                onDelete={
-                  manage
-                    ? (id) => setDeleting(list.data!.items.find((r) => r.id === id)!)
-                    : undefined
-                }
-              />
-            ) : (
-              <EmptyState
-                title="No matching students"
-                description="Add a student or import the class Excel workbook."
-              />
-            )}
-            <Paging {...list} nextCursor={list.data.nextCursor} />
-          </LoadingOverlay>
-        )}
-        {mode === 'profile' &&
-          list.data?.items.map((r) => (
-            <dl key={r.id} className="detail-list">
-              <div>
-                <dt>Birth date</dt>
-                <dd>
-                  {r.student.birthDate ? formatCalendarDate(r.student.birthDate) : 'Not provided'}
-                </dd>
+        <Panel
+          title={
+            mode === 'profile'
+              ? 'Student details'
+              : current
+                ? `${current.name} students`
+                : 'Student directory'
+          }
+          subtitle={`${snapshot.year.name} · ${list.data?.total ?? 0} saved enrollments`}
+          action={
+            mode !== 'profile' &&
+            manage && (
+              <div className="student-import-actions">
+                {current && (
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      downloadClassStudentTemplate(
+                        current.name,
+                        sections.filter((s) => s.status === 'active').map((s) => s.name),
+                      )
+                    }
+                  >
+                    Download Sample Excel
+                  </Button>
+                )}
+                <Button variant="secondary" onClick={() => setInlineImport(true)}>
+                  Import Excel (.xlsx)
+                </Button>
+                <Link
+                  className="button primary"
+                  to={`/students/new?${new URLSearchParams({ year: yearId, classId: selectedClass, sectionId: section === 'none' ? '' : section, returnTo: location.pathname + location.search })}`}
+                >
+                  Add student
+                </Link>
               </div>
-              <div>
-                <dt>Guardian</dt>
-                <dd>
-                  {r.student.guardianName} · {r.student.guardianRelation}
-                </dd>
-              </div>
-              <div>
-                <dt>Parent mobile</dt>
-                <dd>{r.student.guardianPhone || 'Not provided'}</dd>
-              </div>
-              <div>
-                <dt>Address</dt>
-                <dd>{r.student.address || 'Not provided'}</dd>
-              </div>
-            </dl>
-          ))}
-      </Panel>
+            )
+          }
+        >
+          {mode !== 'profile' && filters}
+          {list.error && <LoadState {...list} loading={false} retry={list.reload} />}
+          {!list.error && mode !== 'profile' && (
+            <>
+              {list.data && list.data.items.length === 0 && !list.loading ? (
+                <EmptyState
+                  title="No matching students"
+                  description="Add a student or import the class Excel workbook."
+                />
+              ) : (
+                <StudentRosterTable
+                  studentHref={(id) => `/students/${id}?year=${yearId}`}
+                  rows={(list.data?.items ?? []).map((r) => ({
+                    id: r.id,
+                    studentId: r.student.id,
+                    name: r.student.name,
+                    code: r.student.code,
+                    className: r.className,
+                    sectionName: r.sectionName,
+                    rollNumber: r.rollNumber,
+                    status: r.status,
+                  }))}
+                  onEdit={
+                    manage && list.data
+                      ? (id) => setEditing(list.data!.items.find((r) => r.id === id)!)
+                      : undefined
+                  }
+                  onDelete={
+                    manage && list.data
+                      ? (id) => setDeleting(list.data!.items.find((r) => r.id === id)!)
+                      : undefined
+                  }
+                />
+              )}
+              {list.data && <Paging {...list} nextCursor={list.data.nextCursor} />}
+            </>
+          )}
+          {mode === 'profile' &&
+            (list.data?.items ?? []).map((r) => (
+              <dl key={r.id} className="detail-list">
+                <div>
+                  <dt>Birth date</dt>
+                  <dd>
+                    {r.student.birthDate ? formatCalendarDate(r.student.birthDate) : 'Not provided'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Guardian</dt>
+                  <dd>
+                    {r.student.guardianName} · {r.student.guardianRelation}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Parent mobile</dt>
+                  <dd>{r.student.guardianPhone || 'Not provided'}</dd>
+                </div>
+                <div>
+                  <dt>Address</dt>
+                  <dd>{r.student.address || 'Not provided'}</dd>
+                </div>
+              </dl>
+            ))}
+        </Panel>
+      </LoadingOverlay>
       {manage && (inlineImport || params.has('import')) && importer}
       {editing && (
         <LiveStudentForm

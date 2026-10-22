@@ -1,11 +1,22 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { PageHeading, Panel } from '../../components/ui/Primitives';
-import LiveSettings from './LiveSettings';
+import LiveStudents from '../students/LiveStudents';
+import LiveStaff from '../teachers/LiveStaff';
 import { useLiveSchool } from './schoolContext';
+
 // Reuse the existing school-scoped people integrations for these feature routes.
 export function ExistingPeopleRoute() {
-  const { schoolId } = useLiveSchool(),
-    { pathname } = useLocation();
+  const { schoolId, access, status } = useLiveSchool(),
+    { pathname } = useLocation(),
+    [params] = useSearchParams();
+  const can = (p: string) => access.permissions.includes(p);
+  const year = params.get('year') ?? status.currentAcademicYearId;
+  const denied = (
+    <Panel title="Access unavailable">
+      <p>Your role does not include this feature.</p>
+      <Link to="/settings">Open available settings</Link>
+    </Panel>
+  );
   return (
     <>
       <PageHeading
@@ -17,7 +28,35 @@ export function ExistingPeopleRoute() {
               : 'Staff & HR'
         }
       />
-      <LiveSettings key={`${schoolId}:${pathname}`} schoolId={schoolId} />
+      {pathname.startsWith('/students') ? (
+        can('students.view') ? (
+          <LiveStudents
+            key={`${schoolId}:${year}:${pathname}`}
+            access={access}
+            yearId={year}
+            mode={
+              pathname === '/students/new'
+                ? 'new'
+                : pathname === '/students/import'
+                  ? 'import'
+                  : pathname === '/students'
+                    ? 'directory'
+                    : 'profile'
+            }
+          />
+        ) : (
+          denied
+        )
+      ) : can('staff.view') ? (
+        <LiveStaff
+          key={`${schoolId}:${pathname}`}
+          access={access}
+          yearId={year}
+          teachersOnly={pathname.startsWith('/teachers')}
+        />
+      ) : (
+        denied
+      )}
     </>
   );
 }

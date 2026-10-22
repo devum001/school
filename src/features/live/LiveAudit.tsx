@@ -1,6 +1,6 @@
 import { displayTimestamp } from '../../lib/displayFormat';
 import { useCallback, useState } from 'react';
-import { Button, Panel, LoadingOverlay } from '../../components/ui/Primitives';
+import { Button, LoadingOverlay, Panel } from '../../components/ui/Primitives';
 import { schoolAccessService as api } from '../../services/schoolAccessService';
 import { useRemote } from './useRemote';
 const labels: Record<string, string> = {
@@ -33,31 +33,31 @@ function AuditPage({
   );
   const state = useRemote(load);
   return (
-    <Panel
-      title="School activity"
-      subtitle="Recorded access changes, ordered oldest first."
-      action={
-        <Button variant="secondary" onClick={state.reload} disabled={state.loading}>
-          Refresh activity
-        </Button>
-      }
+    <LoadingOverlay
+      loading={state.loading}
+      size="xl"
+      label="Loading activity log…"
+      message="Loading activity log…"
     >
-      <div className="live-content">
-        {state.error && (
-          <p role="alert">
-            {state.error}{' '}
-            <Button variant="secondary" onClick={state.reload}>
-              Retry activity
-            </Button>
-          </p>
-        )}
-        <LoadingOverlay
-          loading={state.loading}
-          size="xl"
-          label="Loading activity log…"
-          message="Loading activity log…"
-        >
-          {state.data ? (
+      <Panel
+        title="School activity"
+        subtitle="Recorded access changes, ordered oldest first."
+        action={
+          <Button variant="secondary" onClick={state.reload} disabled={state.loading}>
+            Refresh activity
+          </Button>
+        }
+      >
+        <div className="live-content">
+          {state.error && (
+            <p role="alert">
+              {state.error}{' '}
+              <Button variant="secondary" onClick={state.reload}>
+                Retry activity
+              </Button>
+            </p>
+          )}
+          {!state.error && (
             <>
               <div className="live-table-wrap">
                 <table className="live-table">
@@ -71,7 +71,7 @@ function AuditPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {state.data.items.map((event) => (
+                    {(state.data?.items ?? []).map((event) => (
                       <tr key={event.id}>
                         <th scope="row">{labels[event.action] ?? event.action}</th>
                         <td>
@@ -102,25 +102,25 @@ function AuditPage({
                   </tbody>
                 </table>
               </div>
-              {state.data.items.length === 0 && <p>No recorded activity.</p>}
-              <div className="live-actions">
-                {cursor && (
-                  <Button variant="secondary" onClick={() => setCursor(undefined)}>
-                    First page
-                  </Button>
-                )}
-                {state.data.nextCursor && (
-                  <Button variant="secondary" onClick={() => setCursor(state.data!.nextCursor!)}>
-                    Next activity
-                  </Button>
-                )}
-              </div>
+              {state.data && state.data.items.length === 0 && <p>No recorded activity.</p>}
+              {state.data && (
+                <div className="live-actions">
+                  {cursor && (
+                    <Button variant="secondary" onClick={() => setCursor(undefined)}>
+                      First page
+                    </Button>
+                  )}
+                  {state.data.nextCursor && (
+                    <Button variant="secondary" onClick={() => setCursor(state.data!.nextCursor!)}>
+                      Next activity
+                    </Button>
+                  )}
+                </div>
+              )}
             </>
-          ) : (
-            <div style={{ minHeight: '260px' }} />
           )}
-        </LoadingOverlay>
-      </div>
-    </Panel>
+        </div>
+      </Panel>
+    </LoadingOverlay>
   );
 }

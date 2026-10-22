@@ -280,12 +280,14 @@
 }
 
 .loading-overlay-content {
-  transition: filter 350ms ease;
+  transition: filter 320ms ease, opacity 320ms ease;
 }
 
 .loading-overlay-host.is-loading > .loading-overlay-content {
   filter: blur(5px);
+  opacity: 0.72;
   user-select: none;
+  pointer-events: none;
 }
 
 .loading-overlay-layer {
@@ -296,8 +298,7 @@
   align-items: center;
   justify-content: center;
   max-height: calc(100vh - var(--school-header-height, 73px));
-  background: rgba(233, 238, 238, 0.32);
-  backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.24);
   border-radius: inherit;
   opacity: 1;
   transition: opacity 350ms ease;

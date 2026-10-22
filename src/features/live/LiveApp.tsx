@@ -3,12 +3,11 @@ import { FeedbackProvider } from '../../app/Feedback';
 import { useCallback } from 'react';
 import { useRemote } from './useRemote';
 import { schoolAccessService } from '../../services/schoolAccessService';
-import { AppIcon } from '../../components/ui/Primitives';
+import { AppIcon, AppLoader, Button, PageHeading, Panel } from '../../components/ui/Primitives';
 import { useEffect, useState } from 'react';
 import { GraduationCap, Settings, LogOut, Menu } from 'lucide-react';
 import { flushSync } from 'react-dom';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Button, PageHeading, Panel, AppLoader } from '../../components/ui/Primitives';
 import LoginScreen from '../auth/LoginScreen';
 import { useSession } from '../auth/useSession';
 import { sessionStore } from '../auth/sessionStore';
@@ -36,11 +35,15 @@ export default function LiveApp() {
   if (auth.status === 'loading')
     return (
       <main className="live-login">
-        <AppLoader
-          size="xl"
-          label="Checking your session…"
-          message="Checking your session…"
-        />
+        <Panel>
+          <div className="loading-state">
+            <AppLoader
+              size="xl"
+              label="Checking your session…"
+              message="Checking your session…"
+            />
+          </div>
+        </Panel>
       </main>
     );
   if (auth.status === 'error')

@@ -28,17 +28,23 @@ export default function ClassStructureSettings({
   );
   const state = useRemote(load);
   const can = (permission: string) => !permissions || permissions.includes(permission);
-  if (!state.data || state.error)
+  if (state.error)
     return (
       <Panel>
-        <p role={state.error ? 'alert' : 'status'}>{state.error || 'Loading class settings…'}</p>
-        {state.error && <Button onClick={state.reload}>Retry class settings</Button>}
+        <p role="alert">{state.error}</p>
+        <Button onClick={state.reload}>Retry class settings</Button>
       </Panel>
     );
-  const data = state.data;
+  const data = state.data ?? {
+    classes: [],
+    sections: [],
+    teachers: [],
+    counts: [],
+    writable: false,
+  };
   return (
     <LoadingOverlay
-      loading={state.loading}
+      loading={state.loading || !state.data}
       size="xl"
       label="Loading class settings…"
       message="Loading class settings…"
@@ -140,27 +146,33 @@ function ClassSubjects({
     [source, classId],
   );
   const state = useRemote(load);
-  if (!state.data || state.error)
+  if (state.error)
     return (
       <Panel>
-        <p role={state.error ? 'alert' : 'status'}>{state.error || 'Loading subjects…'}</p>
-        {state.error && <Button onClick={state.reload}>Retry subjects</Button>}
+        <p role="alert">{state.error}</p>
+        <Button onClick={state.reload}>Retry subjects</Button>
       </Panel>
     );
   return (
     <LoadingOverlay
-      loading={state.loading}
+      loading={state.loading || !state.data}
       size="xl"
       label={`Loading ${name} subjects…`}
       message={`Loading ${name} subjects…`}
     >
-      <SubjectEditor
-        initiallyUnsaved={canManage && state.data.some((s) => s.id.startsWith('default-'))}
-        name={name}
-        configured={state.data}
-        canManage={canManage}
-        save={(subjects) => source.saveSubjects(classId, subjects)}
-      />
+      {state.data ? (
+        <SubjectEditor
+          initiallyUnsaved={canManage && state.data.some((s) => s.id.startsWith('default-'))}
+          name={name}
+          configured={state.data}
+          canManage={canManage}
+          save={(subjects) => source.saveSubjects(classId, subjects)}
+        />
+      ) : (
+        <Panel title={`${name} subjects`}>
+          <p>Configure subjects for {name}.</p>
+        </Panel>
+      )}
     </LoadingOverlay>
   );
 }

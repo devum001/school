@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { Button, Panel, StatCard, LoadingOverlay } from '../../components/ui/Primitives';
+import { Button, LoadingOverlay, Panel, StatCard } from '../../components/ui/Primitives';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import LiveSchoolProfile from '../settings/LiveSchoolProfile';
 import LiveClassStructure from '../settings/LiveClassStructure';
@@ -50,8 +50,8 @@ function SchoolWorkspace({ schoolId }: { schoolId: string }) {
         label="Loading your school workspace…"
         message="Loading your school workspace…"
       >
-        <Panel>
-          <div style={{ minHeight: '320px' }} />
+        <Panel title="School workspace" subtitle="Loading school configuration and permissions.">
+          <div style={{ minHeight: 180 }} />
         </Panel>
       </LoadingOverlay>
     );

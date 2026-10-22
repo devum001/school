@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Modal, Panel, LoadingOverlay } from '../../components/ui/Primitives';
+import { Button, LoadingOverlay, Modal, Panel } from '../../components/ui/Primitives';
 import {
   onboardingApi,
   type Relation,
@@ -67,102 +67,109 @@ function RelationList({
     ['staff.view', 'classes.view', 'sections.view', 'subjects.view', 'academic-years.view'].every(
       (permission) => access.permissions.includes(permission),
     );
+  const loadingLabel = assignments
+    ? 'Loading teaching assignments…'
+    : 'Loading student enrollments…';
   return (
-    <Panel
-      title={`${assignments ? 'Teaching assignments' : 'Student enrollments'}${year ? ` · ${year.name}` : ''}`}
-      subtitle="Relationships belong to this academic year. Ending a relationship preserves its historical record."
-      action={
-        assignments && canAssign && <Button onClick={() => setAdding(true)}>Assign teacher</Button>
-      }
+    <LoadingOverlay
+      loading={state.loading}
+      size="xl"
+      label={loadingLabel}
+      message={loadingLabel}
     >
-      <div className="live-content">
-        <Link to="/settings?tab=Years">Choose another academic year</Link>
-        <LoadState {...state} loading={!state.data && state.loading} retry={state.reload} />
-        {state.data && !state.error && (
-          <LoadingOverlay
-            loading={state.loading}
-            size="xl"
-            label={assignments ? 'Loading teaching assignments…' : 'Loading student enrollments…'}
-            message={assignments ? 'Loading teaching assignments…' : 'Loading student enrollments…'}
-          >
-            <div className="onboarding-table">
-              <table>
-                <caption>
-                  {assignments ? 'Teacher subject assignments' : 'Annual student enrollments'}
-                </caption>
-                <thead>
-                  <tr>
-                    <th>Name / code</th>
-                    <th>Class</th>
-                    <th>Section</th>
-                    <th>{assignments ? 'Subject' : 'Roll'}</th>
-                    <th>Status</th>
-                    {manage && <th>Action</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.data.items.map((record) => (
-                    <tr key={record.id}>
-                      <td>
-                        {record.name}
-                        <small>{record.code}</small>
-                      </td>
-                      <td>{record.className}</td>
-                      <td>{record.sectionName}</td>
-                      <td>{assignments ? record.subjectName : (record.rollNumber ?? '—')}</td>
-                      <td>{record.status}</td>
-                      {manage && (
-                        <td>
-                          {record.status === 'active' && (
-                            <Button variant="ghost" onClick={() => setEnding(record)}>
-                              {assignments ? 'End assignment' : 'Withdraw enrollment'}
-                            </Button>
-                          )}
-                        </td>
-                      )}
+      <Panel
+        title={`${assignments ? 'Teaching assignments' : 'Student enrollments'}${year ? ` · ${year.name}` : ''}`}
+        subtitle="Relationships belong to this academic year. Ending a relationship preserves its historical record."
+        action={
+          assignments && canAssign && <Button onClick={() => setAdding(true)}>Assign teacher</Button>
+        }
+      >
+        <div className="live-content">
+          <Link to="/settings?tab=Years">Choose another academic year</Link>
+          {state.error && <LoadState {...state} loading={false} retry={state.reload} />}
+          {!state.error && (
+            <>
+              <div className="onboarding-table">
+                <table>
+                  <caption>
+                    {assignments ? 'Teacher subject assignments' : 'Annual student enrollments'}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th>Name / code</th>
+                      <th>Class</th>
+                      <th>Section</th>
+                      <th>{assignments ? 'Subject' : 'Roll'}</th>
+                      <th>Status</th>
+                      {manage && <th>Action</th>}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!state.data.items.length && (
-              <p>
-                {assignments
-                  ? 'No assignments yet. Import teaching staff and configure class subjects first.'
-                  : 'No enrollments yet. Import students into this year to get started.'}
-              </p>
-            )}
-            <Paging
-              nextCursor={state.data.nextCursor}
-              hasPrevious={!!after}
-              first={() => setAfter(undefined)}
-              next={() => setAfter(state.data!.nextCursor ?? undefined)}
+                  </thead>
+                  <tbody>
+                    {(state.data?.items ?? []).map((record) => (
+                      <tr key={record.id}>
+                        <td>
+                          {record.name}
+                          <small>{record.code}</small>
+                        </td>
+                        <td>{record.className}</td>
+                        <td>{record.sectionName}</td>
+                        <td>{assignments ? record.subjectName : (record.rollNumber ?? '—')}</td>
+                        <td>{record.status}</td>
+                        {manage && (
+                          <td>
+                            {record.status === 'active' && (
+                              <Button variant="ghost" onClick={() => setEnding(record)}>
+                                {assignments ? 'End assignment' : 'Withdraw enrollment'}
+                              </Button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {state.data && !state.data.items.length && !state.loading && (
+                <p>
+                  {assignments
+                    ? 'No assignments yet. Import teaching staff and configure class subjects first.'
+                    : 'No enrollments yet. Import students into this year to get started.'}
+                </p>
+              )}
+              {state.data && (
+                <Paging
+                  nextCursor={state.data.nextCursor}
+                  hasPrevious={!!after}
+                  first={() => setAfter(undefined)}
+                  next={() => setAfter(state.data!.nextCursor ?? undefined)}
+                />
+              )}
+            </>
+          )}
+          {ending && (
+            <ConfirmAction
+              title={assignments ? 'End this teaching assignment?' : 'Withdraw this enrollment?'}
+              description={
+                assignments
+                  ? 'The teacher will no longer be actively assigned to this subject and section. You can assign them again later.'
+                  : 'This student’s enrollment will be marked withdrawn. Their identity and history remain. Imports cannot reactivate a withdrawn enrollment.'
+              }
+              action={() => onboardingApi.endRelation(access.schoolId, yearId, kind, ending)}
+              close={() => setEnding(null)}
+              saved={state.reload}
             />
-          </LoadingOverlay>
-        )}
-        {ending && (
-          <ConfirmAction
-            title={assignments ? 'End this teaching assignment?' : 'Withdraw this enrollment?'}
-            description={
-              assignments
-                ? 'The teacher will no longer be actively assigned to this subject and section. You can assign them again later.'
-                : 'This student’s enrollment will be marked withdrawn. Their identity and history remain. Imports cannot reactivate a withdrawn enrollment.'
-            }
-            action={() => onboardingApi.endRelation(access.schoolId, yearId, kind, ending)}
-            close={() => setEnding(null)}
-            saved={state.reload}
-          />
-        )}
-        {adding && (
-          <AssignmentForm
-            schoolId={access.schoolId}
-            yearId={yearId}
-            close={() => setAdding(false)}
-            saved={state.reload}
-          />
-        )}
-      </div>
-    </Panel>
+          )}
+          {adding && (
+            <AssignmentForm
+              schoolId={access.schoolId}
+              yearId={yearId}
+              close={() => setAdding(false)}
+              saved={state.reload}
+            />
+          )}
+        </div>
+      </Panel>
+    </LoadingOverlay>
   );
 }
 function AssignmentForm({
