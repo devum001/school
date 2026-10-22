@@ -12,7 +12,7 @@ const hindiLabels: Record<string, string> = {
   'Staff & HR': 'स्टाफ एवं एचआर',
   Attendance: 'उपस्थिति',
   Finance: 'वित्त',
-  Academics: 'अकादमिक',
+  'Test and Result': 'परीक्षा और परिणाम',
   Notifications: 'सूचनाएँ',
   'School settings': 'स्कूल सेटिंग्स',
 };
@@ -23,7 +23,7 @@ const navigation: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/staff', label: 'Staff & HR', icon: 'staff' },
   { to: '/attendance', label: 'Attendance', icon: 'attendance' },
   { to: '/fees', label: 'Finance', icon: 'fees' },
-  { to: '/academics', label: 'Academics', icon: 'academics' },
+  { to: '/academics', label: 'Test and Result', icon: 'document' },
 ];
 export interface AppShellProps {
   visibleRoute?: (path: string) => boolean;
