@@ -3,7 +3,14 @@ import { FeedbackProvider } from '../../app/Feedback';
 import { useCallback } from 'react';
 import { useRemote } from './useRemote';
 import { schoolAccessService } from '../../services/schoolAccessService';
-import { AppIcon, AppLoader, Button, PageHeading, Panel } from '../../components/ui/Primitives';
+import {
+  AppIcon,
+  AppLoader,
+  Button,
+  PageHeading,
+  Panel,
+  WorkspaceLoadingBoundary,
+} from '../../components/ui/Primitives';
 import { useEffect, useState } from 'react';
 import { GraduationCap, Settings, LogOut, Menu } from 'lucide-react';
 import { flushSync } from 'react-dom';
@@ -237,38 +244,42 @@ function LiveWorkspace() {
           </Button>
         </header>
         <main>
-          {error && (
-            <p role="alert" className="form-error">
-              {error} You are still signed in; retry signing out.
-            </p>
-          )}
-          {platform ? (
-            <PlatformDashboard />
-          ) : schoolPage ? (
-            <div className="school-settings">
-              <PageHeading
-                title={pageTitle}
-                description={
-                  settings
-                    ? 'School identity, academic context, and workspace preferences.'
-                    : 'Manage records for the selected school.'
-                }
-              />
-              <LiveSettings
-                key={`${schoolId ?? 'no-school'}:${location.pathname}`}
-                schoolId={schoolId}
-              />
-            </div>
-          ) : (
-            <Panel>
-              <h1>This module is not connected yet</h1>
-              <p>
-                Live access includes school settings, roles, members, activity, and account
-                sessions.
+          <WorkspaceLoadingBoundary
+            defaultMessage={platform ? 'Loading platform administration…' : `Loading ${pageTitle.toLowerCase()}…`}
+          >
+            {error && (
+              <p role="alert" className="form-error">
+                {error} You are still signed in; retry signing out.
               </p>
-              <Link to="/settings">Open General settings</Link>
-            </Panel>
-          )}
+            )}
+            {platform ? (
+              <PlatformDashboard />
+            ) : schoolPage ? (
+              <div className="school-settings">
+                <PageHeading
+                  title={pageTitle}
+                  description={
+                    settings
+                      ? 'School identity, academic context, and workspace preferences.'
+                      : 'Manage records for the selected school.'
+                  }
+                />
+                <LiveSettings
+                  key={`${schoolId ?? 'no-school'}:${location.pathname}`}
+                  schoolId={schoolId}
+                />
+              </div>
+            ) : (
+              <Panel>
+                <h1>This module is not connected yet</h1>
+                <p>
+                  Live access includes school settings, roles, members, activity, and account
+                  sessions.
+                </p>
+                <Link to="/settings">Open General settings</Link>
+              </Panel>
+            )}
+          </WorkspaceLoadingBoundary>
         </main>
         <footer>
           <span>Schoolwell · Live workspace</span>

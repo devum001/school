@@ -4,7 +4,14 @@ import { displayDate } from '../../lib/config';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronsUpDown, ArrowUpRight, Menu, X, ChevronDown, CircleHelp } from 'lucide-react';
-import { Avatar, Button, LoadingOverlay, Modal, AppIcon, type IconName } from '../ui/Primitives';
+import {
+  Avatar,
+  Button,
+  WorkspaceLoadingBoundary,
+  Modal,
+  AppIcon,
+  type IconName,
+} from '../ui/Primitives';
 const hindiLabels: Record<string, string> = {
   Overview: 'अवलोकन',
   Students: 'विद्यार्थी',
@@ -254,14 +261,9 @@ export default function AppShell({
           </div>
         </header>
         <main>
-          <LoadingOverlay
-            loading={routeLoading}
-            size="xl"
-            label={loadingMessage}
-            message={loadingMessage}
-          >
+          <WorkspaceLoadingBoundary routeLoading={routeLoading} defaultMessage={loadingMessage}>
             {children ?? <Outlet />}
-          </LoadingOverlay>
+          </WorkspaceLoadingBoundary>
         </main>
         <footer>
           <span>Schoolwell · Thoughtfully connected.</span>

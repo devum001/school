@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { AppLoader, Button, Modal } from '../../components/ui/Primitives';
+import { AppLoader, Button, Modal, useWorkspaceLoading } from '../../components/ui/Primitives';
 export function LoadState({
   loading,
   error,
@@ -12,12 +12,15 @@ export function LoadState({
   retry: () => void;
   label?: string;
 }) {
-  if (loading)
+  const delegated = useWorkspaceLoading(loading, label, label);
+  if (loading) {
+    if (delegated) return null;
     return (
       <div className="loading-state">
         <AppLoader size="xl" label={label} message={label} />
       </div>
     );
+  }
   return error ? (
     <div>
       <p role="alert" className="form-error">

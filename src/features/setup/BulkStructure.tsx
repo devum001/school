@@ -39,26 +39,49 @@ export default function BulkStructure({
     [access.schoolId, yearId, kind],
   );
   const state = useRemote(load);
+  const fallbackData: { snapshot: Snapshot; catalog: SchoolCatalog } = {
+    snapshot: {
+      year: {
+        id: yearId ?? 'current',
+        schoolId: access.schoolId,
+        name: 'Current academic year',
+        start: '',
+        end: '',
+        status: 'active',
+        revision: 0,
+      },
+      classes: [],
+      children: [],
+      truncated: false,
+    },
+    catalog: {
+      version: '',
+      title: '',
+      description: '',
+      grades: [],
+      seniorOptions: [],
+    },
+  };
   return (
     <Panel
       title={`Configure ${kind} together`}
       subtitle="Make your changes, review the whole batch, then save once."
     >
       <div className="live-content">
-        <LoadState {...state} retry={state.reload} />
+        <LoadState {...state} label={`Loading ${kind} configuration…`} retry={state.reload} />
         {!yearId && (
           <p>
             Create and select an <Link to="/settings?tab=Years">academic year</Link> first.
           </p>
         )}
-        {state.data && !state.error && (
+        {yearId && !state.error && (
           <BulkEditor
-            key={`${yearId}:${kind}`}
-            {...state.data}
+            key={`${yearId}:${kind}:${state.data ? 'ready' : 'loading'}`}
+            {...(state.data ?? fallbackData)}
             schoolId={access.schoolId}
             defaultSubjects={access.permissions.includes('subjects.manage')}
             kind={kind}
-            manage={access.permissions.includes(`${kind}.manage`)}
+            manage={Boolean(state.data) && access.permissions.includes(`${kind}.manage`)}
             saved={() => {
               state.reload();
               changed();

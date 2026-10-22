@@ -317,8 +317,12 @@ function Directory({ access, kind }: { access: SchoolAccess; kind: RosterKind })
             Refresh directory
           </Button>
         </form>
-        <LoadState {...state} retry={state.reload} />
-        {state.data && !state.error && (
+        <LoadState
+          {...state}
+          label={kind === 'staff' ? 'Loading staff directory…' : 'Loading student directory…'}
+          retry={state.reload}
+        />
+        {!state.error && (
           <>
             <div className="onboarding-table">
               <table>
@@ -334,7 +338,7 @@ function Directory({ access, kind }: { access: SchoolAccess; kind: RosterKind })
                   </tr>
                 </thead>
                 <tbody>
-                  {state.data.items.map((person) => (
+                  {(state.data?.items ?? []).map((person) => (
                     <tr key={person.id}>
                       <td>{person.code}</td>
                       <td>
@@ -366,7 +370,7 @@ function Directory({ access, kind }: { access: SchoolAccess; kind: RosterKind })
                 </tbody>
               </table>
             </div>
-            {!state.data.items.length && (
+            {state.data && !state.data.items.length && !state.loading && (
               <p>
                 No matching {kind} yet.{' '}
                 {manage
@@ -374,7 +378,7 @@ function Directory({ access, kind }: { access: SchoolAccess; kind: RosterKind })
                   : 'An administrator can import records.'}
               </p>
             )}
-            <Paging {...state} nextCursor={state.data.nextCursor} />
+            {state.data && <Paging {...state} nextCursor={state.data.nextCursor} />}
           </>
         )}
         {changing && (
@@ -414,11 +418,11 @@ export function History({
       }
     >
       <div className="live-content">
-        <LoadState {...state} retry={state.reload} />
-        {state.data && !state.error && (
+        <LoadState {...state} label="Loading import history…" retry={state.reload} />
+        {!state.error && (
           <>
             <ul className="setup-records">
-              {state.data.items.map((job) => (
+              {(state.data?.items ?? []).map((job) => (
                 <li key={job.id}>
                   <div>
                     <strong>
@@ -437,8 +441,8 @@ export function History({
                 </li>
               ))}
             </ul>
-            {!state.data.items.length && <p>No imports yet.</p>}
-            <Paging {...state} nextCursor={state.data.nextCursor} />
+            {state.data && !state.data.items.length && !state.loading && <p>No imports yet.</p>}
+            {state.data && <Paging {...state} nextCursor={state.data.nextCursor} />}
           </>
         )}
       </div>

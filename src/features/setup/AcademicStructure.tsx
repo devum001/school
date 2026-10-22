@@ -57,10 +57,21 @@ function YearStructure({
     [access.schoolId, yearId],
   );
   const year = useRemote(load);
+  const fallbackYear: AcademicYear = {
+    id: yearId,
+    schoolId: access.schoolId,
+    name: 'Current academic year',
+    start: '',
+    end: '',
+    status: 'active',
+    revision: 0,
+  };
   return (
     <>
-      <LoadState {...year} retry={year.reload} />
-      {year.data && !year.error && <ClassList access={access} year={year.data} changed={changed} />}
+      <LoadState {...year} label="Loading academic structure…" retry={year.reload} />
+      {!year.error && (
+        <ClassList access={access} year={year.data ?? fallbackYear} changed={changed} />
+      )}
     </>
   );
 }
@@ -102,11 +113,11 @@ function ClassList({
       >
         <div className="live-content">
           <Link to="/settings?tab=Years">Choose another academic year</Link>
-          <LoadState {...state} retry={state.reload} />
-          {state.data && !state.error && (
+          <LoadState {...state} label="Loading classes…" retry={state.reload} />
+          {!state.error && (
             <>
               <div className="setup-class-list">
-                {state.data.items.map((record) => (
+                {(state.data?.items ?? []).map((record) => (
                   <div
                     className={`setup-class-item ${selected?.id === record.id ? 'selected' : ''}`}
                     key={record.id}
@@ -140,8 +151,10 @@ function ClassList({
                   </div>
                 ))}
               </div>
-              {!state.data.items.length && <p>No classes in this year yet.</p>}
-              <Paging {...state} nextCursor={state.data.nextCursor} />
+              {state.data && !state.data.items.length && !state.loading && (
+                <p>No classes in this year yet.</p>
+              )}
+              {state.data && <Paging {...state} nextCursor={state.data.nextCursor} />}
             </>
           )}
         </div>
@@ -254,11 +267,11 @@ function Children({
       }
     >
       <div className="live-content">
-        <LoadState {...state} retry={state.reload} />
-        {state.data && !state.error && (
+        <LoadState {...state} label={`Loading ${kind}…`} retry={state.reload} />
+        {!state.error && (
           <>
             <ul className="setup-records">
-              {state.data.items.map((item) => (
+              {(state.data?.items ?? []).map((item) => (
                 <li key={item.id}>
                   <div>
                     <strong>{item.name}</strong> <Badge>{item.status}</Badge>
@@ -276,12 +289,12 @@ function Children({
                 </li>
               ))}
             </ul>
-            {!state.data.items.length && (
+            {state.data && !state.data.items.length && !state.loading && (
               <p>
                 No {kind} yet. Add the first {singular} for this class.
               </p>
             )}
-            <Paging {...state} nextCursor={state.data.nextCursor} />
+            {state.data && <Paging {...state} nextCursor={state.data.nextCursor} />}
           </>
         )}
         {kind === 'sections' && (

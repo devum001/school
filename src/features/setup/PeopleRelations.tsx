@@ -217,17 +217,24 @@ function AssignmentForm({
         if (!busy) close();
       }}
     >
-      <div className="live-content">
-        <LoadState {...structure} retry={structure.reload} />
-        <LoadState {...staff} retry={staff.reload} />
-        <form
-          className="live-actions"
-          onSubmit={(event) => {
-            event.preventDefault();
-            staff.first();
-            setQuery(search);
-          }}
-        >
+      <LoadingOverlay
+        local
+        loading={structure.loading || staff.loading}
+        size="lg"
+        label="Loading assignment options…"
+        message="Loading assignment options…"
+      >
+        <div className="live-content">
+          {structure.error && <LoadState {...structure} loading={false} retry={structure.reload} />}
+          {staff.error && <LoadState {...staff} loading={false} retry={staff.reload} />}
+          <form
+            className="live-actions"
+            onSubmit={(event) => {
+              event.preventDefault();
+              staff.first();
+              setQuery(search);
+            }}
+          >
           <input
             aria-label="Search teachers"
             placeholder="Name or staff code"
@@ -359,7 +366,8 @@ function AssignmentForm({
             </Button>
           </form>
         )}
-      </div>
+        </div>
+      </LoadingOverlay>
     </Modal>
   );
 }

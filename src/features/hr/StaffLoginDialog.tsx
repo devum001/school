@@ -48,6 +48,7 @@ export default function StaffLoginDialog({
       }}
     >
       <LoadingOverlay
+        local
         loading={!state.data && !state.error}
         size="lg"
         label="Loading school roles…"

@@ -12,7 +12,12 @@ export {
   type AppLoaderSize,
   type AppLoaderVariant,
 } from './app-loader/AppLoader';
-export { LoadingOverlay, type LoadingOverlayProps } from './LoadingOverlay';
+export {
+  LoadingOverlay,
+  WorkspaceLoadingBoundary,
+  useWorkspaceLoading,
+  type LoadingOverlayProps,
+} from './LoadingOverlay';
 export function Button({
   children,
   variant = 'primary',

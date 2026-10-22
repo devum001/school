@@ -55,37 +55,27 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
   if (!session) return null;
   const fallbackSchoolName =
     session.memberships.find((m) => m.schoolId === schoolId)?.schoolName ?? 'School workspace';
-  if (!state.data) {
-    return (
-      <AppShell
-        school={{ name: fallbackSchoolName }}
-        user={{ name: session.user.name, detail: session.user.email }}
-        preferences={{ language: 'English', landingPage: 'Dashboard' }}
-        attentionCount={null}
-        studentSearchUrl={(query) => `/students?studentSearch=${encodeURIComponent(query)}`}
-        schoolPicker={<SchoolPicker name={fallbackSchoolName} schoolId={schoolId} />}
-        topbar={null}
-      >
-        <LoadingOverlay
-          loading
-          size="xl"
-          label="Loading your school workspace…"
-          message="Loading your school workspace…"
-        >
-          <PageHeading title="A good day starts with clarity." />
-          <Panel
-            title={fallbackSchoolName}
-            subtitle="Loading saved school configuration and records."
-          >
-            <div style={{ minHeight: 240 }} />
-          </Panel>
-        </LoadingOverlay>
-      </AppShell>
-    );
-  }
-  const { profile, access, status } = state.data;
+  const profile = state.data?.profile ?? null;
+  const access: SchoolContextValue['access'] = state.data?.access ?? {
+    schoolId,
+    membershipId: '',
+    roleId: '',
+    permissions: [],
+    owner: false,
+  };
+  const status: SchoolContextValue['status'] = state.data?.status ?? {
+    schoolId,
+    currentAcademicYearId: null,
+    academicRevision: 0,
+    ready: false,
+    selfLinked: false,
+    counts: { classes: 0, withoutSections: 0, withoutSubjects: 0 },
+    steps: [],
+  };
   const schoolName = profile?.school.name ?? fallbackSchoolName;
-  const navigation = portalAccess(access.permissions, { selfLinked: status.selfLinked });
+  const navigation = state.data
+    ? portalAccess(access.permissions, { selfLinked: status.selfLinked })
+    : { allowed: () => true, home: '/overview' };
   const context = { schoolId, access, profile, status, reload: state.reload };
   return (
     <SchoolContext.Provider value={context}>
@@ -99,23 +89,40 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
         schoolPicker={
           <SchoolPicker name={schoolName} logo={profile?.school.logoDataUrl} schoolId={schoolId} />
         }
-        topbar={<SessionControls context={context} />}
+        topbar={state.data ? <SessionControls context={context} /> : null}
         extraNavigation={
-          <>
-            {access.permissions.includes('attendance.self') && status.selfLinked && (
-              <Link className="nav-link" to="/staff/self">
-                My attendance & salary
-              </Link>
-            )}
-            {session.user.platformRole === 'super_admin' && (
-              <Link className="nav-link" to="/platform">
-                Super Admin
-              </Link>
-            )}
-          </>
+          state.data ? (
+            <>
+              {access.permissions.includes('attendance.self') && status.selfLinked && (
+                <Link className="nav-link" to="/staff/self">
+                  My attendance & salary
+                </Link>
+              )}
+              {session.user.platformRole === 'super_admin' && (
+                <Link className="nav-link" to="/platform">
+                  Super Admin
+                </Link>
+              )}
+            </>
+          ) : undefined
         }
       >
-        {navigation.allowed(location.pathname) ? (
+        {!state.data ? (
+          <LoadingOverlay
+            loading
+            size="xl"
+            label="Loading your school workspace…"
+            message="Loading your school workspace…"
+          >
+            <PageHeading title="A good day starts with clarity." />
+            <Panel
+              title={fallbackSchoolName}
+              subtitle="Loading saved school configuration and records."
+            >
+              <div style={{ minHeight: 240 }} />
+            </Panel>
+          </LoadingOverlay>
+        ) : navigation.allowed(location.pathname) ? (
           <Outlet />
         ) : (
           <Navigate to={navigation.home} replace />
