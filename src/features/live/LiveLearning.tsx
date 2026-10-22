@@ -3,7 +3,7 @@ import type { DemoState } from '../../types/domain';
 import { lazy, Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SchoolFeatureContext, type SchoolFeatureData } from '../../app/schoolFeatureContext';
-import { Button, Panel } from '../../components/ui/Primitives';
+import { Button, Panel, LoadingOverlay, AppLoader } from '../../components/ui/Primitives';
 import {
   createTest as validateNewTest,
   updateTest as validateTestChange,
@@ -36,6 +36,15 @@ export default function LiveLearning({ area }: { area: LearningArea }) {
     [schoolId, yearId, area, requestedDate],
   );
   const remote = useRemote(load);
+  const learningLoadingMessage =
+    area === 'overview'
+      ? 'Loading overview…'
+      : area === 'academics'
+        ? 'Loading test and results…'
+        : area === 'attendance'
+          ? 'Loading attendance…'
+          : 'Loading class workspace…';
+
   if (!yearId)
     return (
       <Panel title="Select an academic year">
@@ -52,7 +61,16 @@ export default function LiveLearning({ area }: { area: LearningArea }) {
       </Panel>
     );
   if (!remote.data || remote.data.key !== `${yearId}:${area}:${requestedDate || ''}`)
-    return <p role="status">Loading school records…</p>;
+    return (
+      <LoadingOverlay
+        loading
+        size="xl"
+        label={learningLoadingMessage}
+        message={learningLoadingMessage}
+      >
+        <div style={{ minHeight: '400px' }} />
+      </LoadingOverlay>
+    );
   return (
     <LearningContent
       key={`${schoolId}:${yearId}:${area}:${requestedDate || ''}`}
@@ -63,6 +81,8 @@ export default function LiveLearning({ area }: { area: LearningArea }) {
       yearId={yearId}
       date={requestedDate}
       setDate={setDate}
+      loading={remote.loading}
+      loadingMessage={learningLoadingMessage}
     />
   );
 }
@@ -74,6 +94,8 @@ function LearningContent({
   yearId,
   date,
   setDate,
+  loading = false,
+  loadingMessage = 'Loading…',
 }: {
   initial: LearningSnapshot;
   permissions: readonly string[];
@@ -82,6 +104,8 @@ function LearningContent({
   yearId: string;
   date?: string;
   setDate: (date: string) => void;
+  loading?: boolean;
+  loadingMessage?: string;
 }) {
   const [data, setSaved] = useState(initial),
     latest = useRef(initial);
@@ -190,17 +214,32 @@ function LearningContent({
   }
   return (
     <SchoolFeatureContext.Provider value={feature}>
-      <Suspense fallback={<p role="status">Loading school screen…</p>}>
-        {area === 'overview' ? (
-          <DashboardPage />
-        ) : area === 'academics' ? (
-          <AcademicsPage />
-        ) : area === 'attendance' ? (
-          <AttendancePage />
-        ) : (
-          <ClassesPage />
-        )}
-      </Suspense>
+      <LoadingOverlay
+        loading={loading}
+        size="xl"
+        label={loadingMessage}
+        message={loadingMessage}
+      >
+        <Suspense
+          fallback={
+            <AppLoader
+              size="xl"
+              label={loadingMessage}
+              message={loadingMessage}
+            />
+          }
+        >
+          {area === 'overview' ? (
+            <DashboardPage />
+          ) : area === 'academics' ? (
+            <AcademicsPage />
+          ) : area === 'attendance' ? (
+            <AttendancePage />
+          ) : (
+            <ClassesPage />
+          )}
+        </Suspense>
+      </LoadingOverlay>
     </SchoolFeatureContext.Provider>
   );
 }

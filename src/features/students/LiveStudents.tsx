@@ -1,7 +1,7 @@
 import { formatCalendarDate } from '../../lib/displayFormat';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Panel, SearchInput, EmptyState } from '../../components/ui/Primitives';
+import { Button, Panel, SearchInput, EmptyState, LoadingOverlay } from '../../components/ui/Primitives';
 import { onboardingApi } from '../../services/onboardingService';
 import { productApi, type StudentRow } from '../../services/productService';
 import type { SchoolAccess } from '../../services/schoolAccessService';
@@ -137,36 +137,42 @@ function StudentWorkspace({
     }, 300);
     return () => clearTimeout(timer);
   }, [searchDraft, search, setParams, firstPage]);
+  const loadingLabel = current ? `Loading ${current.name} students…` : 'Loading students…';
   const filters = (
-    <div className="toolbar">
-      {!classId && (
-        <label className="field">
-          Class
-          <select
-            aria-label="Student directory class"
-            value={selectedClass}
-            onChange={(e) => update('classId', e.target.value)}
-          >
-            <option value="">{mode === 'import' ? 'Choose a class' : 'All classes'}</option>
-            {snapshot.classes
-              .filter((c) => c.status === 'active')
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-          </select>
-        </label>
-      )}
+    <div className="toolbar live-students-toolbar">
       {mode === 'directory' && (
-        <>
+        <div className="students-search-group">
+          <span>Search</span>
           <SearchInput
             value={searchDraft}
             onChange={setSearchDraft}
             placeholder="Search class students…"
           />
-          <label className="field">
-            Section
+        </div>
+      )}
+      <div className="students-filters-group">
+        {!classId && (
+          <label className="field filter-label">
+            <span>Class</span>
+            <select
+              aria-label="Student directory class"
+              value={selectedClass}
+              onChange={(e) => update('classId', e.target.value)}
+            >
+              <option value="">{mode === 'import' ? 'Choose a class' : 'All classes'}</option>
+              {snapshot.classes
+                .filter((c) => c.status === 'active')
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+        )}
+        {mode === 'directory' && (
+          <label className="field filter-label">
+            <span>Section</span>
             <select
               aria-label="Class students section"
               disabled={!selectedClass}
@@ -182,8 +188,8 @@ function StudentWorkspace({
               ))}
             </select>
           </label>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
   const closeImport = () => {
@@ -263,9 +269,14 @@ function StudentWorkspace({
         }
       >
         {mode !== 'profile' && filters}
-        <LoadState {...list} retry={list.reload} />
+        <LoadState {...list} loading={!list.data && list.loading} retry={list.reload} />
         {list.data && !list.error && (
-          <>
+          <LoadingOverlay
+            loading={list.loading}
+            size="xl"
+            label={loadingLabel}
+            message={loadingLabel}
+          >
             {list.data.items.length ? (
               <StudentRosterTable
                 studentHref={(id) => `/students/${id}?year=${yearId}`}
@@ -297,7 +308,7 @@ function StudentWorkspace({
               />
             )}
             <Paging {...list} nextCursor={list.data.nextCursor} />
-          </>
+          </LoadingOverlay>
         )}
         {mode === 'profile' &&
           list.data?.items.map((r) => (

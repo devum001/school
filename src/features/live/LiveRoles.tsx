@@ -2,7 +2,7 @@ import { permissionGroup, permissionDependencies, togglePermission } from './per
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { titleCase } from '../../lib/displayFormat';
 import { useCallback, useState } from 'react';
-import { Button, Modal, Panel } from '../../components/ui/Primitives';
+import { Button, Modal, Panel, LoadingOverlay } from '../../components/ui/Primitives';
 import {
   schoolAccessService as api,
   canAssign,
@@ -56,7 +56,6 @@ export default function LiveRoles({
     >
       <div className="live-content">
         {notice && <p role="status">{notice}</p>}
-        {state.loading && <p role="status">Loading roles…</p>}
         {state.error && (
           <p role="alert">
             {state.error}{' '}
@@ -65,58 +64,67 @@ export default function LiveRoles({
             </Button>
           </p>
         )}
-        {state.data && (
-          <div className="live-table-wrap">
-            <table className="live-table">
-              <caption className="sr-only">School roles</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Role</th>
-                  <th scope="col">Permissions</th>
-                  <th scope="col">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.data.roles.map((role) => (
-                  <tr key={role.id}>
-                    <th scope="row">
-                      {titleCase(role.name)}
-                      {role.description && <small>{role.description}</small>}
-                      <small>{role.memberCount ?? 0} school members</small>
-                      {role.builtinKey && <small>Protected owner role</small>}
-                    </th>
-                    <td>
-                      {role.permissions.length
-                        ? role.permissions.map(permissionLabel).join(', ')
-                        : 'No permissions'}
-                    </td>
-                    <td>
-                      {manage && !role.builtinKey && canAssign(access, role) ? (
-                        <div className="live-actions">
-                          <Button variant="secondary" onClick={() => setEditing(role)}>
-                            Edit <span className="sr-only">{titleCase(role.name)}</span>
-                          </Button>
-                          <Button
-                            variant="danger"
-                            onClick={() => {
-                              setError('');
-                              setDeleting(role);
-                            }}
-                          >
-                            Delete <span className="sr-only">{titleCase(role.name)}</span>
-                          </Button>
-                        </div>
-                      ) : (
-                        'Read only'
-                      )}
-                    </td>
+        <LoadingOverlay
+          loading={state.loading}
+          size="xl"
+          label="Loading roles & permissions…"
+          message="Loading roles & permissions…"
+        >
+          {state.data ? (
+            <div className="live-table-wrap">
+              <table className="live-table">
+                <caption className="sr-only">School roles</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Role</th>
+                    <th scope="col">Permissions</th>
+                    <th scope="col">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {state.data.roles.length === 0 && <p>No roles have been created.</p>}
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {state.data.roles.map((role) => (
+                    <tr key={role.id}>
+                      <th scope="row">
+                        {titleCase(role.name)}
+                        {role.description && <small>{role.description}</small>}
+                        <small>{role.memberCount ?? 0} school members</small>
+                        {role.builtinKey && <small>Protected owner role</small>}
+                      </th>
+                      <td>
+                        {role.permissions.length
+                          ? role.permissions.map(permissionLabel).join(', ')
+                          : 'No permissions'}
+                      </td>
+                      <td>
+                        {manage && !role.builtinKey && canAssign(access, role) ? (
+                          <div className="live-actions">
+                            <Button variant="secondary" onClick={() => setEditing(role)}>
+                              Edit <span className="sr-only">{titleCase(role.name)}</span>
+                            </Button>
+                            <Button
+                              variant="danger"
+                              onClick={() => {
+                                setError('');
+                                setDeleting(role);
+                              }}
+                            >
+                              Delete <span className="sr-only">{titleCase(role.name)}</span>
+                            </Button>
+                          </div>
+                        ) : (
+                          'Read only'
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {state.data.roles.length === 0 && <p>No roles have been created.</p>}
+            </div>
+          ) : (
+            <div style={{ minHeight: '260px' }} />
+          )}
+        </LoadingOverlay>
         {!manage && <p>You can view roles. Managing them requires additional permission.</p>}
       </div>
       {editing && state.data && (

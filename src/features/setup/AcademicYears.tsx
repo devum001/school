@@ -1,7 +1,7 @@
 import { formatCalendarDate } from '../../lib/displayFormat';
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Modal, Panel, PickerInput } from '../../components/ui/Primitives';
+import { Badge, Button, Modal, Panel, PickerInput, LoadingOverlay } from '../../components/ui/Primitives';
 import {
   setupApi,
   yearValidation,
@@ -44,10 +44,15 @@ export default function AcademicYears({
       action={manage && <Button onClick={() => setEditing('new')}>Create academic year</Button>}
     >
       <div className="live-content">
-        <LoadState {...state} retry={state.reload} />
+        <LoadState {...state} loading={!state.data && state.loading} retry={state.reload} />
         {notice && <p role="status">{notice}</p>}
         {state.data && !state.error && (
-          <>
+          <LoadingOverlay
+            loading={state.loading}
+            size="xl"
+            label="Loading academic years…"
+            message="Loading academic years…"
+          >
             <div className="live-table-wrap">
               <table className="live-table">
                 <thead>
@@ -114,7 +119,7 @@ export default function AcademicYears({
               <p>No academic years yet. Create your first year to begin.</p>
             )}
             <Paging {...state} nextCursor={state.data.nextCursor} />
-          </>
+          </LoadingOverlay>
         )}
         <p className="panel-note">
           Dates cannot overlap another year. Selecting a draft activates it; previous years keep

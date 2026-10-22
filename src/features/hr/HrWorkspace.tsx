@@ -2,7 +2,7 @@ import StaffLoginDialog from './StaffLoginDialog';
 import AttendanceCalendar from './AttendanceCalendar';
 import { useSearchParams } from 'react-router-dom';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Badge, Button, Modal, Panel, StatCard, Avatar } from '../../components/ui/Primitives';
+import { Badge, Button, Modal, Panel, StatCard, Avatar, LoadingOverlay } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useToday } from '../../app/useToday';
@@ -94,6 +94,16 @@ export function HrWorkspace({
     [adapter, month, self, allowed],
   );
   const state = useRemote(load);
+  const hrLoadingMessage =
+    tab === 'attendance'
+      ? 'Loading staff attendance…'
+      : tab === 'leave'
+        ? 'Loading leave requests…'
+        : tab === 'salary'
+          ? 'Loading salary expenses…'
+          : tab === 'self'
+            ? 'Loading your records…'
+            : 'Loading staff records…';
   const items = [
     ...(can('payroll.view') ? [{ id: 'salary', label: 'Salary Expenses' }] : []),
     ...(can('attendance.manage')
@@ -150,7 +160,16 @@ export function HrWorkspace({
           {state.error}
         </p>
       ) : !state.data || state.data.key !== `${month}:${self}` ? (
-        <p>Loading staff records…</p>
+        <LoadingOverlay
+          loading
+          size="xl"
+          label={hrLoadingMessage}
+          message={hrLoadingMessage}
+        >
+          <Panel>
+            <div style={{ minHeight: '300px' }} />
+          </Panel>
+        </LoadingOverlay>
       ) : settings ? (
         can('payroll.manage') ? (
           <HrSettingsPanel
@@ -167,22 +186,29 @@ export function HrWorkspace({
           </Panel>
         )
       ) : (
-        <HrContent
-          key={`${month}:${tab}`}
-          adapter={adapter}
-          data={{
-            ...state.data.value,
-            staff: teachersOnly
-              ? state.data.value.staff.filter((p) => p.teaching)
-              : state.data.value.staff,
-          }}
-          tab={tab}
-          month={month}
-          can={can}
-          permissions={permissions}
-          reload={state.reload}
-          changeMonth={setMonth}
-        />
+        <LoadingOverlay
+          loading={state.loading}
+          size="xl"
+          label={hrLoadingMessage}
+          message={hrLoadingMessage}
+        >
+          <HrContent
+            key={`${month}:${tab}`}
+            adapter={adapter}
+            data={{
+              ...state.data.value,
+              staff: teachersOnly
+                ? state.data.value.staff.filter((p) => p.teaching)
+                : state.data.value.staff,
+            }}
+            tab={tab}
+            month={month}
+            can={can}
+            permissions={permissions}
+            reload={state.reload}
+            changeMonth={setMonth}
+          />
+        </LoadingOverlay>
       )}
     </div>
   );

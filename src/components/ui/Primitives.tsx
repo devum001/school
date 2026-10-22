@@ -6,6 +6,13 @@ import { Link } from 'react-router-dom';
 import { initials } from '../../lib/config';
 import { AppIcon } from './AppIcon';
 export { AppIcon, iconNames, type IconName, type AppIconProps } from './AppIcon';
+export {
+  AppLoader,
+  type AppLoaderProps,
+  type AppLoaderSize,
+  type AppLoaderVariant,
+} from './app-loader/AppLoader';
+export { LoadingOverlay, type LoadingOverlayProps } from './LoadingOverlay';
 export function Button({
   children,
   variant = 'primary',

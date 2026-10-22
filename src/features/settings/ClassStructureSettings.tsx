@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Panel, Button } from '../../components/ui/Primitives';
+import { Panel, Button, LoadingOverlay } from '../../components/ui/Primitives';
 import ClassStructureView from './ClassStructureView';
 import ClassStructureForm from './ClassStructureForm';
 import ClassSetupDialog from './ClassSetupDialog';
@@ -37,7 +37,12 @@ export default function ClassStructureSettings({
     );
   const data = state.data;
   return (
-    <>
+    <LoadingOverlay
+      loading={state.loading}
+      size="xl"
+      label="Loading class settings…"
+      message="Loading class settings…"
+    >
       <ClassStructureView
         {...data}
         setupAction={
@@ -116,7 +121,7 @@ export default function ClassStructureSettings({
           }}
         />
       )}
-    </>
+    </LoadingOverlay>
   );
 }
 function ClassSubjects({
@@ -143,12 +148,19 @@ function ClassSubjects({
       </Panel>
     );
   return (
-    <SubjectEditor
-      initiallyUnsaved={canManage && state.data.some((s) => s.id.startsWith('default-'))}
-      name={name}
-      configured={state.data}
-      canManage={canManage}
-      save={(subjects) => source.saveSubjects(classId, subjects)}
-    />
+    <LoadingOverlay
+      loading={state.loading}
+      size="xl"
+      label={`Loading ${name} subjects…`}
+      message={`Loading ${name} subjects…`}
+    >
+      <SubjectEditor
+        initiallyUnsaved={canManage && state.data.some((s) => s.id.startsWith('default-'))}
+        name={name}
+        configured={state.data}
+        canManage={canManage}
+        save={(subjects) => source.saveSubjects(classId, subjects)}
+      />
+    </LoadingOverlay>
   );
 }

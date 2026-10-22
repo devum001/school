@@ -12,6 +12,7 @@ import {
   Panel,
   SearchInput,
   EmptyState,
+  LoadingOverlay,
 } from '../../components/ui/Primitives';
 import type { SchoolAccess } from '../../services/schoolAccessService';
 import { onboardingApi, type Person } from '../../services/onboardingService';
@@ -68,6 +69,7 @@ export default function LiveStaff({
       onboardingApi.people(access.schoolId, 'staff', signal, after, query, teachersOnly),
     [access.schoolId, query, teachersOnly],
   );
+  const staffLoadingLabel = teachersOnly ? 'Loading teachers…' : 'Loading staff & HR…';
   const state = useSetupList(load);
   return (
     <div className="ledger-stack">
@@ -122,9 +124,14 @@ export default function LiveStaff({
               placeholder="Search staff name or code…"
             />
           </div>
-          <LoadState {...state} retry={state.reload} />
+          <LoadState {...state} loading={!state.data && state.loading} retry={state.reload} />
           {state.data && !state.error && (
-            <>
+            <LoadingOverlay
+              loading={state.loading}
+              size="xl"
+              label={staffLoadingLabel}
+              message={staffLoadingLabel}
+            >
               <div className="table-wrap">
                 <table>
                   <thead>
@@ -215,7 +222,7 @@ export default function LiveStaff({
                 />
               )}
               <Paging {...state} nextCursor={state.data.nextCursor} />
-            </>
+            </LoadingOverlay>
           )}
           <p className="panel-note">
             Profiles and teaching assignments are saved to this school. Use the attendance and

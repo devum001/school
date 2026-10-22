@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { Button, Panel, StatCard } from '../../components/ui/Primitives';
+import { Button, Panel, StatCard, LoadingOverlay } from '../../components/ui/Primitives';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import LiveSchoolProfile from '../settings/LiveSchoolProfile';
 import LiveClassStructure from '../settings/LiveClassStructure';
@@ -44,9 +44,16 @@ function SchoolWorkspace({ schoolId }: { schoolId: string }) {
   const state = useRemote(load);
   if (state.loading)
     return (
-      <Panel>
-        <p role="status">Loading your school workspace…</p>
-      </Panel>
+      <LoadingOverlay
+        loading
+        size="xl"
+        label="Loading your school workspace…"
+        message="Loading your school workspace…"
+      >
+        <Panel>
+          <div style={{ minHeight: '320px' }} />
+        </Panel>
+      </LoadingOverlay>
     );
   if (!state.data || state.error)
     return (

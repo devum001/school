@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Button, Modal, Panel } from '../../components/ui/Primitives';
+import { Button, Modal, Panel, LoadingOverlay } from '../../components/ui/Primitives';
 import {
   schoolAccessService as api,
   canAssign,
@@ -94,7 +94,6 @@ function MemberPage({
           </p>
         )}
         {notice && <p role="status">{notice}</p>}
-        {state.loading && <p role="status">Loading members…</p>}
         {state.error && (
           <p role="alert">
             {state.error}{' '}
@@ -103,81 +102,90 @@ function MemberPage({
             </Button>
           </p>
         )}
-        {state.data && (
-          <>
-            <div className="live-table-wrap">
-              <table className="live-table">
-                <caption className="sr-only">School memberships</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Member</th>
-                    <th scope="col">Role</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.data.members.items.map((member) => (
-                    <tr key={member.id}>
-                      <th scope="row">
-                        {member.user?.name ?? 'Account details unavailable'}
-                        <small>
-                          {member.user?.email}
-                          {member.id === access.membershipId ? ' · You' : ''}
-                        </small>
-                      </th>
-                      <td>
-                        {member.roleName ??
-                          state.data?.roles.find((role) => role.id === member.roleId)?.name ??
-                          'Role unavailable'}
-                      </td>
-                      <td>{member.status === 'active' ? 'Active' : 'Suspended'}</td>
-                      <td>
-                        {manage && editable(member) ? (
-                          <div className="live-actions">
-                            <Button variant="secondary" onClick={() => setEditing(member)}>
-                              Edit <span className="sr-only">{member.user?.name ?? 'member'}</span>
-                            </Button>
-                            {member.status === 'active' && (
-                              <Button
-                                variant="danger"
-                                onClick={() => {
-                                  setError('');
-                                  setSuspending(member);
-                                }}
-                              >
-                                Suspend{' '}
-                                <span className="sr-only">{member.user?.name ?? 'member'}</span>
-                              </Button>
-                            )}
-                          </div>
-                        ) : (
-                          'Read only'
-                        )}
-                      </td>
+        <LoadingOverlay
+          loading={state.loading}
+          size="xl"
+          label="Loading school members…"
+          message="Loading school members…"
+        >
+          {state.data ? (
+            <>
+              <div className="live-table-wrap">
+                <table className="live-table">
+                  <caption className="sr-only">School memberships</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Member</th>
+                      <th scope="col">Role</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {state.data.members.items.length === 0 && <p>No members on this page.</p>}
-            <div className="live-actions">
-              {cursor && (
-                <Button variant="secondary" onClick={() => setCursor(undefined)}>
-                  First page
-                </Button>
-              )}
-              {state.data.members.nextCursor && (
-                <Button
-                  variant="secondary"
-                  onClick={() => setCursor(state.data!.members.nextCursor!)}
-                >
-                  Next members
-                </Button>
-              )}
-            </div>
-          </>
-        )}
+                  </thead>
+                  <tbody>
+                    {state.data.members.items.map((member) => (
+                      <tr key={member.id}>
+                        <th scope="row">
+                          {member.user?.name ?? 'Account details unavailable'}
+                          <small>
+                            {member.user?.email}
+                            {member.id === access.membershipId ? ' · You' : ''}
+                          </small>
+                        </th>
+                        <td>
+                          {member.roleName ??
+                            state.data?.roles.find((role) => role.id === member.roleId)?.name ??
+                            'Role unavailable'}
+                        </td>
+                        <td>{member.status === 'active' ? 'Active' : 'Suspended'}</td>
+                        <td>
+                          {manage && editable(member) ? (
+                            <div className="live-actions">
+                              <Button variant="secondary" onClick={() => setEditing(member)}>
+                                Edit <span className="sr-only">{member.user?.name ?? 'member'}</span>
+                              </Button>
+                              {member.status === 'active' && (
+                                <Button
+                                  variant="danger"
+                                  onClick={() => {
+                                    setError('');
+                                    setSuspending(member);
+                                  }}
+                                >
+                                  Suspend{' '}
+                                  <span className="sr-only">{member.user?.name ?? 'member'}</span>
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            'Read only'
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {state.data.members.items.length === 0 && <p>No members on this page.</p>}
+              <div className="live-actions">
+                {cursor && (
+                  <Button variant="secondary" onClick={() => setCursor(undefined)}>
+                    First page
+                  </Button>
+                )}
+                {state.data.members.nextCursor && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setCursor(state.data!.members.nextCursor!)}
+                  >
+                    Next members
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div style={{ minHeight: '260px' }} />
+          )}
+        </LoadingOverlay>
       </div>
       {editing && (
         <MemberEditor

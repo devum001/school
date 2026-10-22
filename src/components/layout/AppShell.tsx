@@ -4,7 +4,7 @@ import { displayDate } from '../../lib/config';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronsUpDown, ArrowUpRight, Menu, X, ChevronDown, CircleHelp } from 'lucide-react';
-import { Avatar, Button, Modal, AppIcon, type IconName } from '../ui/Primitives';
+import { Avatar, Button, Modal, AppIcon, LoadingOverlay, type IconName } from '../ui/Primitives';
 const hindiLabels: Record<string, string> = {
   Overview: 'अवलोकन',
   Students: 'विद्यार्थी',
@@ -25,6 +25,19 @@ const navigation: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/fees', label: 'Finance', icon: 'fees' },
   { to: '/academics', label: 'Test and Result', icon: 'document' },
 ];
+function loadingMessageForRoute(pathname: string): string {
+  if (pathname === '/' || pathname === '') return 'Loading overview…';
+  if (pathname.startsWith('/students')) return 'Loading students…';
+  if (pathname.startsWith('/teachers')) return 'Loading teachers…';
+  if (pathname.startsWith('/staff')) return 'Loading staff & HR…';
+  if (pathname.startsWith('/attendance')) return 'Loading attendance…';
+  if (pathname.startsWith('/fees')) return 'Loading finance…';
+  if (pathname.startsWith('/academics')) return 'Loading test and results…';
+  if (pathname.startsWith('/settings')) return 'Loading settings…';
+  if (pathname.startsWith('/setup')) return 'Loading school setup…';
+  return 'Loading workspace…';
+}
+
 export interface AppShellProps {
   visibleRoute?: (path: string) => boolean;
   school: { name: string; logo?: string };
@@ -56,6 +69,19 @@ export default function AppShell({
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const [routeLoading, setRouteLoading] = useState(false);
+  const prevPathRef = useRef(location.pathname);
+
+  useEffect(() => {
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname;
+      setRouteLoading(true);
+      const timer = window.setTimeout(() => setRouteLoading(false), 260);
+      return () => window.clearTimeout(timer);
+    }
+  }, [location.pathname]);
+
+  const loadingMessage = loadingMessageForRoute(location.pathname);
   const routeParams = new URLSearchParams(location.search);
   const featureRoute = [
     location.pathname,
@@ -208,7 +234,16 @@ export default function AppShell({
             </Link>
           </div>
         </header>
-        <main>{children ?? <Outlet />}</main>
+        <main>
+          <LoadingOverlay
+            loading={routeLoading}
+            size="xl"
+            label={loadingMessage}
+            message={loadingMessage}
+          >
+            {children ?? <Outlet />}
+          </LoadingOverlay>
+        </main>
         <footer>
           <span>Schoolwell · Thoughtfully connected.</span>
           <span>

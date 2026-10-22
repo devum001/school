@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronsUpDown, LogOut } from 'lucide-react';
 import AppShell from '../../components/layout/AppShell';
-import { Button, Modal, Panel } from '../../components/ui/Primitives';
+import { Button, Modal, Panel, AppLoader } from '../../components/ui/Primitives';
 import { getSchoolProfile } from '../../services/schoolProfileService';
 import { schoolAccessService } from '../../services/schoolAccessService';
 import { setupApi } from '../../services/schoolSetupService';
@@ -42,18 +42,24 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
     [schoolId],
   );
   const state = useRemote(load);
-  if (!state.data || state.error)
+  if (state.error)
     return (
       <main className="live-login">
         <Panel>
-          <h2>{state.error ? 'School profile unavailable' : 'Loading your school workspace…'}</h2>
-          {state.error && (
-            <>
-              <p role="alert">{state.error}</p>
-              <Button onClick={state.reload}>Retry school profile</Button>
-            </>
-          )}
+          <h2>School profile unavailable</h2>
+          <p role="alert">{state.error}</p>
+          <Button onClick={state.reload}>Retry school profile</Button>
         </Panel>
+      </main>
+    );
+  if (!state.data)
+    return (
+      <main className="live-login">
+        <AppLoader
+          size="xl"
+          label="Loading your school workspace…"
+          message="Loading your school workspace…"
+        />
       </main>
     );
   if (!session) return null;

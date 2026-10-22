@@ -1,0 +1,384 @@
+/*
+ * AppLoader — materials, layout and motion wiring (Green Schoolwell Theme).
+ * The keyframes themselves live in the generated compass-animation.css.
+ */
+
+@layer components {
+  .sw-loader {
+    /* ---- Public hooks -------------------------------------------------- */
+    --sw-duration: 4.6s;
+    /* Schoolwell emerald & forest green palette */
+    --sw-accent: var(--green, #2c816e);
+
+    /* ---- Derived materials (lighting comes from the upper left) -------- */
+    --sw-ink: var(--sw-accent);
+    --sw-pencil-lit: color-mix(in oklab, var(--sw-accent) 62%, #ffffff);
+    --sw-pencil-mid: var(--sw-accent);
+    --sw-pencil-shade: color-mix(in oklab, var(--sw-accent) 68%, #07221d);
+    --sw-body-lit: color-mix(in oklab, var(--sw-accent) 44%, #19494d);
+    --sw-body-mid: color-mix(in oklab, var(--sw-accent) 28%, #12373b);
+    --sw-body-shade: color-mix(in oklab, var(--sw-accent) 14%, #0a2023);
+
+    --sw-steel-lit: #f8fafc;
+    --sw-steel-1: #dbe2ec;
+    --sw-steel-2: #a7b5c8;
+    --sw-steel-3: #78889e;
+    --sw-steel-4: #64748b;
+
+    --sw-wood-lit: #f8e0b6;
+    --sw-wood: #e0b179;
+    --sw-graphite-lit: #52736d;
+    --sw-graphite: #193834;
+
+    --sw-eraser-lit: #ffffff;
+    --sw-eraser: #eef5f2;
+    --sw-eraser-shade: #d3e2dc;
+    --sw-eraser-tip: #68b99a;
+    --sw-eraser-tip-shade: #469d7d;
+
+    /* Contact shadow colour, as an rgb triple so opacity can vary per use. */
+    --sw-shadow-rgb: 18 55 59;
+    --sw-surface-tint: #eaf5ef;
+    --sw-surface-strength: 0.78;
+
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  :where(.dark) .sw-loader {
+    --sw-body-lit: color-mix(in oklab, var(--sw-accent) 52%, #2a5356);
+    --sw-body-mid: color-mix(in oklab, var(--sw-accent) 34%, #19494d);
+    --sw-body-shade: color-mix(in oklab, var(--sw-accent) 20%, #12373b);
+    --sw-steel-lit: #eef2f7;
+    --sw-steel-1: #c3ccd9;
+    --sw-steel-2: #94a1b3;
+    --sw-steel-3: #6f7d92;
+    --sw-steel-4: #51607a;
+    --sw-eraser-lit: #f1f5f9;
+    --sw-eraser: #dde4ee;
+    --sw-eraser-shade: #b9c3d2;
+    --sw-shadow-rgb: 0 0 0;
+    --sw-surface-tint: color-mix(in oklab, var(--sw-accent) 60%, #94a3b8);
+    --sw-surface-strength: 0.16;
+  }
+
+  .sw-loader__svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* ---- Sizing: fixed boxes so the loader can never shift layout -------- */
+  .sw-loader__figure {
+    flex: none;
+    width: var(--sw-size);
+    height: var(--sw-size);
+  }
+
+  .sw-loader[data-size='xs'] {
+    --sw-size: 28px;
+    --sw-ink-width: 2.7;
+    gap: 0.375rem;
+  }
+  .sw-loader[data-size='sm'] {
+    --sw-size: 40px;
+    --sw-ink-width: 2;
+    gap: 0.5rem;
+  }
+  .sw-loader[data-size='md'] {
+    --sw-size: 64px;
+    --sw-ink-width: 1.5;
+    gap: 0.625rem;
+  }
+  .sw-loader[data-size='lg'] {
+    --sw-size: 96px;
+    --sw-ink-width: 1.15;
+    gap: 0.75rem;
+  }
+  .sw-loader[data-size='xl'] {
+    --sw-size: 120px;
+    --sw-ink-width: 1.05;
+    gap: 0.875rem;
+  }
+
+  .sw-loader[data-size='xs'] .sw-detail {
+    display: none;
+  }
+
+  .sw-loader__message {
+    margin: 0;
+    max-width: 32ch;
+    font-size: var(--sw-message-size, 0.875rem);
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--school-forest, #12373b);
+    text-wrap: balance;
+  }
+
+  .sw-loader[data-size='xs'] .sw-loader__message,
+  .sw-loader[data-size='sm'] .sw-loader__message {
+    --sw-message-size: 0.75rem;
+  }
+  .sw-loader[data-size='lg'] .sw-loader__message,
+  .sw-loader[data-size='xl'] .sw-loader__message {
+    --sw-message-size: 0.95rem;
+  }
+
+  /* ---- Scene parts ----------------------------------------------------- */
+
+  .sw-edge {
+    stroke: var(--sw-steel-4);
+    stroke-opacity: 0.3;
+    stroke-width: 0.22;
+  }
+
+  .sw-ink {
+    fill: none;
+    stroke: var(--sw-ink);
+    stroke-width: var(--sw-ink-width);
+    stroke-linecap: butt;
+    stroke-linejoin: round;
+  }
+
+  .sw-pencil,
+  .sw-tip-shadow,
+  .sw-eraser,
+  .sw-eraser-shadow {
+    transform-box: view-box;
+  }
+
+  .sw-tip-shadow,
+  .sw-eraser,
+  .sw-eraser-shadow {
+    transform-origin: 0 0;
+  }
+
+  /* ---- Motion ---------------------------------------------------------- */
+
+  .sw-pencil {
+    animation: sw-pencil-move var(--sw-duration) linear infinite both;
+  }
+  .sw-tip-shadow {
+    animation: sw-tip-shadow-move var(--sw-duration) linear infinite both;
+  }
+  .sw-eraser {
+    animation: sw-eraser-move var(--sw-duration) linear infinite both;
+  }
+  .sw-eraser-shadow {
+    animation: sw-eraser-shadow-move var(--sw-duration) linear infinite both;
+  }
+  .sw-ink {
+    animation:
+      sw-ink-draw var(--sw-duration) linear infinite both,
+      sw-ink-visible var(--sw-duration) step-end infinite both;
+  }
+
+  .sw-pencil--near {
+    animation:
+      sw-pencil-move var(--sw-duration) linear infinite both,
+      sw-pencil-near var(--sw-duration) step-end infinite both;
+  }
+  .sw-pencil--far {
+    animation:
+      sw-pencil-move var(--sw-duration) linear infinite both,
+      sw-pencil-far var(--sw-duration) step-end infinite both;
+  }
+  .sw-eraser--near {
+    animation:
+      sw-eraser-move var(--sw-duration) linear infinite both,
+      sw-eraser-near var(--sw-duration) step-end infinite both;
+  }
+  .sw-eraser--far {
+    animation:
+      sw-eraser-move var(--sw-duration) linear infinite both,
+      sw-eraser-far var(--sw-duration) step-end infinite both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sw-pencil,
+    .sw-pencil--near,
+    .sw-pencil--far,
+    .sw-tip-shadow,
+    .sw-eraser,
+    .sw-eraser--near,
+    .sw-eraser--far,
+    .sw-eraser-shadow,
+    .sw-ink,
+    .sw-loader-overlay {
+      animation: none;
+    }
+
+    .sw-pencil--near,
+    .sw-eraser--near,
+    .sw-eraser--far,
+    .sw-eraser-shadow {
+      visibility: hidden;
+    }
+
+    .sw-ink {
+      stroke-dasharray: none;
+      stroke-dashoffset: 0;
+      animation: sw-ink-breathe calc(var(--sw-duration) * 0.55) ease-in-out infinite alternate;
+    }
+  }
+
+  @keyframes sw-ink-breathe {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0.45;
+    }
+  }
+
+  /* ---- Overlays -------------------------------------------------------- */
+
+  .sw-loader-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    cursor: wait;
+    border-radius: inherit;
+    background: color-mix(in oklab, var(--surface-panel, #ffffff) 74%, transparent);
+    backdrop-filter: blur(2px);
+    animation: sw-overlay-in 160ms ease-out both;
+  }
+
+  .sw-loader-overlay[data-variant='fullscreen'] {
+    position: fixed;
+    z-index: 50;
+    border-radius: 0;
+    background: color-mix(in oklab, var(--surface-panel, #ffffff) 88%, transparent);
+  }
+
+  @keyframes sw-overlay-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .sw-ink {
+      stroke: Highlight;
+    }
+  }
+}
+
+/* Content-only blur overlay — never blurs sidebar or topbar */
+.loading-overlay-host {
+  position: relative;
+  min-height: 260px;
+}
+
+.loading-overlay-content {
+  transition: filter 350ms ease;
+}
+
+.loading-overlay-host.is-loading > .loading-overlay-content {
+  filter: blur(5px);
+  user-select: none;
+}
+
+.loading-overlay-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: calc(100vh - var(--school-header-height, 73px));
+  background: rgba(233, 238, 238, 0.32);
+  backdrop-filter: blur(4px);
+  border-radius: inherit;
+  opacity: 1;
+  transition: opacity 350ms ease;
+  pointer-events: none;
+}
+
+.loading-overlay-layer.is-exiting {
+  opacity: 0;
+}
+
+/* Students toolbar alignment: Search on left, Class & Section on right, 38px controls */
+.live-students-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 20px;
+  flex-wrap: wrap;
+  background: var(--surface-toolbar);
+}
+
+.live-students-toolbar .students-search-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  flex: 1 1 260px;
+  max-width: 360px;
+  margin-right: auto;
+}
+
+.live-students-toolbar .students-search-group > span,
+.live-students-toolbar .students-filters-group .filter-label > span {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #59626c;
+}
+
+.live-students-toolbar .students-search-group .search-input {
+  width: 100%;
+  min-height: 38px;
+  height: 38px;
+  margin-right: 0;
+}
+
+.live-students-toolbar .students-search-group .search-input input {
+  min-height: 36px;
+  height: 36px;
+}
+
+.live-students-toolbar .students-filters-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.live-students-toolbar .students-filters-group .filter-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.live-students-toolbar .students-filters-group select {
+  min-height: 38px;
+  height: 38px;
+  font-size: 12px;
+}
+
+@media (max-width: 620px) {
+  .live-students-toolbar {
+    padding: 16px;
+    gap: 12px;
+  }
+  .live-students-toolbar .students-search-group {
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+  .live-students-toolbar .students-filters-group {
+    width: 100%;
+  }
+}

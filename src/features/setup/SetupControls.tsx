@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Modal } from '../../components/ui/Primitives';
+import { Button, Modal, AppLoader } from '../../components/ui/Primitives';
 export function LoadState({
   loading,
   error,
   retry,
+  label = 'Loading school setup…',
 }: {
   loading: boolean;
   error?: string;
   retry: () => void;
+  label?: string;
 }) {
-  if (loading) return <p role="status">Loading school setup…</p>;
+  if (loading) return <AppLoader size="xl" label={label} message={label} />;
   return error ? (
     <div>
       <p role="alert" className="form-error">

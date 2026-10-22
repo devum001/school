@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Modal, Panel } from '../../components/ui/Primitives';
+import { Button, Modal, Panel, LoadingOverlay } from '../../components/ui/Primitives';
 import {
   onboardingApi,
   type Relation,
@@ -77,9 +77,14 @@ function RelationList({
     >
       <div className="live-content">
         <Link to="/settings?tab=Years">Choose another academic year</Link>
-        <LoadState {...state} retry={state.reload} />
+        <LoadState {...state} loading={!state.data && state.loading} retry={state.reload} />
         {state.data && !state.error && (
-          <>
+          <LoadingOverlay
+            loading={state.loading}
+            size="xl"
+            label={assignments ? 'Loading teaching assignments…' : 'Loading student enrollments…'}
+            message={assignments ? 'Loading teaching assignments…' : 'Loading student enrollments…'}
+          >
             <div className="onboarding-table">
               <table>
                 <caption>
@@ -133,7 +138,7 @@ function RelationList({
               first={() => setAfter(undefined)}
               next={() => setAfter(state.data!.nextCursor ?? undefined)}
             />
-          </>
+          </LoadingOverlay>
         )}
         {ending && (
           <ConfirmAction

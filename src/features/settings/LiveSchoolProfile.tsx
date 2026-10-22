@@ -1,5 +1,5 @@
 import type { ProfileSource } from './data/contracts';
-import { Button, Panel } from '../../components/ui/Primitives';
+import { Button, Panel, LoadingOverlay } from '../../components/ui/Primitives';
 import type { SchoolHours } from '../../types/domain';
 import { saveSchoolProfile } from '../../services/schoolProfileService';
 import { profileDraft, validateProfile } from '../setup/profileForm';
@@ -17,9 +17,36 @@ export default function LiveSchoolProfile({
   const profile = useSchoolProfile(schoolId);
   if (profile.status === 'loading')
     return (
-      <Panel>
-        <p role="status">Loading school profile…</p>
-      </Panel>
+      <LoadingOverlay
+        loading
+        size="xl"
+        label="Loading school profile…"
+        message="Loading school profile…"
+      >
+        <SchoolProfileView
+          school={{
+            id: schoolId,
+            name: 'School',
+            motto: '',
+            city: '',
+            address: '',
+            region: '',
+            country: '',
+            postalCode: '',
+            timezone: 'Asia/Kolkata',
+            accentColor: '#10523C',
+            code: '',
+            email: '',
+            phone: '',
+            principal: '',
+          }}
+          academicYear={{ name: 'Academic Year' }}
+          hours={{ start: '08:00', end: '14:00', days: [] }}
+          canManage={false}
+          validate={() => ({})}
+          save={async () => {}}
+        />
+      </LoadingOverlay>
     );
   if (!profile.data || profile.status === 'error')
     return (
