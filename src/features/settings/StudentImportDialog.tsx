@@ -3,11 +3,15 @@ import { formatRosterCell, formatCalendarDate, titleCase } from '../../lib/displ
 import { useDraftGuard } from '../academics/useDraftGuard';
 import { useMemo, useRef, useState } from 'react';
 import {
+  AlertCircle,
+  ArrowLeft,
   ArrowRight,
+  Check,
   CheckCircle2,
-  Download,
   FileSpreadsheet,
+  FolderOpen,
   Info,
+  Pen,
   RefreshCw,
   Search,
   Trash2,
@@ -22,6 +26,12 @@ import { readStudentWorkbook, type ExcelCell } from '../../lib/xlsx';
 import { downloadClassStudentTemplate } from '../../lib/studentTemplate';
 import { sectionLabel } from '../../lib/schoolLabels';
 import '../setup/import.css';
+
+function formatByteSize(bytes: number): string {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
 
 export default function StudentImportDialog({
   classId,
@@ -46,9 +56,11 @@ export default function StudentImportDialog({
   const [editingRow, setEditingRow] = useState<number | null>(null);
   const [rowCells, setRowCells] = useState<string[]>([]);
   const [target, setTarget] = useState(classId);
+  const [duplicateMode, setDuplicateMode] = useState<'keep' | 'update'>('keep');
   const [grid, setGrid] = useState<ExcelCell[][] | null>(null);
   const [preview, setPreview] = useState<StudentImportPreview | null>(null);
   const [fileName, setFileName] = useState('');
+  const [fileBytes, setFileBytes] = useState(0);
   const [reading, setReading] = useState(false),
     [error, setError] = useState('');
   const guard = useDraftGuard(!!grid || reading, onClose);
@@ -63,6 +75,7 @@ export default function StudentImportDialog({
     setPreview(null);
     setError('');
     setFileName(file?.name ?? '');
+    setFileBytes(file?.size ?? 0);
     if (!file) {
       setReading(false);
       return;
@@ -93,7 +106,7 @@ export default function StudentImportDialog({
       if (searchQuery.trim()) {
         const needle = searchQuery.trim().toLowerCase();
         const hay =
-          `${row.input.name} ${row.input.admissionNumber} ${row.input.rollNumber} ${row.input.guardian ?? ''}`.toLowerCase();
+          `${row.input.name} ${row.input.admissionNumber} ${row.input.rollNumber} ${row.input.guardian?.name ?? ''}`.toLowerCase();
         if (!hay.includes(needle)) return false;
       }
       return true;
@@ -120,7 +133,7 @@ export default function StudentImportDialog({
       }
     >
       {discard ? (
-        <div className="modal-actions">
+        <div className="import-modal-footer">
           <Button variant="secondary" onClick={guard.keepEditing}>
             Keep reviewing
           </Button>
@@ -135,25 +148,24 @@ export default function StudentImportDialog({
           </Button>
         </div>
       ) : (
-        <div className="student-import-content">
-          <ImportSteps step={step} />
+        <div
+          className="student-import-content"
+          data-import-wide={step > 1 ? 'true' : undefined}
+        >
           {step === 1 && (
             <>
-              <div className="import-template-banner">
-                <div className="import-template-banner-left">
-                  <span className="import-template-icon" aria-hidden="true">
-                    <FileSpreadsheet size={18} />
+              <div className="import-header-subbar">
+                <span className="import-header-hint">
+                  <Info size={14} aria-hidden="true" />
+                  <span>
+                    Ensure your columns match:{' '}
+                    <strong>Class, Section, Admission No, Roll No, Birth Date</strong>
                   </span>
-                  <div className="import-template-banner-copy">
-                    <strong>Need the template?</strong>
-                    <span className="class-timetable-note">
-                      Use the Students sheet. Fill Class, Admission Number and Roll Number for every
-                      student. Leave Section blank when the class has no sections.
-                    </span>
-                  </div>
-                </div>
-                <Button
-                  variant="secondary"
+                </span>
+                <button
+                  type="button"
+                  className="import-sample-btn"
+                  title="Download the official Excel template"
                   onClick={() =>
                     downloadClassStudentTemplate(
                       schoolClass?.name ?? '',
@@ -161,72 +173,50 @@ export default function StudentImportDialog({
                     )
                   }
                 >
-                  <Download size={14} aria-hidden="true" />
-                  Download Sample Excel
-                </Button>
+                  <FileSpreadsheet size={14} aria-hidden="true" />
+                  <span>Download Sample Excel</span>
+                </button>
               </div>
 
-              {!preview ? (
-                <label className="import-dropzone-empty student-timing-field">
-                  <span className="sr-only">Excel file (.xlsx)</span>
-                  <span className="import-dropzone-cloud" aria-hidden="true">
-                    <UploadCloud size={22} />
-                  </span>
-                  <span className="import-dropzone-title">
-                    {reading
-                      ? `Reading and validating ${fileName}…`
-                      : 'Choose Excel file or drag & drop here'}
-                  </span>
-                  <p className="import-dropzone-sub">
-                    Supports .xlsx up to 1,000 students across classes at once
-                  </p>
-                  <span className="import-browse-btn" aria-hidden="true">
-                    Browse File
-                  </span>
-                  <input
-                    className="import-file-hidden"
-                    aria-label="Excel file (.xlsx)"
-                    type="file"
-                    accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
-                      event.target.value = '';
-                      await handleFileChange(file);
-                    }}
-                  />
-                </label>
-              ) : (
-                <div
-                  className="import-dropzone-filled"
-                  data-has-errors={preview.errors.length > 0 ? 'true' : undefined}
-                >
-                  <div className="import-file-info">
-                    <span className="import-file-icon-box" aria-hidden="true">
-                      <CheckCircle2 size={22} />
-                    </span>
-                    <div className="import-file-details">
-                      <div className="import-file-name-row">
-                        <strong>{fileName}</strong>
-                        <span
-                          className="import-validated-pill"
-                          data-warn={preview.errors.length > 0 ? 'true' : undefined}
-                        >
-                          {preview.errors.length > 0 ? 'Needs Review' : 'Validated'}
-                        </span>
-                      </div>
-                      <p role="status" className="import-file-meta">
-                        ✓ {fileName} · {preview.rows.length} student rows loaded (
-                        {preview.errors.length
-                          ? `${preview.errors.length} need correction`
-                          : 'all rows valid'}
-                        )
-                      </p>
-                    </div>
+              <div className="import-step1-body">
+                <ImportSteps step={1} validated={Boolean(preview)} />
+
+                <section aria-labelledby="demo-upload-heading" className="import-step1-section">
+                  <div className="import-section-head">
+                    <h3 className="import-section-title" id="demo-upload-heading">
+                      Upload Workbook
+                    </h3>
+                    <span className="import-spec-pill">.xlsx • Max 1,000 rows • 1 MiB</span>
                   </div>
-                  <div className="import-file-actions">
-                    <label className="import-replace-btn student-timing-field">
-                      <RefreshCw size={13} aria-hidden="true" />
-                      Replace file
+
+                  {!preview ? (
+                    <label
+                      className="import-dropzone-empty student-timing-field"
+                      data-purpose="file-dropzone"
+                    >
+                      <span className="sr-only">Excel file (.xlsx)</span>
+                      <span className="import-dropzone-cloud" aria-hidden="true">
+                        <UploadCloud size={20} />
+                      </span>
+                      <div>
+                        <p className="import-dropzone-title">
+                          {reading ? (
+                            `Reading and validating ${fileName}…`
+                          ) : (
+                            <>
+                              <span className="import-choose-link">Choose Excel file</span> or drag
+                              &amp; drop here
+                            </>
+                          )}
+                        </p>
+                        <p className="import-dropzone-sub">
+                          Supports Microsoft Excel spreadsheet (.xlsx, .xls)
+                        </p>
+                      </div>
+                      <span className="import-browse-btn" aria-hidden="true">
+                        <FolderOpen size={14} />
+                        <span>Browse File</span>
+                      </span>
                       <input
                         className="import-file-hidden"
                         aria-label="Excel file (.xlsx)"
@@ -239,112 +229,221 @@ export default function StudentImportDialog({
                         }}
                       />
                     </label>
-                    <button
-                      type="button"
-                      className="import-remove-btn"
-                      title="Remove file"
-                      aria-label="Remove selected file"
-                      onClick={() => {
-                        setGrid(null);
-                        setPreview(null);
-                        setFileName('');
-                        setOffset(0);
-                        setError('');
-                      }}
+                  ) : (
+                    <div
+                      className="import-dropzone-filled"
+                      data-has-errors={preview.errors.length > 0 ? 'true' : undefined}
+                      data-purpose="file-dropzone"
                     >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              )}
-              {reading && <p role="status">Reading and validating {fileName}…</p>}
+                      <div className="import-file-info">
+                        <span className="import-file-icon-box" aria-hidden="true">
+                          <FileSpreadsheet size={22} />
+                        </span>
+                        <div className="import-file-details">
+                          <div className="import-file-name-row">
+                            <strong>{fileName}</strong>
+                            <span
+                              className="import-validated-pill"
+                              data-warn={preview.errors.length > 0 ? 'true' : undefined}
+                            >
+                              <CheckCircle2 size={11} aria-hidden="true" />
+                              {preview.errors.length > 0 ? 'Needs Review' : 'Validated'}
+                            </span>
+                          </div>
+                          <p role="status" className="import-file-meta">
+                            {fileBytes > 0 && (
+                              <>
+                                <span style={{ fontWeight: 500, color: '#475569' }}>
+                                  {formatByteSize(fileBytes)}
+                                </span>
+                                <span>•</span>
+                              </>
+                            )}
+                            <span>{preview.rows.length} rows detected</span>
+                            <span>•</span>
+                            <span className="import-ready-text">
+                              {preview.errors.length
+                                ? `${preview.errors.length} need correction`
+                                : 'Ready to process'}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="import-file-actions">
+                        <label className="import-replace-btn student-timing-field">
+                          <RefreshCw size={12} aria-hidden="true" />
+                          <span>Replace file</span>
+                          <input
+                            className="import-file-hidden"
+                            aria-label="Excel file (.xlsx)"
+                            type="file"
+                            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            onChange={async (event) => {
+                              const file = event.target.files?.[0];
+                              event.target.value = '';
+                              await handleFileChange(file);
+                            }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className="import-remove-btn"
+                          title="Remove file"
+                          aria-label="Remove selected file"
+                          onClick={() => {
+                            setGrid(null);
+                            setPreview(null);
+                            setFileName('');
+                            setFileBytes(0);
+                            setOffset(0);
+                            setError('');
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {reading && <p role="status">Reading and validating {fileName}…</p>}
+                </section>
 
-              <div className="import-config-grid">
-                <div className="import-config-card" style={{ gridColumn: '1 / -1' }}>
-                  <label className="field">
-                    <span
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <strong style={{ color: '#1e293b', fontSize: 12 }}>
-                        Default class for older workbooks without a Class column
-                      </strong>
-                      <span className="import-config-tag">Class Routing</span>
+                <section aria-labelledby="demo-settings-heading" className="import-step1-section">
+                  <div className="import-section-head">
+                    <h3 className="import-section-title" id="demo-settings-heading">
+                      Class Routing &amp; Duplicate Handling
+                    </h3>
+                  </div>
+
+                  <div className="import-config-grid">
+                    <div className="import-select-group">
+                      <label htmlFor="demo-class-routing-select">
+                        Which classes are in this file?
+                      </label>
+                      <select
+                        id="demo-class-routing-select"
+                        aria-label="Default class for older workbooks without a Class column"
+                        value={target}
+                        disabled={reading}
+                        onChange={(e) => {
+                          setTarget(e.target.value);
+                          setGrid(null);
+                          setOffset(0);
+                          setPreview(null);
+                        }}
+                      >
+                        {state.classes
+                          .filter((c) => c.schoolId === state.school.id)
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>
+                              Use the Class column (default: {c.name})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div className="import-select-group">
+                      <label htmlFor="demo-duplicate-select">
+                        If an admission number already exists
+                      </label>
+                      <select
+                        id="demo-duplicate-select"
+                        value={duplicateMode}
+                        disabled={reading}
+                        onChange={(e) => setDuplicateMode(e.target.value as 'keep' | 'update')}
+                      >
+                        <option value="keep">Keep existing students unchanged</option>
+                        <option value="update">Overwrite existing student details</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="import-info-callout" data-purpose="info-callout">
+                    <CheckCircle2 size={15} aria-hidden="true" />
+                    <span>
+                      Add new students and skip identical records. Existing students with different
+                      details are automatically flagged for review.
                     </span>
-                    <select
-                      value={target}
-                      disabled={reading}
-                      onChange={(e) => {
-                        setTarget(e.target.value);
-                        setGrid(null);
-                        setOffset(0);
-                        setPreview(null);
-                      }}
-                    >
-                      {state.classes
-                        .filter((c) => c.schoolId === state.school.id)
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <small>
-                    Rows with a Class column are routed to their matching class automatically.
-                  </small>
-                </div>
+                  </div>
+                </section>
+
+                {error && (
+                  <div style={{ marginTop: 14 }}>
+                    <p className="form-error" role="alert">
+                      {error}
+                    </p>
+                  </div>
+                )}
               </div>
             </>
           )}
-          {preview && step > 1 && (
-            <>
-              <div className="import-review-toolbar">
-                <div className="import-summary-pills">
-                  <div className="import-pill-badge">
-                    <span>Total Rows</span>
-                    <strong>{preview.rows.length}</strong>
-                  </div>
-                  <div className="import-pill-badge" data-tone="valid">
-                    <span className="import-pill-dot" aria-hidden="true" />
-                    <span>Valid</span>
-                    <strong>{preview.rows.filter((r) => !r.error).length}</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="import-pill-badge"
-                    data-tone="attention"
-                    data-active={onlyErrors ? 'true' : undefined}
-                    onClick={() => {
-                      setOnlyErrors((v) => !v);
-                      setOffset(0);
-                    }}
-                  >
-                    <span className="import-pill-dot" aria-hidden="true" />
-                    <span>Attention Needed</span>
-                    <strong>{preview.errors.length}</strong>
-                  </button>
-                </div>
 
-                {step === 2 && (
-                  <div className="import-review-filters">
-                    <div className="import-review-search">
-                      <Search size={14} aria-hidden="true" />
-                      <input
-                        type="search"
-                        aria-label="Search preview rows"
-                        placeholder="Search student, admission #, or roll…"
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setOffset(0);
-                        }}
-                      />
+          {preview && step > 1 && (
+            <div className="import-step2-body">
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 10,
+                }}
+              >
+                <span className="import-file-chip" data-pill={step === 3 ? 'round' : undefined}>
+                  <FileSpreadsheet size={13} aria-hidden="true" />
+                  <span>
+                    {fileName}
+                    {step === 3 ? ` • ${preview.rows.length} rows` : ''}
+                  </span>
+                </span>
+                <p className="sr-only">
+                  {preview.rows.length} students ·{' '}
+                  {preview.errors.length
+                    ? `${preview.errors.length} ${preview.errors.length === 1 ? 'row needs' : 'rows need'} correction`
+                    : 'Ready to import'}{' '}
+                  · {fileName}
+                </p>
+              </div>
+
+              <ImportSteps step={step} validated />
+
+              {step === 2 ? (
+                <>
+                  <div className="import-review-toolbar">
+                    <div className="import-summary-pills">
+                      <div className="import-pill-badge">
+                        <strong>{preview.rows.length}</strong> Total Rows
+                      </div>
+                      <div className="import-pill-badge" data-tone="valid">
+                        <CheckCircle2 size={13} aria-hidden="true" />
+                        <span>{preview.rows.filter((r) => !r.error).length} Valid</span>
+                      </div>
+                      <label className="import-pill-badge" data-tone="attention">
+                        <input
+                          type="checkbox"
+                          checked={onlyErrors}
+                          onChange={(e) => {
+                            setOnlyErrors(e.target.checked);
+                            setOffset(0);
+                          }}
+                        />
+                        <span>{preview.errors.length} Attention Needed</span>
+                      </label>
                     </div>
-                    {previewClassIds.length > 1 && (
+
+                    <div className="import-review-filters">
+                      <div className="import-review-search">
+                        <Search size={13} aria-hidden="true" />
+                        <input
+                          type="search"
+                          aria-label="Search preview rows"
+                          placeholder="Search student, admission #, or guardian..."
+                          value={searchQuery}
+                          onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setOffset(0);
+                          }}
+                        />
+                      </div>
                       <select
                         className="import-review-class-select"
                         aria-label="Filter preview by class"
@@ -361,215 +460,278 @@ export default function StudentImportDialog({
                           </option>
                         ))}
                       </select>
-                    )}
+                    </div>
                   </div>
-                )}
-              </div>
 
-              <p className="import-summary">
-                {preview.rows.length} students ·{' '}
-                {preview.errors.length
-                  ? `${preview.errors.length} ${preview.errors.length === 1 ? 'row needs' : 'rows need'} correction`
-                  : 'Ready to import'}{' '}
-                · {fileName}
-              </p>
-              {preview.errors.length > 0 && (
-                <div className="import-errors" role="alert">
-                  <strong>
-                    Edit the flagged rows below, or go back and choose a corrected file.
-                  </strong>
-                  <ul>
-                    {preview.errors.slice(0, 20).map((message) => (
-                      <li key={message}>{message}</li>
-                    ))}
-                  </ul>
-                  {preview.errors.length > 20 && (
-                    <p>Showing the first 20 errors of {preview.errors.length}.</p>
+                  {preview.errors.length > 0 && (
+                    <div className="sr-only" role="alert">
+                      <strong>
+                        Edit the flagged rows below, or go back and choose a corrected file.
+                      </strong>
+                      <ul>
+                        {preview.errors.slice(0, 20).map((message) => (
+                          <li key={message}>{message}</li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
-                </div>
-              )}
-              {step === 2 && (
-                <div
-                  className="import-preview-scroll"
-                  tabIndex={0}
-                  role="region"
-                  aria-label="Scrollable student import preview"
-                >
-                  <table className="import-preview">
-                    <caption>Student import preview</caption>
-                    <thead>
-                      <tr>
-                        <th scope="col">Excel row</th>
-                        <th scope="col">Roll</th>
-                        <th scope="col">Student</th>
-                        <th scope="col">Class</th>
-                        <th scope="col">Section</th>
-                        <th scope="col">Admission number</th>
-                        <th scope="col">Birth date</th>
-                        <th scope="col">Check</th>
-                        <th scope="col">Corrections</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredPreviewRows.slice(offset, offset + 50).map((row) => (
-                        <tr key={row.row} data-row-error={Boolean(row.error)}>
-                          <td>{row.row}</td>
-                          <td>{row.input.rollNumber || '—'}</td>
-                          <td>
-                            <strong>{titleCase(row.input.name) || '—'}</strong>
-                          </td>
-                          <td>
-                            {state.classes.find((c) => c.id === row.input.classId)?.name ||
-                              'Unknown class'}
-                          </td>
-                          <td>
-                            {row.input.sectionId
-                              ? sectionLabel(
-                                  state.sections.find((s) => s.id === row.input.sectionId)?.name,
-                                )
-                              : 'No section'}
-                          </td>
-                          <td>{row.input.admissionNumber || '—'}</td>
-                          <td>{formatCalendarDate(row.input.birthDate)}</td>
-                          <td>
-                            <span className="import-status-badge" data-valid={!row.error}>
-                              {row.error ?? 'Ready'}
-                            </span>
-                          </td>
-                          <td>
-                            <Button
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingRow(row.row);
-                                setRowCells(
-                                  (grid?.[0] ?? []).map((header, index) => {
-                                    const value =
-                                      String(header) === 'Birth Date'
-                                        ? row.input.birthDate
-                                        : String(grid?.[row.row - 1][index] ?? '');
-                                    return formatRosterCell(String(header), value);
-                                  }),
-                                );
-                              }}
+
+                  <div className="import-table-card">
+                    <div
+                      className="import-preview-scroll"
+                      tabIndex={0}
+                      role="region"
+                      aria-label="Scrollable student import preview"
+                    >
+                      <table className="import-preview">
+                        <caption>Student import preview</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col" className="import-row-num-cell">
+                              #
+                            </th>
+                            <th scope="col">Student Name</th>
+                            <th scope="col">Admission Number</th>
+                            <th scope="col">Birth Date</th>
+                            <th scope="col">Guardian Name</th>
+                            <th scope="col">Parent Mobile</th>
+                            <th scope="col">Roll Number</th>
+                            <th scope="col">Section</th>
+                            <th scope="col">Class</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Corrections</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredPreviewRows.slice(offset, offset + 50).map((row) => (
+                            <tr key={row.row} data-row-error={Boolean(row.error)}>
+                              <td className="import-row-num-cell">{row.row}</td>
+                              <td style={{ fontWeight: 600, color: '#0f172a' }}>
+                                {titleCase(row.input.name) || '—'}
+                              </td>
+                              <td>{row.input.admissionNumber || '—'}</td>
+                              <td>{formatCalendarDate(row.input.birthDate)}</td>
+                              <td>{titleCase(row.input.guardian?.name || '') || '—'}</td>
+                              <td>{row.input.guardian?.contact || '—'}</td>
+                              <td>{row.input.rollNumber || '—'}</td>
+                              <td>
+                                {row.input.sectionId
+                                  ? sectionLabel(
+                                      state.sections.find((s) => s.id === row.input.sectionId)
+                                        ?.name,
+                                    )
+                                  : '—'}
+                              </td>
+                              <td>
+                                {state.classes.find((c) => c.id === row.input.classId)?.name ||
+                                  'Unknown class'}
+                              </td>
+                              <td>
+                                {!row.error ? (
+                                  <span className="import-status-badge" data-valid="true">
+                                    <Check size={10} strokeWidth={3} aria-hidden="true" />
+                                    Valid
+                                  </span>
+                                ) : (
+                                  <span className="import-status-badge" data-valid="false">
+                                    <AlertCircle size={11} aria-hidden="true" />
+                                    {row.error}
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="import-inline-edit-btn"
+                                  onClick={() => {
+                                    setEditingRow(row.row);
+                                    setRowCells(
+                                      (grid?.[0] ?? []).map((header, index) => {
+                                        const value =
+                                          String(header) === 'Birth Date'
+                                            ? row.input.birthDate
+                                            : String(grid?.[row.row - 1][index] ?? '');
+                                        return formatRosterCell(String(header), value);
+                                      }),
+                                    );
+                                  }}
+                                >
+                                  <Pen size={10} aria-hidden="true" />
+                                  <span>Edit row {row.row}</span>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="import-table-footer">
+                      <span>
+                        Showing {Math.min(50, filteredPreviewRows.length)} of {preview.rows.length}{' '}
+                        rows
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {(onlyErrors || searchQuery || classFilter) && (
+                          <button
+                            type="button"
+                            className="import-view-all-link"
+                            onClick={() => {
+                              setOnlyErrors(false);
+                              setSearchQuery('');
+                              setClassFilter('');
+                              setOffset(0);
+                            }}
+                          >
+                            View all {preview.rows.length} rows
+                          </button>
+                        )}
+                        {filteredPreviewRows.length > 50 && (
+                          <>
+                            <button
+                              type="button"
+                              className="import-view-all-link"
+                              disabled={!offset}
+                              onClick={() => setOffset(Math.max(0, offset - 50))}
                             >
-                              Edit row {row.row}
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              {step === 2 && filteredPreviewRows.length > 50 && (
-                <div className="modal-actions">
-                  <Button
-                    variant="secondary"
-                    disabled={!offset}
-                    onClick={() => setOffset(Math.max(0, offset - 50))}
-                  >
-                    Previous rows
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={offset + 50 >= filteredPreviewRows.length}
-                    onClick={() => setOffset(offset + 50)}
-                  >
-                    Next rows
-                  </Button>
-                </div>
-              )}
-              {filteredPreviewRows.length > 50 && (
-                <p className="class-timetable-note">
-                  Showing rows {offset + 1}–{Math.min(offset + 50, filteredPreviewRows.length)}. All{' '}
-                  {preview.rows.length} validated students will be imported.
-                </p>
-              )}
-            </>
-          )}
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-          {step === 3 && preview && (
-            <div className="import-submit-hero">
-              <div className="import-submit-top">
-                <div className="import-submit-title-group">
-                  <div className="import-submit-status-row">
-                    <span className="import-state-pill">
-                      <span className="import-pill-dot" aria-hidden="true" />
-                      Ready
-                    </span>
-                    <h3>Ready to enroll {preview.rows.length} students</h3>
+                              Previous rows
+                            </button>
+                            <button
+                              type="button"
+                              className="import-view-all-link"
+                              disabled={offset + 50 >= filteredPreviewRows.length}
+                              onClick={() => setOffset(offset + 50)}
+                            >
+                              Next rows
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <p>
-                    Import {preview.rows.length} students into the classes shown in the preview.
-                    Admission numbers match by numeric part across your school; roll numbers within
-                    each class and section.
-                  </p>
-                </div>
-              </div>
+                </>
+              ) : (
+                <>
+                  <div className="import-step3-badges-row">
+                    <div className="import-step3-pill">
+                      <span className="import-dot-slate" aria-hidden="true" />
+                      {preview.rows.length} Total Rows
+                    </div>
+                    <div className="import-step3-pill" data-tone="valid">
+                      <Check size={11} strokeWidth={3} aria-hidden="true" />
+                      {preview.rows.filter((r) => !r.error).length} Valid
+                    </div>
+                    <div className="import-step3-pill">
+                      <Check
+                        size={11}
+                        strokeWidth={3}
+                        style={{ color: '#059669' }}
+                        aria-hidden="true"
+                      />
+                      {preview.errors.length} Attention Needed
+                    </div>
+                  </div>
 
-              <div className="import-breakdown-grid">
-                <div className="import-breakdown-card" data-metric="pending">
-                  <strong>{preview.rows.length}</strong>
-                  <span>Ready to enroll</span>
-                </div>
-                <div className="import-breakdown-card" data-metric="updated">
-                  <strong>{previewClassIds.length || 1}</strong>
-                  <span>Classes covered</span>
-                </div>
-                <div className="import-breakdown-card" data-metric="failed">
-                  <strong>{preview.errors.length}</strong>
-                  <span>Validation errors</span>
-                </div>
-              </div>
+                  <div className="import-submit-hero">
+                    <div>
+                      <div className="import-submit-headline">
+                        <span className="import-pulse-dot" aria-hidden="true" />
+                        <span>Student import • Ready</span>
+                      </div>
+                      <div className="import-submit-sub">
+                        Create new records; identical records are skipped.
+                      </div>
+                    </div>
 
-              <div className="import-info-strip">
-                <Info size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
-                <p>
-                  All {preview.rows.length} rows have passed validation. Select Import{' '}
-                  {preview.rows.length} students below to complete enrollment.
+                    <div className="import-bar-track">
+                      <div className="import-bar-fill" style={{ width: '100%' }} />
+                    </div>
+
+                    <div className="import-breakdown-grid">
+                      <div className="import-breakdown-card" data-metric="created">
+                        <strong>{preview.rows.length}</strong>
+                        <span>Created</span>
+                      </div>
+                      <div className="import-breakdown-card" data-metric="updated">
+                        <strong>0</strong>
+                        <span>Updated</span>
+                      </div>
+                      <div className="import-breakdown-card" data-metric="skipped">
+                        <strong>0</strong>
+                        <span>Skipped</span>
+                      </div>
+                      <div className="import-breakdown-card" data-metric="failed">
+                        <strong>{preview.errors.length}</strong>
+                        <span>Failed</span>
+                      </div>
+                      <div className="import-breakdown-card" data-metric="pending">
+                        <strong>0</strong>
+                        <span>Pending</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {error && (
+                <p className="form-error" role="alert">
+                  {error}
                 </p>
-              </div>
+              )}
             </div>
           )}
-          <div className="modal-actions">
-            {step > 1 && (
-              <Button variant="secondary" onClick={() => setStep(step === 3 ? 2 : 1)}>
-                Back
-              </Button>
+
+          <footer className="import-modal-footer">
+            {step === 1 ? (
+              <button type="button" className="import-cancel-btn" onClick={close}>
+                Cancel
+              </button>
+            ) : step === 2 ? (
+              <button type="button" className="import-cancel-btn" onClick={() => setStep(1)}>
+                <ArrowLeft size={12} aria-hidden="true" />
+                <span>Back to Upload</span>
+              </button>
+            ) : (
+              <button type="button" className="import-white-btn" onClick={() => setStep(2)}>
+                <ArrowLeft size={12} aria-hidden="true" />
+                <span>Back to Review</span>
+              </button>
             )}
-            <Button variant="secondary" onClick={close}>
-              Cancel
-            </Button>
-            <Button
-              disabled={!grid || !preview || (step > 1 && preview.errors.length > 0) || reading}
-              onClick={() => {
-                if (!grid || !preview) return;
-                if (step < 3) {
-                  setStep(step === 1 ? 2 : 3);
-                  return;
-                }
-                try {
-                  repository.importStudents(target, grid);
-                  notify(`${preview.rows.length} students imported into their classes.`);
-                  request.current++;
-                  guard.complete();
-                } catch (cause) {
-                  setError(cause instanceof Error ? cause.message : 'Unable to save students.');
-                }
-              }}
-            >
-              {step === 1
-                ? 'Next: preview'
-                : step === 2
-                  ? 'Next: submit'
-                  : `Import ${preview?.rows.length ?? ''} students`}
-              {step < 3 && <ArrowRight size={14} aria-hidden="true" />}
-            </Button>
-          </div>
+
+            <div className="import-footer-right">
+              <button
+                type="button"
+                className="import-primary-btn"
+                data-dark={step === 1 && !preview ? 'true' : undefined}
+                disabled={!grid || !preview || (step > 1 && preview.errors.length > 0) || reading}
+                onClick={() => {
+                  if (!grid || !preview) return;
+                  if (step < 3) {
+                    setStep(step === 1 ? 2 : 3);
+                    return;
+                  }
+                  try {
+                    repository.importStudents(target, grid);
+                    notify(`${preview.rows.length} students imported into their classes.`);
+                    request.current++;
+                    guard.complete();
+                  } catch (cause) {
+                    setError(cause instanceof Error ? cause.message : 'Unable to save students.');
+                  }
+                }}
+              >
+                <span>
+                  {step === 1
+                    ? 'Continue to Review'
+                    : step === 2
+                      ? 'Proceed to Submit'
+                      : `Import ${preview?.rows.length ?? ''} students`}
+                </span>
+                <ArrowRight size={12} aria-hidden="true" />
+              </button>
+            </div>
+          </footer>
+
           {editingRow !== null && grid && (
             <Modal
               open

@@ -1,7 +1,18 @@
 import ImportSteps from './ImportSteps';
 import { formatRosterCell } from '../../lib/displayFormat';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, Info, RefreshCw, Search, XCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  FileSpreadsheet,
+  Pen,
+  RefreshCw,
+  Search,
+  XCircle,
+} from 'lucide-react';
 import { Button, LoadingOverlay, Modal, Panel } from '../../components/ui/Primitives';
 import { onboardingApi, type ImportDetail } from '../../services/onboardingService';
 import { accessError } from '../../services/schoolAccessService';
@@ -13,13 +24,17 @@ import './import.css';
 export default function ImportJob({
   schoolId,
   jobId,
+  fileName,
   close,
+  onDone,
   backLabel = 'Back to directory',
   wizard = false,
 }: {
   schoolId: string;
   jobId: string;
+  fileName?: string;
   close: () => void;
+  onDone?: () => void;
   backLabel?: string;
   wizard?: boolean;
 }) {
@@ -84,7 +99,9 @@ export default function ImportJob({
     if (!job || classColIndex < 0) return [];
     return [
       ...new Set(
-        job.rows.map((r) => formatRosterCell('Class', r.cells[classColIndex] ?? '').trim()).filter(Boolean),
+        job.rows
+          .map((r) => formatRosterCell('Class', r.cells[classColIndex] ?? '').trim())
+          .filter(Boolean),
       ),
     ];
   }, [job, classColIndex]);
@@ -117,6 +134,11 @@ export default function ImportJob({
         : job.processed
     : 0;
   const progressPct = job && job.total > 0 ? Math.round((progressValue / job.total) * 100) : 100;
+  const statusLabel = job
+    ? job.status === 'draft'
+      ? 'Ready'
+      : job.status.charAt(0).toUpperCase() + job.status.slice(1)
+    : '';
 
   return (
     <LoadingOverlay
@@ -131,11 +153,13 @@ export default function ImportJob({
         subtitle="You can leave this page and return through Import history. Processing continues in the background."
       >
         <div className="live-content">
-          <Button variant="secondary" onClick={close}>
-            {backLabel}
-          </Button>
+          {!wizard && (
+            <Button variant="secondary" onClick={close}>
+              {backLabel}
+            </Button>
+          )}
           {error && (
-            <div>
+            <div style={{ padding: '12px 24px 0' }}>
               <p role="alert" className="form-error">
                 {error}
               </p>
@@ -147,275 +171,393 @@ export default function ImportJob({
           {!job && !error && <div style={{ minHeight: 180 }} />}
           {job && (
             <>
-              {wizard && <ImportSteps step={isStep3 ? 3 : 2} />}
-
-              {!isStep3 && (
-                <div className="import-review-toolbar">
-                  <div className="import-summary-pills">
-                    <div className="import-pill-badge">
-                      <span>Total Rows</span>
-                      <strong>{job.total}</strong>
-                    </div>
-                    <div className="import-pill-badge" data-tone="valid">
-                      <span className="import-pill-dot" aria-hidden="true" />
-                      <span>Valid</span>
-                      <strong>{Math.max(0, job.total - job.invalid)}</strong>
-                    </div>
-                    <button
-                      type="button"
-                      className="import-pill-badge"
-                      data-tone="attention"
-                      data-active={onlyErrors ? 'true' : undefined}
-                      onClick={() => setOnlyErrors((v) => !v)}
-                      title="Click to filter rows needing attention"
+              <div className="import-step2-body">
+                {wizard && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 10,
+                    }}
+                  >
+                    <span
+                      className="import-file-chip"
+                      data-pill={isStep3 ? 'round' : undefined}
                     >
-                      <span className="import-pill-dot" aria-hidden="true" />
-                      <span>Attention Needed</span>
-                      <strong>{job.invalid}</strong>
-                    </button>
-                  </div>
-
-                  <div className="import-review-filters">
-                    <div className="import-review-search">
-                      <Search size={14} aria-hidden="true" />
-                      <input
-                        type="search"
-                        aria-label="Search preview rows"
-                        placeholder="Search student, admission #, or guardian…"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
-                    {availableClasses.length > 0 && (
-                      <select
-                        className="import-review-class-select"
-                        aria-label="Filter preview by class"
-                        value={classFilter}
-                        onChange={(e) => setClassFilter(e.target.value)}
-                      >
-                        <option value="">All Classes</option>
-                        {availableClasses.map((cls) => (
-                          <option key={cls} value={cls}>
-                            {cls}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="import-submit-hero">
-                <div className="import-submit-top">
-                  <div className="import-submit-title-group">
-                    <div className="import-submit-status-row">
-                      <span className="import-state-pill">
-                        <span className="import-pill-dot" aria-hidden="true" />
-                        {job.status}
+                      <FileSpreadsheet size={13} aria-hidden="true" />
+                      <span>
+                        {fileName || `${job.kind}-import.xlsx`}
+                        {isStep3 ? ` • ${job.total} rows` : ''}
                       </span>
-                      <h3>
-                        {job.kind === 'staff' ? 'Staff' : 'Student'} import · {job.status}
-                      </h3>
-                    </div>
-                    <p>
-                      {job.mode === 'create'
-                        ? 'Create new records; identical records are skipped.'
-                        : 'Update matching profiles; blank optional cells clear existing values.'}
+                    </span>
+                    <p
+                      role="status"
+                      className="sr-only"
+                    >
+                      {job.status === 'validating'
+                        ? `${job.checked} of ${job.total} rows validated`
+                        : job.status === 'draft'
+                          ? `${job.total} rows previewed`
+                          : `${job.processed} of ${job.total} rows processed`}{' '}
+                      · {job.invalid} rows need attention
                     </p>
                   </div>
+                )}
 
-                  <p role="status" style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>
-                    {job.status === 'validating'
-                      ? `${job.checked} of ${job.total} rows validated`
-                      : job.status === 'draft'
-                        ? `${job.total} rows previewed`
-                        : `${job.processed} of ${job.total} rows processed`}{' '}
-                    · {job.invalid} rows need attention
-                  </p>
-                </div>
+                {wizard && <ImportSteps step={isStep3 ? 3 : 2} validated />}
 
-                {(!wizard || !['draft', 'validating'].includes(job.status) || isStep3) && (
+                {!isStep3 ? (
                   <>
-                    <div className="import-progress-block">
-                      <div className="import-progress-labels">
-                        <span>Validation &amp; Import Progress</span>
-                        <span>{progressPct}%</span>
+                    <div className="import-review-toolbar">
+                      <div className="import-summary-pills">
+                        <div className="import-pill-badge">
+                          <strong>{job.total}</strong> Total Rows
+                        </div>
+                        <div className="import-pill-badge" data-tone="valid">
+                          <CheckCircle2 size={13} aria-hidden="true" />
+                          <span>{Math.max(0, job.total - job.invalid)} Valid</span>
+                        </div>
+                        <label
+                          className="import-pill-badge"
+                          data-tone="attention"
+                          title="Filter rows needing attention"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={onlyErrors}
+                            onChange={(e) => setOnlyErrors(e.target.checked)}
+                          />
+                          <span>{job.invalid} Attention Needed</span>
+                        </label>
                       </div>
-                      <progress
-                        aria-label="Import progress"
-                        max={job.total || 1}
-                        value={job.status === 'validating' ? job.checked : job.processed}
-                      />
+
+                      <div className="import-review-filters">
+                        <div className="import-review-search">
+                          <Search size={13} aria-hidden="true" />
+                          <input
+                            type="search"
+                            aria-label="Search preview rows"
+                            placeholder="Search student, admission #, or guardian..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                          />
+                        </div>
+                        <select
+                          className="import-review-class-select"
+                          aria-label="Filter preview by class"
+                          value={classFilter}
+                          onChange={(e) => setClassFilter(e.target.value)}
+                        >
+                          <option value="">All Classes</option>
+                          {availableClasses.map((cls) => (
+                            <option key={cls} value={cls}>
+                              {cls}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
-                    <div className="import-breakdown-grid roster-totals">
-                      {(['created', 'updated', 'skipped', 'failed', 'pending'] as const).map(
-                        (key) => (
-                          <div key={key} className="import-breakdown-card" data-metric={key}>
-                            <strong>{job.counts[key]}</strong>
-                            <span>{key}</span>
-                          </div>
-                        ),
-                      )}
+                    <div className="import-table-card">
+                      <div
+                        className="onboarding-table import-preview"
+                        role="region"
+                        aria-label="Import preview and validation"
+                        tabIndex={0}
+                      >
+                        <table>
+                          <caption>Import preview and validation</caption>
+                          <thead>
+                            <tr>
+                              <th className="import-row-num-cell">#</th>
+                              {job.columns.map((column) => (
+                                <th key={column}>{column}</th>
+                              ))}
+                              <th>Status</th>
+                              <th className="import-correction-cell">Corrections</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredRows.map((row) => (
+                              <tr
+                                key={row.number}
+                                data-row-error={row.errors.length > 0 ? 'true' : undefined}
+                              >
+                                <th scope="row" className="import-row-num-cell">
+                                  {row.number}
+                                  {row.outcome !== 'pending' && <small>{row.outcome}</small>}
+                                </th>
+                                {row.cells.map((cell, index) => (
+                                  <td
+                                    key={index}
+                                    style={
+                                      index === 0
+                                        ? { fontWeight: 600, color: '#0f172a' }
+                                        : undefined
+                                    }
+                                  >
+                                    {formatRosterCell(job.columns[index], cell) || '—'}
+                                    {index === 0 &&
+                                      row.errors.map((message) => (
+                                        <p className="sr-only" key={message}>
+                                          {message}
+                                        </p>
+                                      ))}
+                                  </td>
+                                ))}
+                                <td>
+                                  {row.errors.length === 0 ? (
+                                    <span className="import-status-badge" data-valid="true">
+                                      <Check size={10} strokeWidth={3} aria-hidden="true" />
+                                      Valid
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className="import-status-badge"
+                                      data-valid="false"
+                                      title={row.errors.join(' · ')}
+                                    >
+                                      <AlertCircle size={11} aria-hidden="true" />
+                                      {row.errors[0]}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="import-correction-cell">
+                                  {job.status === 'draft' && row.outcome === 'pending' && (
+                                    <button
+                                      type="button"
+                                      className="import-inline-edit-btn"
+                                      onClick={() => setEditing(row)}
+                                    >
+                                      <Pen size={10} aria-hidden="true" />
+                                      <span>Edit row {row.number}</span>
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="import-table-footer">
+                        <span>
+                          Showing {filteredRows.length} of {job.total} rows
+                          {job.total > 50
+                            ? ` (Rows ${job.total ? offset + 1 : 0}–${offset + job.rows.length})`
+                            : ''}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          {(onlyErrors || searchQuery || classFilter) && (
+                            <button
+                              type="button"
+                              className="import-view-all-link"
+                              onClick={() => {
+                                setOnlyErrors(false);
+                                setSearchQuery('');
+                                setClassFilter('');
+                              }}
+                            >
+                              View all {job.total} rows
+                            </button>
+                          )}
+                          {job.total > 50 && (
+                            <>
+                              <button
+                                type="button"
+                                className="import-view-all-link"
+                                disabled={!offset}
+                                onClick={() => setOffset(Math.max(0, offset - 50))}
+                              >
+                                Previous rows
+                              </button>
+                              <button
+                                type="button"
+                                className="import-view-all-link"
+                                disabled={job.nextOffset === null}
+                                onClick={() => setOffset(job.nextOffset!)}
+                              >
+                                Next rows
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="import-step3-badges-row">
+                      <div className="import-step3-pill">
+                        <span className="import-dot-slate" aria-hidden="true" />
+                        {job.total} Total Rows
+                      </div>
+                      <div className="import-step3-pill" data-tone="valid">
+                        <Check size={11} strokeWidth={3} aria-hidden="true" />
+                        {Math.max(0, job.total - job.invalid)} Valid
+                      </div>
+                      <div className="import-step3-pill">
+                        <Check
+                          size={11}
+                          strokeWidth={3}
+                          style={{ color: '#059669' }}
+                          aria-hidden="true"
+                        />
+                        {job.invalid} Attention Needed
+                      </div>
+                    </div>
+
+                    <div className="import-submit-hero">
+                      <div>
+                        <div className="import-submit-headline">
+                          <span className="import-pulse-dot" aria-hidden="true" />
+                          <span>
+                            {job.kind === 'staff' ? 'Staff' : 'Student'} import • {statusLabel}
+                          </span>
+                        </div>
+                        <div className="import-submit-sub">
+                          {job.mode === 'create'
+                            ? 'Create new records; identical records are skipped.'
+                            : 'Update matching profiles; blank optional cells clear existing values.'}
+                        </div>
+                      </div>
+
+                      <div className="import-bar-track" aria-label="Import progress">
+                        <div
+                          className="import-bar-fill"
+                          style={{ width: `${Math.max(8, progressPct)}%` }}
+                        />
+                      </div>
+
+                      <div className="import-breakdown-grid roster-totals">
+                        {(['created', 'updated', 'skipped', 'failed', 'pending'] as const).map(
+                          (key) => (
+                            <div key={key} className="import-breakdown-card" data-metric={key}>
+                              <strong>{job.counts[key]}</strong>
+                              <span>{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+
+                      {job.message && <p role="alert">{job.message}</p>}
                     </div>
                   </>
                 )}
-
-                {job.message && <p role="alert">{job.message}</p>}
-
-                {wizard && reviewed && job.status === 'draft' && (
-                  <div className="import-submit-card">
-                    <strong>Ready to import {job.total} rows</strong>
-                    <p>
-                      Ready to import {job.total} rows. New students will be created; existing
-                      students follow your selected matching option. Nothing is saved until you
-                      select Import students.
-                    </p>
-                  </div>
-                )}
-
-                <div className="import-info-strip">
-                  <Info size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
-                  <p>
-                    Correct all flagged rows before confirming. If some rows fail during import,
-                    successful rows stay saved. Retrying only checks the remaining rows.
-                  </p>
-                </div>
               </div>
 
-              <div className="live-actions">
-                {wizard && reviewed && job.status === 'draft' && (
-                  <Button variant="secondary" disabled={busy} onClick={() => setReviewed(false)}>
-                    Back to preview
-                  </Button>
-                )}
-                {job.status === 'draft' && (
-                  <Button
-                    disabled={busy || job.invalid > 0 || !!error}
-                    onClick={() => {
-                      if (wizard) {
-                        if (reviewed) void action('confirm');
-                        else setReviewed(true);
-                      } else setConfirm('confirm');
-                    }}
-                  >
-                    {wizard ? (reviewed ? 'Import students' : 'Next: submit') : 'Confirm import'}
-                  </Button>
-                )}
-                {['paused', 'cancelled', 'completed'].includes(job.status) &&
-                  (job.status === 'paused' ||
-                    job.counts.failed > 0 ||
-                    job.counts.pending > 0) && (
-                    <Button disabled={busy} onClick={() => setConfirm('retry')}>
-                      <RefreshCw size={14} aria-hidden="true" />
-                      Revalidate remaining rows
-                    </Button>
+              <footer className="import-modal-footer">
+                <div>
+                  {isStep3 && job.status === 'draft' ? (
+                    <button
+                      type="button"
+                      className="import-white-btn"
+                      disabled={busy}
+                      onClick={() => setReviewed(false)}
+                    >
+                      <ArrowLeft size={12} aria-hidden="true" />
+                      <span>Back to Review</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="import-cancel-btn"
+                      disabled={busy}
+                      onClick={close}
+                    >
+                      <ArrowLeft size={12} aria-hidden="true" />
+                      <span>{backLabel}</span>
+                    </button>
                   )}
-                {!['completed', 'cancelled'].includes(job.status) && (
-                  <Button variant="secondary" disabled={busy} onClick={() => setConfirm('cancel')}>
-                    <XCircle size={14} aria-hidden="true" />
-                    Cancel remaining rows
-                  </Button>
-                )}
-                <Button
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={async () => {
-                    try {
-                      downloadText(
-                        `${job.kind}-results.csv`,
-                        (await onboardingApi.results(schoolId, job.id)).csv,
-                      );
-                    } catch (cause) {
-                      setError(accessError(cause));
-                    }
-                  }}
-                >
-                  <Download size={14} aria-hidden="true" />
-                  Download import report
-                </Button>
-              </div>
+                </div>
 
-              {(!wizard || !reviewed || job.status !== 'draft') && (
-                <>
-                  <div
-                    className="onboarding-table import-preview"
-                    role="region"
-                    aria-label="Import preview and validation"
-                    tabIndex={0}
-                  >
-                    <table>
-                      <caption>Import preview and validation</caption>
-                      <thead>
-                        <tr>
-                          <th>Row</th>
-                          {job.columns.map((column) => (
-                            <th key={column}>{column}</th>
-                          ))}
-                          <th className="import-correction-cell">Corrections</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredRows.map((row) => (
-                          <tr
-                            key={row.number}
-                            data-row-error={row.errors.length > 0 ? 'true' : undefined}
-                          >
-                            <th scope="row">
-                              {row.number}
-                              {row.outcome !== 'pending' && <small>{row.outcome}</small>}
-                            </th>
-                            {row.cells.map((cell, index) => (
-                              <td
-                                key={index}
-                                className={
-                                  index === 0 && row.errors.length
-                                    ? 'import-validation-cell'
-                                    : undefined
-                                }
-                              >
-                                {formatRosterCell(job.columns[index], cell) || '—'}
-                                {index === 0 &&
-                                  row.errors.map((message) => (
-                                    <p className="form-error" key={message}>
-                                      {message}
-                                    </p>
-                                  ))}
-                              </td>
-                            ))}
-                            <td className="import-correction-cell">
-                              {job.status === 'draft' && row.outcome === 'pending' && (
-                                <Button variant="ghost" onClick={() => setEditing(row)}>
-                                  Edit row {row.number}
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="live-actions">
-                    <Button
-                      variant="secondary"
-                      disabled={!offset}
-                      onClick={() => setOffset(Math.max(0, offset - 50))}
+                <div className="import-footer-right">
+                  {!isStep3 && (
+                    <button
+                      type="button"
+                      className="import-white-btn"
+                      disabled={busy}
+                      onClick={async () => {
+                        try {
+                          downloadText(
+                            `${job.kind}-results.csv`,
+                            (await onboardingApi.results(schoolId, job.id)).csv,
+                          );
+                        } catch (cause) {
+                          setError(accessError(cause));
+                        }
+                      }}
                     >
-                      Previous rows
-                    </Button>
-                    <span>
-                      Rows {job.total ? offset + 1 : 0}–{offset + job.rows.length} of {job.total}
-                    </span>
-                    <Button
-                      variant="secondary"
-                      disabled={job.nextOffset === null}
-                      onClick={() => setOffset(job.nextOffset!)}
+                      <FileSpreadsheet size={13} aria-hidden="true" />
+                      <span>Export Error Rows (.csv)</span>
+                    </button>
+                  )}
+
+                  {['paused', 'cancelled', 'completed'].includes(job.status) &&
+                    (job.status === 'paused' ||
+                      job.counts.failed > 0 ||
+                      job.counts.pending > 0) && (
+                      <button
+                        type="button"
+                        className="import-white-btn"
+                        disabled={busy}
+                        onClick={() => setConfirm('retry')}
+                      >
+                        <RefreshCw size={13} aria-hidden="true" />
+                        <span>Revalidate remaining rows</span>
+                      </button>
+                    )}
+
+                  {isStep3 && !['completed', 'cancelled', 'draft'].includes(job.status) && (
+                    <button
+                      type="button"
+                      className="import-white-btn"
+                      disabled={busy}
+                      onClick={() => setConfirm('cancel')}
                     >
-                      Next rows
-                    </Button>
-                  </div>
-                </>
-              )}
+                      <XCircle size={13} aria-hidden="true" />
+                      <span>Cancel remaining rows</span>
+                    </button>
+                  )}
+
+                  {job.status === 'draft' ? (
+                    <button
+                      type="button"
+                      className="import-primary-btn"
+                      disabled={busy || job.invalid > 0 || !!error}
+                      onClick={() => {
+                        if (wizard) {
+                          if (reviewed) void action('confirm');
+                          else setReviewed(true);
+                        } else setConfirm('confirm');
+                      }}
+                    >
+                      <span>
+                        {wizard
+                          ? reviewed
+                            ? 'Import students'
+                            : 'Proceed to Submit'
+                          : 'Confirm import'}
+                      </span>
+                      <ArrowRight size={12} aria-hidden="true" />
+                    </button>
+                  ) : (
+                    job.status === 'completed' && (
+                      <button
+                        type="button"
+                        className="import-primary-btn"
+                        onClick={() => (onDone ? onDone() : close())}
+                      >
+                        <span>View Enrolled Students</span>
+                        <ArrowRight size={12} aria-hidden="true" />
+                      </button>
+                    )
+                  )}
+                </div>
+              </footer>
+
               {editing && (
                 <RowEditor
                   job={job}

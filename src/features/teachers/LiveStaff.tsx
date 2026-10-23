@@ -149,22 +149,31 @@ export default function LiveStaff({
                       {(state.data?.items ?? []).map((p) => (
                         <tr key={p.id}>
                           <td>
-                            <span className="avatar">
+                            <div className="person">
                               {p.photoDataUrl ? (
-                                <img
-                                  src={p.photoDataUrl}
-                                  alt=""
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                />
+                                <span className="avatar">
+                                  <img
+                                    src={p.photoDataUrl}
+                                    alt=""
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                </span>
                               ) : (
                                 <Avatar name={p.name} />
                               )}
-                            </span>
-                            <strong>{titleCase(p.name)}</strong>
-                            <small>
-                              {p.code}
-                              {p.teaching ? ' · Teaching' : ''}
-                            </small>
+                              <div>
+                                <strong>{titleCase(p.name)}</strong>
+                                <small>
+                                  {[
+                                    p.code,
+                                    titleCase(p.designation || '') ||
+                                      (p.teaching ? 'Teaching' : ''),
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                </small>
+                              </div>
+                            </div>
                           </td>
                           <td>{titleCase(p.department || '') || '—'}</td>
                           <td>{titleCase(p.designation || '') || '—'}</td>

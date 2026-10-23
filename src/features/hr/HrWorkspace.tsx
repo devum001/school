@@ -462,6 +462,47 @@ function HrContent({
                 ? 'Leave requests'
                 : 'Salary Expenses'
         }
+        action={
+          tab !== 'self' ? (
+            <div className="hr-header-filters">
+              <label className="field hr-inline-filter">
+                <span>Department</span>
+                <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+                  <option value="">All departments</option>
+                  {[...new Set(data.staff.map((p) => p.department).filter(Boolean))].map((d) => (
+                    <option key={d} value={d}>
+                      {titleCase(d)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field hr-inline-filter">
+                <span>Staff member</span>
+                <select value={selectedStaff} onChange={(e) => setSelectedStaff(e.target.value)}>
+                  <option value="">All staff</option>
+                  {data.staff
+                    .filter((p) => !department || p.department === department)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {tab === 'attendance' && (
+                <label className="field hr-inline-filter">
+                  <span>Attendance date</span>
+                  <CalendarDateInput
+                    value={date}
+                    min={`${month}-01`}
+                    max={data.today}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
+                </label>
+              )}
+            </div>
+          ) : undefined
+        }
       >
         {error && (
           <p role="alert" className="form-error">
@@ -568,45 +609,6 @@ function HrContent({
             </div>
           </>
         )}
-        {tab !== 'self' && (
-          <label className="field">
-            Department
-            <select value={department} onChange={(e) => setDepartment(e.target.value)}>
-              <option value="">All departments</option>
-              {[...new Set(data.staff.map((p) => p.department).filter(Boolean))].map((d) => (
-                <option key={d} value={d}>
-                  {titleCase(d)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {tab !== 'self' && (
-          <label className="field">
-            Staff member
-            <select value={selectedStaff} onChange={(e) => setSelectedStaff(e.target.value)}>
-              <option value="">All staff</option>
-              {data.staff
-                .filter((p) => !department || p.department === department)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-        )}
-        {tab === 'attendance' && (
-          <label className="field">
-            Attendance date
-            <CalendarDateInput
-              value={date}
-              min={`${month}-01`}
-              max={data.today}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </label>
-        )}
         {tab === 'salary' ? (
           <div className="table-wrap">
             <table>
@@ -630,7 +632,9 @@ function HrContent({
                           <Avatar name={p.name} />
                           <div>
                             <strong>{titleCase(p.name)}</strong>
-                            <small>{p.code}</small>
+                            <small>
+                              {[p.code, titleCase(p.designation || '')].filter(Boolean).join(' · ')}
+                            </small>
                           </div>
                         </div>
                         {data.advanceBalances?.find((a) => a.staffId === p.id) && (
