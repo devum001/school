@@ -20,6 +20,7 @@ export default function LiveStudentForm({
   initialClassId,
   initialSectionId,
   existing,
+  presentation,
   close,
   saved,
 }: {
@@ -29,6 +30,7 @@ export default function LiveStudentForm({
   initialClassId?: string;
   initialSectionId?: string;
   existing?: StudentRow;
+  presentation?: 'page' | 'dialog';
   close: () => void;
   saved: () => void;
 }) {
@@ -65,7 +67,7 @@ export default function LiveStudentForm({
     <Modal
       open
       wide
-      presentation={existing ? 'dialog' : 'page'}
+      presentation={presentation ?? (existing ? 'dialog' : 'page')}
       onClose={() => {
         if (!busy) guard.requestClose();
       }}

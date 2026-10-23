@@ -68,6 +68,75 @@ export default function ClassSetupDialog({
           }}
         >
           <fieldset disabled={busy} className="class-setup-fields">
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: '8px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                display: 'grid',
+                gap: '8px',
+              }}
+            >
+              <strong style={{ fontSize: '0.88rem', color: '#0f1f2e' }}>
+                RBSE & CBSE Quick Class Templates
+              </strong>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    const existingSet = new Set(existing.map((n) => n.trim().toLowerCase()));
+                    const presetNames = [
+                      'Class 11 Science',
+                      'Class 11 Commerce',
+                      'Class 11 Arts',
+                      'Class 12 Science',
+                      'Class 12 Commerce',
+                      'Class 12 Arts',
+                    ].filter((n) => !existingSet.has(n.toLowerCase()));
+                    if (!presetNames.length) {
+                      setError('All 11th & 12th stream classes already exist.');
+                      return;
+                    }
+                    setRows((old) => [
+                      ...old.filter((r) => r.name || r.sections),
+                      ...presetNames.map((name) => ({ name, sections: pattern || 'A' })),
+                    ]);
+                    setError('');
+                  }}
+                >
+                  + Class 11 & 12 (Science, Commerce, Arts)
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    const existingSet = new Set(existing.map((n) => n.trim().toLowerCase()));
+                    const presetNames = [
+                      ...Array.from({ length: 10 }, (_, i) => `Class ${i + 1}`),
+                      'Class 11 Science',
+                      'Class 11 Commerce',
+                      'Class 11 Arts',
+                      'Class 12 Science',
+                      'Class 12 Commerce',
+                      'Class 12 Arts',
+                    ].filter((n) => !existingSet.has(n.toLowerCase()));
+                    if (!presetNames.length) {
+                      setError('Classes 1–12 already exist.');
+                      return;
+                    }
+                    setRows((old) => [
+                      ...old.filter((r) => r.name || r.sections),
+                      ...presetNames.map((name) => ({ name, sections: pattern || 'A' })),
+                    ]);
+                    setError('');
+                  }}
+                >
+                  + Classes 1–12 with 11th/12th Streams
+                </Button>
+              </div>
+            </div>
             <details className="class-setup-paste">
               <summary>Add several classes at once</summary>
               <div className="class-setup-row">
@@ -76,7 +145,7 @@ export default function ClassSetupDialog({
                   <textarea
                     value={names}
                     rows={4}
-                    placeholder={'Class 1\nClass 2\nClass 3'}
+                    placeholder={'Class 1\nClass 2\nClass 11 Science\nClass 11 Commerce\nClass 11 Arts'}
                     onChange={(e) => setNames(e.target.value)}
                   />
                 </label>

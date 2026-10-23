@@ -101,6 +101,23 @@ export default function ImportJob({
                 step={reviewed || !['validating', 'draft'].includes(job.status) ? 3 : 2}
               />
             )}
+            <div className="import-kpi-strip">
+              <div className="import-kpi-box">
+                <strong>{job.total}</strong>
+                <span>Total rows</span>
+              </div>
+              <div className="import-kpi-box" data-tone="success">
+                <strong>{Math.max(0, job.total - job.invalid)}</strong>
+                <span>Valid & ready</span>
+              </div>
+              <div
+                className="import-kpi-box"
+                data-tone={job.invalid > 0 ? 'danger' : undefined}
+              >
+                <strong>{job.invalid}</strong>
+                <span>Rows needing attention</span>
+              </div>
+            </div>
             <h3>
               {job.kind === 'staff' ? 'Staff' : 'Student'} import · {job.status}
             </h3>
@@ -140,11 +157,14 @@ export default function ImportJob({
               successful rows stay saved. Retrying only checks the remaining rows.
             </p>
             {wizard && reviewed && job.status === 'draft' && (
-              <p>
-                Ready to import {job.total} rows. New students will be created; existing students
-                follow your selected matching option. Nothing is saved until you select Import
-                students.
-              </p>
+              <div className="import-submit-card">
+                <strong>Ready to import {job.total} rows</strong>
+                <p>
+                  Ready to import {job.total} rows. New students will be created; existing students
+                  follow your selected matching option. Nothing is saved until you select Import
+                  students.
+                </p>
+              </div>
             )}
             <div className="live-actions">
               {wizard && reviewed && job.status === 'draft' && (

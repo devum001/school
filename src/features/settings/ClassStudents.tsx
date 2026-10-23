@@ -3,7 +3,7 @@ import { repository } from '../../lib/repository';
 import { compareRolls } from '../../lib/studentIdentifiers';
 import StudentRosterTable from '../students/StudentRosterTable';
 import { useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { AppIcon, Button, EmptyState, Panel, SearchInput } from '../../components/ui/Primitives';
@@ -14,10 +14,9 @@ import { downloadClassStudentTemplate } from '../../lib/studentTemplate';
 import { sectionLabel } from '../../lib/schoolLabels';
 
 export default function ClassStudents({ classId }: { classId: string }) {
-  const state = useSchool(),
-    navigate = useNavigate(),
-    location = useLocation();
+  const state = useSchool();
   const [params, setParams] = useSearchParams();
+  const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -79,13 +78,7 @@ export default function ClassStudents({ classId }: { classId: string }) {
               <AppIcon name="upload" size={16} />
               Import Excel (.xlsx)
             </Button>
-            <Button
-              onClick={() =>
-                navigate(
-                  `/students/new?${new URLSearchParams({ classId, ...(section && section !== 'none' ? { sectionId: section } : {}), returnTo: location.pathname + location.search })}`,
-                )
-              }
-            >
+            <Button onClick={() => setAdding(true)}>
               <Plus size={15} />
               Add student
             </Button>
@@ -137,6 +130,13 @@ export default function ClassStudents({ classId }: { classId: string }) {
           />
         )}
       </Panel>
+      {adding && (
+        <StudentDialog
+          initialClassId={classId}
+          initialSectionId={section && section !== 'none' ? section : undefined}
+          onClose={() => setAdding(false)}
+        />
+      )}
       {importing && <StudentImportDialog classId={classId} onClose={() => setImporting(false)} />}
       {deleting && (
         <DeleteDialog

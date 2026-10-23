@@ -22,8 +22,10 @@ import {
   marksAdded,
   overallLeaderboard,
   savedSubjects,
+  scopeStateForFeature,
   sectionStats,
 } from '../../lib/academicSheets';
+import { useSchoolFeature } from '../../app/schoolFeatureContext';
 import { displayDate } from '../../lib/config';
 import { downloadCsv } from '../../lib/download';
 import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
@@ -42,7 +44,9 @@ export default function ResultsView({
   change: (values: Record<string, string | null>) => void;
 }) {
   const recentView = params.get('resultsView') === 'recent' || !!params.get('test');
-  const state = useSchool(),
+  const rawState = useSchool(),
+    feature = useSchoolFeature(),
+    state = scopeStateForFeature(rawState, feature?.canMarkSubject),
     today = useToday();
   const sections = state.sections.filter(
     (s) => s.schoolId === state.school.id && s.classId === classId,

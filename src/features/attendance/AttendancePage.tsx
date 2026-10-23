@@ -281,7 +281,7 @@ function AttendanceRegister() {
               <span className={`status-dot ${dirty ? 'pending' : 'active'}`} />
               <strong>{dirty ? 'Unsaved changes' : 'Register up to date'}</strong>
               <small>
-                {summary.attended} attending / {summary.marked} marked · {summary.percentage}%
+                {summary.attended} attending / {summary.total} total · {summary.percentage}%
                 attendance
               </small>
             </div>

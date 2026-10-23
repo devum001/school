@@ -105,7 +105,7 @@ export default function DashboardPage() {
           }
           detail={
             <>
-              <span className="text-green">{attendance.percentage}% of marked</span>
+              <span className="text-green">{attendance.percentage}% of total</span>
               <span> · {attendance.unmarked} unmarked</span>
             </>
           }
@@ -124,7 +124,7 @@ export default function DashboardPage() {
           detail={
             feature?.unavailable.includes('staffAttendance')
               ? 'Staff attendance access is required'
-              : `${staffAttendance.percentage}% of marked · ${staffAttendance.unmarked} unmarked`
+              : `${staffAttendance.percentage}% of total · ${staffAttendance.unmarked} unmarked`
           }
           href={
             feature && !feature.routeAllowed?.('/attendance/staff')
@@ -226,7 +226,7 @@ export default function DashboardPage() {
                     <span style={{ width: `${summary.percentage}%` }} />
                   </div>
                   <span>
-                    {summary.attended}/{summary.marked}
+                    {summary.attended}/{summary.total}
                   </span>
                   <b>{summary.percentage}%</b>
                 </Link>
@@ -234,7 +234,7 @@ export default function DashboardPage() {
             })}
           </div>
           <div className="panel-note">
-            Attending / marked · Unmarked students are excluded from the rate.
+            Attending / total enrolled · Attendance rate is calculated out of total students.
           </div>
         </Panel>
       </div>

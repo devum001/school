@@ -72,7 +72,7 @@ export default function MarksDialog({
           .filter(
             ({ c }) =>
               !feature?.canMarkSubject ||
-              feature.canMarkSubject(s.classId, s.sectionId, c.subjectId),
+              feature.canMarkSubject(s.classId, s.sectionId, c.subjectId, c.name),
           );
         return [
           s.key,
@@ -151,9 +151,14 @@ export default function MarksDialog({
       };
     }),
   };
-  const canEditCell = (student: RosterEntry, subjectId: string) =>
+  const canEditCell = (student: RosterEntry, subjectId: string, subjectName?: string) =>
     !feature?.canMarkSubject ||
-    feature.canMarkSubject(student.enrollment.classId, student.enrollment.sectionId, subjectId);
+    feature.canMarkSubject(
+      student.enrollment.classId,
+      student.enrollment.sectionId,
+      subjectId,
+      subjectName ?? columns.find((col) => col.subjectId === subjectId)?.name,
+    );
   const update = (next: typeof draft) =>
     setDrafts((prev) => {
       const updated = { ...prev };

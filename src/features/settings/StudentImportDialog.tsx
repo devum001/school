@@ -74,84 +74,128 @@ export default function StudentImportDialog({
           <ImportSteps step={step} />
           {step === 1 && (
             <>
-              <label className="field">
-                Default class for older workbooks without a Class column
-                <select
-                  value={target}
-                  disabled={reading}
-                  onChange={(e) => {
-                    setTarget(e.target.value);
-                    setGrid(null);
-                    setOffset(0);
-                    setPreview(null);
-                  }}
+              <div className="import-template-banner">
+                <div className="import-template-banner-copy">
+                  <strong>Step 1: Download the sample Excel format</strong>
+                  <p className="class-timetable-note">
+                    Use the Students sheet. Fill Class, Admission Number and Roll Number for every
+                    student. Leave Section blank when the class has no sections. Dates: DD-MM-YYYY
+                    or Excel date cells. Import up to 1,000 students across classes at once.
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    downloadClassStudentTemplate(
+                      schoolClass?.name ?? '',
+                      sections.map((s) => s.name),
+                    )
+                  }
                 >
-                  {state.classes
-                    .filter((c) => c.schoolId === state.school.id)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  downloadClassStudentTemplate(
-                    schoolClass?.name ?? '',
-                    sections.map((s) => s.name),
-                  )
-                }
-              >
-                Download Sample Excel
-              </Button>
-              <label className="student-timing-field">
-                Excel file (.xlsx)
-                <input
-                  type="file"
-                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                  onChange={async (event) => {
-                    const file = event.target.files?.[0];
-                    const attempt = ++request.current;
-                    setGrid(null);
-                    setOffset(0);
-                    setPreview(null);
-                    setError('');
-                    setFileName(file?.name ?? '');
-                    if (!file) {
-                      setReading(false);
-                      return;
-                    }
-                    setReading(true);
-                    try {
-                      const cells = await readStudentWorkbook(file);
-                      if (attempt !== request.current) return;
-                      setGrid(cells);
-                      setPreview(previewStudentImport(repository.getSnapshot(), target, cells));
-                    } catch (cause) {
-                      if (attempt === request.current)
-                        setError(
-                          cause instanceof Error
-                            ? cause.message
-                            : 'Unable to read this workbook. Use the sample Excel file.',
-                        );
-                    } finally {
-                      if (attempt === request.current) setReading(false);
-                    }
-                  }}
-                />
-              </label>
-              <p className="class-timetable-note">
-                Use the Students sheet. Fill Class, Admission Number and Roll Number for every
-                student. Leave Section blank when the class has no sections. Dates: DD-MM-YYYY or
-                Excel date cells. Import up to 1,000 students across classes at once.
-              </p>
-              {reading && <p role="status">Reading and validating {fileName}…</p>}
+                  Download Sample Excel
+                </Button>
+              </div>
+              <div className="import-dropzone-card">
+                <div className="import-dropzone-header">
+                  <strong>Step 2: Select your Excel workbook (.xlsx)</strong>
+                  <span className="import-dropzone-badge">.xlsx · Up to 1,000 students</span>
+                </div>
+                <label className="student-timing-field">
+                  Excel file (.xlsx)
+                  <input
+                    type="file"
+                    accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+                      const attempt = ++request.current;
+                      setGrid(null);
+                      setOffset(0);
+                      setPreview(null);
+                      setError('');
+                      setFileName(file?.name ?? '');
+                      if (!file) {
+                        setReading(false);
+                        return;
+                      }
+                      setReading(true);
+                      try {
+                        const cells = await readStudentWorkbook(file);
+                        if (attempt !== request.current) return;
+                        setGrid(cells);
+                        setPreview(previewStudentImport(repository.getSnapshot(), target, cells));
+                      } catch (cause) {
+                        if (attempt === request.current)
+                          setError(
+                            cause instanceof Error
+                              ? cause.message
+                              : 'Unable to read this workbook. Use the sample Excel file.',
+                          );
+                      } finally {
+                        if (attempt === request.current) setReading(false);
+                      }
+                    }}
+                  />
+                </label>
+                {reading && <p role="status">Reading and validating {fileName}…</p>}
+                {preview && !reading && (
+                  <p role="status" className="import-file-ready">
+                    <span>
+                      ✓ {fileName} · {preview.rows.length} student rows loaded (
+                      {preview.errors.length
+                        ? `${preview.errors.length} need correction`
+                        : 'all rows valid'}
+                      )
+                    </span>
+                  </p>
+                )}
+              </div>
+              <div className="import-options-card">
+                <h4 className="import-options-card-title">
+                  Step 3: Default fallback class (optional)
+                </h4>
+                <label className="field">
+                  Default class for older workbooks without a Class column
+                  <select
+                    value={target}
+                    disabled={reading}
+                    onChange={(e) => {
+                      setTarget(e.target.value);
+                      setGrid(null);
+                      setOffset(0);
+                      setPreview(null);
+                    }}
+                  >
+                    {state.classes
+                      .filter((c) => c.schoolId === state.school.id)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </div>
             </>
           )}
           {preview && step > 1 && (
             <>
+              <div className="import-kpi-strip">
+                <div className="import-kpi-box">
+                  <strong>{preview.rows.length}</strong>
+                  <span>Total students in {fileName || 'workbook'}</span>
+                </div>
+                <div className="import-kpi-box" data-tone="success">
+                  <strong>{preview.rows.filter((r) => !r.error).length}</strong>
+                  <span>Valid & ready</span>
+                </div>
+                <div
+                  className="import-kpi-box"
+                  data-tone={preview.errors.length > 0 ? 'danger' : undefined}
+                >
+                  <strong>{preview.errors.length}</strong>
+                  <span>Rows needing correction</span>
+                </div>
+              </div>
               <p className="import-summary">
                 {preview.rows.length} students ·{' '}
                 {preview.errors.length
@@ -198,7 +242,7 @@ export default function StudentImportDialog({
                     </thead>
                     <tbody>
                       {preview.rows.slice(offset, offset + 50).map((row) => (
-                        <tr key={row.row}>
+                        <tr key={row.row} data-row-error={Boolean(row.error)}>
                           <td>{row.row}</td>
                           <td>{row.input.rollNumber || '—'}</td>
                           <td>{titleCase(row.input.name) || '—'}</td>
@@ -215,7 +259,14 @@ export default function StudentImportDialog({
                           </td>
                           <td>{row.input.admissionNumber || '—'}</td>
                           <td>{formatCalendarDate(row.input.birthDate)}</td>
-                          <td>{row.error ?? 'Ready'}</td>
+                          <td>
+                            <span
+                              className="import-status-badge"
+                              data-valid={!row.error}
+                            >
+                              {row.error ?? 'Ready'}
+                            </span>
+                          </td>
                           <td>
                             <Button
                               variant="ghost"
@@ -273,11 +324,14 @@ export default function StudentImportDialog({
             </p>
           )}
           {step === 3 && (
-            <p>
-              Import {preview?.rows.length} students into the classes shown in the preview.
-              Admission numbers match by numeric part across your school; roll numbers within each
-              class and section.
-            </p>
+            <div className="import-submit-card">
+              <strong>Ready to enroll {preview?.rows.length} students</strong>
+              <p>
+                Import {preview?.rows.length} students into the classes shown in the preview.
+                Admission numbers match by numeric part across your school; roll numbers within each
+                class and section.
+              </p>
+            </div>
           )}
           <div className="modal-actions">
             {step > 1 && (

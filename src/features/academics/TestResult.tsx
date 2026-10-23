@@ -14,6 +14,7 @@ import {
 import {
   overallLeaderboard,
   savedSubjects,
+  scopeStateForFeature,
   sectionStats,
   subjectResults,
 } from '../../lib/academicSheets';
@@ -38,11 +39,12 @@ export default function TestResult({
   onEdit: () => void;
   from: string;
 }) {
-  const state = useSchool();
+  const rawState = useSchool();
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const feature = useSchoolFeature();
+  const state = scopeStateForFeature(rawState, feature?.canMarkSubject);
   const subjects = savedSubjects(state, exam, sectionId, classId);
   const columns = subjects.map((subject) => ({
     subject,

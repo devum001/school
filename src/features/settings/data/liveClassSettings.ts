@@ -5,6 +5,7 @@ import { productApi } from '../../../services/productService';
 import type { SchoolAccess } from '../../../services/schoolAccessService';
 import { scoped } from '../../../services/schoolSetupService';
 import { orderedClasses } from '../../../lib/schoolLabels';
+import { boardSubjectCatalogForClass, detectClassStream } from '../../../lib/classSubjects';
 import type { ClassSettingsSource } from './contracts';
 const defaultsSchema = z.object({
   schoolId: z.string(),
@@ -112,7 +113,14 @@ export function liveClassSource(access: SchoolAccess, yearId: string): ClassSett
           await apiService.request(`${path}/${classId}/subject-defaults`, { signal }),
         );
         scoped(defaults, schoolId, yearId, classId);
-        return defaults.names.map((name, i) => ({ id: `default-${i}`, name }));
+        const label = `${parent.name} ${parent.grade ?? ''}`.trim();
+        const stream = detectClassStream(label);
+        const names = stream
+          ? boardSubjectCatalogForClass(label, stream)
+          : defaults.names.length
+            ? defaults.names
+            : boardSubjectCatalogForClass(label);
+        return names.slice(0, 30).map((name, i) => ({ id: `default-${i}`, name }));
       }
       return records.map((c) => ({ id: c.id, name: c.name, archived: c.status === 'archived' }));
     },

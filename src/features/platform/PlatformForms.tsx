@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Button, Modal } from '../../components/ui/Primitives';
 import {
   platformService as api,
@@ -57,31 +58,51 @@ export function PasswordFields({
   setRepeat: (value: string) => void;
   disabled: boolean;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRepeat, setShowRepeat] = useState(false);
   return (
     <>
       <label>
         Initial password
-        <input
-          type="password"
-          required
-          autoComplete="new-password"
-          minLength={8}
-          maxLength={64}
-          value={password}
-          disabled={disabled}
-          onChange={(event) => setPassword(event.target.value)}
-        />
+        <span className="password-input-wrap">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            required
+            autoComplete="new-password"
+            minLength={8}
+            maxLength={64}
+            value={password}
+            disabled={disabled}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <button
+            type="button"
+            aria-label={showPassword ? 'Hide initial password' : 'Show initial password'}
+            onClick={() => setShowPassword((value) => !value)}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </span>
       </label>
       <label>
         Confirm password
-        <input
-          type="password"
-          required
-          autoComplete="new-password"
-          value={repeat}
-          disabled={disabled}
-          onChange={(event) => setRepeat(event.target.value)}
-        />
+        <span className="password-input-wrap">
+          <input
+            type={showRepeat ? 'text' : 'password'}
+            required
+            autoComplete="new-password"
+            value={repeat}
+            disabled={disabled}
+            onChange={(event) => setRepeat(event.target.value)}
+          />
+          <button
+            type="button"
+            aria-label={showRepeat ? 'Hide confirm password' : 'Show confirm password'}
+            onClick={() => setShowRepeat((value) => !value)}
+          >
+            {showRepeat ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </span>
       </label>
       <p>
         Use a unique 8–64 character password. Share it privately with the account holder; no email

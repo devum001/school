@@ -404,3 +404,86 @@ export function subjectResults(
     highest: present.length ? Math.max(...present.map((r) => r.cell!.marks)) : null,
   };
 }
+
+export function scopeStateForFeature(
+  state: DemoState,
+  canMarkSubject?: (
+    classId: string,
+    sectionId: string,
+    subjectId: string,
+    subjectName?: string,
+  ) => boolean,
+): DemoState {
+  if (!canMarkSubject) return state;
+  const enrollmentMap = new Map(state.enrollments.map((e) => [e.id, e]));
+  const subjectNameById = new Map<string, string>();
+  for (const cls of state.classes) {
+    for (const sub of cls.subjects ?? []) {
+      subjectNameById.set(sub.id, sub.name);
+    }
+  }
+  const allowsInClass = (classId: string, sectionId: string, subjectId?: string, name?: string) => {
+    const resolvedName = name || (subjectId ? subjectNameById.get(subjectId) : '') || '';
+    if (sectionId) {
+      return canMarkSubject(classId, sectionId, subjectId ?? '', resolvedName);
+    }
+    const classSections = state.sections.filter(
+      (s) => s.schoolId === state.school.id && s.classId === classId,
+    );
+    if (!classSections.length) {
+      return canMarkSubject(classId, '', subjectId ?? '', resolvedName);
+    }
+    return (
+      canMarkSubject(classId, '', subjectId ?? '', resolvedName) ||
+      classSections.some((sec) =>
+        canMarkSubject(classId, sec.id, subjectId ?? '', resolvedName),
+      )
+    );
+  };
+  return {
+    ...state,
+    classes: state.classes.map((cls) => ({
+      ...cls,
+      subjects: cls.subjects?.filter((sub) => allowsInClass(cls.id, '', sub.id, sub.name)),
+    })),
+    exams: state.exams.map((exam) => ({
+      ...exam,
+      subjects: exam.subjects.filter((s) =>
+        allowsInClass(exam.classId, '', s.subjectId, s.name),
+      ),
+      sheets: exam.sheets?.map((sheet) => {
+        const sheetClassId =
+          sheet.classId ??
+          state.sections.find((sec) => sec.id === sheet.sectionId)?.classId ??
+          exam.classId;
+        return {
+          ...sheet,
+          subjects: sheet.subjects.filter((s) =>
+            allowsInClass(sheetClassId, sheet.sectionId, s.subjectId, s.name),
+          ),
+        };
+      }),
+      subjectMaximums: exam.subjectMaximums?.filter((m) =>
+        allowsInClass(m.classId, '', m.subjectId, subjectNameById.get(m.subjectId)),
+      ),
+      subjectSelections: exam.subjectSelections?.map((sel) => ({
+        ...sel,
+        subjectIds: sel.subjectIds.filter((id) =>
+          allowsInClass(sel.classId, '', id, subjectNameById.get(id)),
+        ),
+      })),
+    })),
+    results: state.results.map((res) => {
+      const enrollment = enrollmentMap.get(res.enrollmentId);
+      const classId = enrollment?.classId ?? '';
+      const sectionId = enrollment?.sectionId ?? '';
+      const filteredSubjects = res.subjects.filter((s) =>
+        allowsInClass(classId, sectionId, s.subjectId, s.name),
+      );
+      return {
+        ...res,
+        subjects: filteredSubjects,
+      };
+    }),
+  };
+}

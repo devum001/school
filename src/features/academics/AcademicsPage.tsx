@@ -28,7 +28,7 @@ import { orderedClasses } from '../../lib/schoolLabels';
 
 import { testRoster } from '../../lib/academics';
 
-import { marksAdded, examIncludes } from '../../lib/academicSheets';
+import { marksAdded, examIncludes, scopeStateForFeature } from '../../lib/academicSheets';
 
 import { studentReturnPath } from '../../lib/academicNavigation';
 
@@ -46,10 +46,12 @@ import ResultsView from './ResultsView';
 import './academics.css';
 
 export default function AcademicsPage() {
-  const state = useSchool();
+  const rawState = useSchool();
   const feature = useSchoolFeature(),
     data = feature ?? repository,
-    canManage = feature?.canManage ?? true;
+    canManage = feature?.canManage ?? true,
+    canCreateTest = feature ? (feature.canCreateTest ?? canManage) : canManage;
+  const state = scopeStateForFeature(rawState, feature?.canMarkSubject);
 
   const [params, setParams] = useSearchParams();
 
@@ -84,7 +86,7 @@ export default function AcademicsPage() {
     .reverse()
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  const exam = exams.find((e) => e.id === params.get('test'));
+  const exam = rawState.exams.find((e) => e.id === params.get('test'));
 
   const returnTo = studentReturnPath(params.get('returnTo'));
 
@@ -100,7 +102,7 @@ export default function AcademicsPage() {
       <PageHeading
         title="Test and Result"
         actions={
-          !resultsView && canManage ? (
+          !resultsView && canCreateTest ? (
             <Button onClick={() => setAdding(true)}>
               <AppIcon name="document" size={17} />
               Add Test / Exam
@@ -222,7 +224,7 @@ export default function AcademicsPage() {
                         >
                           <AppIcon name="edit" size={18} />
                         </Button>
-                        {(!feature?.canEditTest || feature.canEditTest(e.id)) && (
+                        {canCreateTest && (!feature?.canEditTest || feature.canEditTest(e.id)) && (
                           <details className="academic-test-menu">
                             <summary aria-label={`More options for ${e.name}`}>
                               <MoreVertical size={19} />
@@ -258,7 +260,11 @@ export default function AcademicsPage() {
           {!exams.some((e) => e.name.toLowerCase().includes(query.toLowerCase())) && (
             <EmptyState
               title={query ? 'No matching tests' : 'No tests yet'}
-              description="Create a test, then open its pencil to record marks."
+              description={
+                canCreateTest
+                  ? 'Create a test, then open its pencil to record marks.'
+                  : 'Tests created by your school administrator will appear here.'
+              }
             />
           )}
         </>

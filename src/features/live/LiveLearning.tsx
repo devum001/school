@@ -20,8 +20,76 @@ import DashboardPage from '../dashboard/DashboardPage';
 import AcademicsPage from '../academics/AcademicsPage';
 import AttendancePage from '../attendance/AttendancePage';
 import ClassesPage from '../classes/ClassesPage';
+import { sessionStore } from '../auth/sessionStore';
 import { useLiveSchool } from './schoolContext';
 import { useRemote } from './useRemote';
+
+const SUBJECT_ALIAS_GROUPS: readonly (readonly string[])[] = [
+  ['math', 'maths', 'mathematics', 'applied mathematics'],
+  ['eng', 'english', 'english core', 'english elective', 'general english'],
+  ['hin', 'hindi', 'hindi core', 'hindi elective', 'general hindi'],
+  ['sci', 'science', 'general science'],
+  ['sst', 'social science', 'social studies'],
+  ['evs', 'environmental studies', 'environmental science'],
+  [
+    'cs',
+    'computer',
+    'computers',
+    'computer science',
+    'computer applications',
+    'it',
+    'information technology',
+    'informatics practices',
+    'ip',
+  ],
+  ['phy', 'physics'],
+  ['chem', 'chemistry'],
+  ['bio', 'biology'],
+  ['acc', 'accounts', 'accountancy'],
+  ['bst', 'business', 'business studies'],
+  ['eco', 'economics'],
+  ['pol sci', 'political science', 'civics'],
+  ['hist', 'history'],
+  ['geo', 'geography'],
+  ['sans', 'sanskrit', 'sanskrit literature'],
+  ['pe', 'physical education', 'phe'],
+  ['gk', 'general knowledge'],
+];
+
+function cleanSubjectToken(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(
+      /\b(teacher|faculty|lecturer|instructor|professor|pgt|tgt|prt|senior|junior|sr|jr|head|hod|dept|department|master|mistress|subject|class|grade)\b/g,
+      ' ',
+    )
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractTeacherSubjectTokens(labels: string[]): string[] {
+  return labels
+    .flatMap((label) => label.split(/[,/&|;+]|\band\b/i))
+    .map(cleanSubjectToken)
+    .filter((token) => token.length >= 2);
+}
+
+function subjectMatchesTeacherTokens(subjectName: string, teacherTokens: string[]): boolean {
+  const cleanSub = cleanSubjectToken(subjectName);
+  if (!cleanSub || !teacherTokens.length) return false;
+  return teacherTokens.some((token) => {
+    if (cleanSub === token) return true;
+    const group = SUBJECT_ALIAS_GROUPS.find((g) => g.includes(token) || g.includes(cleanSub));
+    if (group && group.includes(token) && group.includes(cleanSub)) return true;
+    const subWords = cleanSub.split(' ');
+    const tokenWords = token.split(' ');
+    return (
+      (token.length >= 3 && subWords.includes(token)) ||
+      (cleanSub.length >= 3 && tokenWords.includes(cleanSub))
+    );
+  });
+}
 
 function learningAreaMessage(area: LearningArea): string {
   if (area === 'overview') return 'Loading overview…';
@@ -130,6 +198,7 @@ export default function LiveLearning({ area }: { area: LearningArea }) {
       <LearningContent
         key={`${schoolId}:${targetKey}:${isReady ? 'ready' : 'loading'}`}
         initial={activeSnapshot}
+        owner={access.owner}
         permissions={access.permissions}
         area={area}
         schoolId={schoolId}
@@ -142,6 +211,7 @@ export default function LiveLearning({ area }: { area: LearningArea }) {
 }
 function LearningContent({
   initial,
+  owner,
   permissions,
   area,
   schoolId,
@@ -150,6 +220,7 @@ function LearningContent({
   setDate,
 }: {
   initial: LearningSnapshot;
+  owner?: boolean;
   permissions: readonly string[];
   area: LearningArea;
   schoolId: string;
@@ -158,7 +229,7 @@ function LearningContent({
   setDate: (date: string) => void;
 }) {
   const [data, setSaved] = useState(initial),
-    latest = useRef(initial);
+     latest = useRef(initial);
   const refresh = useCallback(async () => {
     const next = await loadLearning(schoolId, yearId, area, date);
     latest.current = next;
@@ -168,28 +239,98 @@ function LearningContent({
   // A changed query date is a new server snapshot, never an optimistic local record.
   const effective = data;
   const root = learningRoot(schoolId, yearId);
-  const feature = useMemo<SchoolFeatureData>(
-    () => ({
+  const feature = useMemo<SchoolFeatureData>(() => {
+    const isAdminOrOwner =
+      Boolean(owner) ||
+      permissions.includes('school.profile.manage') ||
+      permissions.includes('roles.manage') ||
+      permissions.includes('staff.manage') ||
+      permissions.includes('classes.manage');
+    const sessionUser = sessionStore.getSnapshot().session?.user;
+    const userEmail = sessionUser?.email?.trim().toLowerCase() ?? '';
+    const userName = sessionUser?.name?.trim().toLowerCase() ?? '';
+    const matchedTeachers = effective.state.teachers.filter(
+      (t) =>
+        (userEmail && t.email.trim().toLowerCase() === userEmail) ||
+        (userName && t.name.trim().toLowerCase() === userName) ||
+        (!isAdminOrOwner && effective.state.teachers.length === 1),
+    );
+    const matchedStaff = effective.state.staffMembers.filter(
+      (s) =>
+        (userEmail && s.email.trim().toLowerCase() === userEmail) ||
+        (userName && s.name.trim().toLowerCase() === userName) ||
+        matchedTeachers.some((t) => t.staffId === s.id || s.teacherId === t.id) ||
+        (!isAdminOrOwner && effective.state.staffMembers.length === 1),
+    );
+    const teacherTokens = extractTeacherSubjectTokens([
+      ...matchedTeachers.map((t) => t.subject),
+      ...matchedStaff.map((s) => s.designation),
+    ]);
+    const explicitSubjectAssignments = effective.assignments.filter((g) => Boolean(g.subjectId));
+    const isTeacherScoped =
+      !isAdminOrOwner &&
+      (!permissions.includes('academics.manage') ||
+        explicitSubjectAssignments.length > 0 ||
+        teacherTokens.length > 0);
+    const subjectNameLookup = new Map<string, string>();
+    for (const cls of effective.state.classes) {
+      for (const sub of cls.subjects ?? []) {
+        subjectNameLookup.set(sub.id, sub.name);
+      }
+    }
+    const canAccessSubject = (
+      classId: string,
+      sectionId: string,
+      subjectId: string,
+      subjectName?: string,
+    ) => {
+      if (!isTeacherScoped) return true;
+      const resolvedName = subjectName || subjectNameLookup.get(subjectId) || '';
+      const hasClassSectionScope =
+        !effective.assignments.length ||
+        effective.assignments.some(
+          (g) =>
+            (!classId || g.classId === classId) &&
+            (!sectionId || !g.sectionId || g.sectionId === sectionId),
+        );
+      if (!hasClassSectionScope) return false;
+      if (explicitSubjectAssignments.length > 0 || teacherTokens.length > 0) {
+        const matchesAssignedId =
+          Boolean(subjectId) &&
+          explicitSubjectAssignments.some(
+            (g) =>
+              g.subjectId === subjectId &&
+              (!classId || g.classId === classId) &&
+              (!sectionId || !g.sectionId || g.sectionId === sectionId),
+          );
+        const matchesDesignation =
+          Boolean(resolvedName) && subjectMatchesTeacherTokens(resolvedName, teacherTokens);
+        return matchesAssignedId || matchesDesignation;
+      }
+      return effective.assignments.some(
+        (g) =>
+          g.classId === classId &&
+          (!sectionId || !g.sectionId || g.sectionId === sectionId) &&
+          (!g.subjectId || g.subjectId === subjectId),
+      );
+    };
+    return {
       mode: 'live',
       selectedDate: date,
       state: effective.state,
       today: effective.today,
       canManage: effective.canManage,
+      canCreateTest: !isTeacherScoped && permissions.includes('academics.manage'),
       routeAllowed: portalAccess(permissions).allowed,
       canMarkAttendance:
         permissions.includes('student-attendance.manage') ||
         permissions.includes('student-attendance.assigned'),
       canViewStudentProfiles: permissions.includes('students.view'),
       canEditTest: (id) =>
-        effective.state.exams.find((e) => e.id === id)?.canEditDefinition ?? effective.canManage,
-      canMarkSubject: (classId, sectionId, subjectId) =>
-        permissions.includes('academics.manage') ||
-        effective.assignments.some(
-          (g) =>
-            g.classId === classId &&
-            g.sectionId === sectionId &&
-            (!g.subjectId || g.subjectId === subjectId),
-        ),
+        !isTeacherScoped &&
+        permissions.includes('academics.manage') &&
+        (effective.state.exams.find((e) => e.id === id)?.canEditDefinition ?? effective.canManage),
+      canMarkSubject: isTeacherScoped ? canAccessSubject : undefined,
       unavailable: effective.unavailable,
       refreshDate: setDate,
       getSnapshot: () => latest.current.state,
@@ -256,9 +397,8 @@ function LearningContent({
         });
         await refresh();
       },
-    }),
-    [effective, root, refresh, setDate, date, permissions],
-  );
+    };
+  }, [effective, root, refresh, setDate, date, permissions]);
   function revision(id: string) {
     return latest.current.state.exams.find((e) => e.id === id)?.revision ?? 0;
   }

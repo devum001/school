@@ -78,85 +78,103 @@ export default function LiveStudentImport({
             ) : (
               <>
                 <ImportSteps step={1} />
-                <Button
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => downloadClassStudentTemplate(name, sections)}
-                >
-                  Download Sample Excel
-                </Button>
-                <label className="field">
-                  Excel file (.xlsx)
-                  <input
-                    type="file"
-                    accept=".xlsx"
+                <div className="import-template-banner">
+                  <div className="import-template-banner-copy">
+                    <strong>Step 1: Download the sample Excel format</strong>
+                    <p>
+                      Use the Students sheet. Fill Class (for example Class 12 or 12th), Admission
+                      Number, Roll Number, Birth Date and Guardian Name. Leave Section blank only
+                      for a class with no sections.
+                    </p>
+                  </div>
+                  <Button
+                    variant="secondary"
                     disabled={busy}
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      e.target.value = '';
-                      setGrid(null);
-                      setError('');
-                      setFileName(file?.name ?? '');
-                      if (!file) return;
-                      setBusy(true);
-                      try {
-                        setGrid(await readRosterFile(file, 'students', STUDENT_IMPORT_HEADERS));
-                      } catch (cause) {
-                        setError(
-                          cause instanceof Error ? cause.message : 'Unable to read workbook.',
-                        );
-                      } finally {
-                        setBusy(false);
-                      }
-                    }}
-                  />
-                </label>
-                <div className="student-timing-form-grid">
-                  <label className="field">
-                    Which classes are in this file?
-                    <select
-                      value={scope}
-                      disabled={busy}
-                      onChange={(e) => setScope(e.target.value)}
-                    >
-                      <option value="workbook">Use the Class column</option>
-                      {name && <option value="selected">Only the selected class: {name}</option>}
-                    </select>
-                    <small>
-                      Read the Class column for each student, or restrict the file to this class.
-                    </small>
-                  </label>
-                  <label className="field">
-                    If an admission number already exists
-                    <select
-                      value={mode}
-                      disabled={busy}
-                      onChange={(e) => setMode(e.target.value as 'create' | 'update')}
-                    >
-                      <option value="create">Keep existing students unchanged</option>
-                      <option value="update">Update existing student details</option>
-                    </select>
-                    <small>
-                      Match by the numeric part of Admission Number: SH-12 and AB-12 identify the
-                      same record.
-                    </small>
-                  </label>
+                    onClick={() => downloadClassStudentTemplate(name, sections)}
+                  >
+                    Download Sample Excel
+                  </Button>
                 </div>
-                <p className="import-note">
-                  {mode === 'update'
-                    ? 'Add new students and update matching profiles. Blank optional cells clear existing values. Existing classes and roll numbers stay unchanged.'
-                    : 'Add new students and skip identical records. Existing students with different details are flagged for review.'}
-                </p>
-                <p>
-                  Use the Students sheet. Fill Class (for example Class 12 or 12th), Admission
-                  Number, Roll Number, Birth Date and Guardian Name. Leave Section blank only for a
-                  class with no sections. Up to 1,000 rows and 1 MiB.
-                </p>
-                {grid && (
-                  <p role="status">
-                    {fileName} · {grid.length - 1} rows selected. Preview before importing.
+                <div className="import-dropzone-card">
+                  <div className="import-dropzone-header">
+                    <strong>Step 2: Upload your filled Excel workbook</strong>
+                    <span className="import-dropzone-badge">.xlsx · Max 1,000 rows · 1 MiB</span>
+                  </div>
+                  <label className="field">
+                    Excel file (.xlsx)
+                    <input
+                      type="file"
+                      accept=".xlsx"
+                      disabled={busy}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        setGrid(null);
+                        setError('');
+                        setFileName(file?.name ?? '');
+                        if (!file) return;
+                        setBusy(true);
+                        try {
+                          setGrid(await readRosterFile(file, 'students', STUDENT_IMPORT_HEADERS));
+                        } catch (cause) {
+                          setError(
+                            cause instanceof Error ? cause.message : 'Unable to read workbook.',
+                          );
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    />
+                  </label>
+                  {grid && (
+                    <p role="status" className="import-file-ready">
+                      <span>
+                        ✓ {fileName} · {grid.length - 1} rows selected. Preview before importing.
+                      </span>
+                    </p>
+                  )}
+                </div>
+                <div className="import-options-card">
+                  <h4 className="import-options-card-title">
+                    Step 3: Choose class routing & duplicate handling
+                  </h4>
+                  <div className="student-timing-form-grid">
+                    <label className="field">
+                      Which classes are in this file?
+                      <select
+                        value={scope}
+                        disabled={busy}
+                        onChange={(e) => setScope(e.target.value)}
+                      >
+                        <option value="workbook">Use the Class column</option>
+                        {name && <option value="selected">Only the selected class: {name}</option>}
+                      </select>
+                      <small>
+                        Read the Class column for each student, or restrict the file to this class.
+                      </small>
+                    </label>
+                    <label className="field">
+                      If an admission number already exists
+                      <select
+                        value={mode}
+                        disabled={busy}
+                        onChange={(e) => setMode(e.target.value as 'create' | 'update')}
+                      >
+                        <option value="create">Keep existing students unchanged</option>
+                        <option value="update">Update existing student details</option>
+                      </select>
+                      <small>
+                        Match by the numeric part of Admission Number: SH-12 and AB-12 identify the
+                        same record.
+                      </small>
+                    </label>
+                  </div>
+                  <p className="import-note">
+                    {mode === 'update'
+                      ? 'Add new students and update matching profiles. Blank optional cells clear existing values. Existing classes and roll numbers stay unchanged.'
+                      : 'Add new students and skip identical records. Existing students with different details are flagged for review.'}
                   </p>
-                )}
+                </div>
                 {error && (
                   <p role="alert" className="form-error">
                     {error}

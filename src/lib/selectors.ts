@@ -35,14 +35,15 @@ export function statusFor(state: DemoState, enrollmentId: string, date: string):
 export function attendanceSummary(statuses: AttendanceStatus[]) {
   const counts = { present: 0, absent: 0, late: 0, 'half-day': 0, unmarked: 0 };
   statuses.forEach((s) => counts[s]++);
-  const marked = statuses.length - counts.unmarked;
+  const total = statuses.length;
+  const marked = total - counts.unmarked;
   const attended = counts.present + counts.late + counts['half-day'];
   return {
     ...counts,
-    total: statuses.length,
+    total,
     marked,
     attended,
-    percentage: marked ? Math.round((attended / marked) * 1000) / 10 : 0,
+    percentage: total ? Math.round((attended / total) * 1000) / 10 : 0,
   };
 }
 export function feeSummary(state: DemoState, enrollmentId?: string) {

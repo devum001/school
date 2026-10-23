@@ -49,13 +49,13 @@ describe('consistent school model', () => {
   });
 });
 describe('attendance', () => {
-  it('keeps unmarked separate from absent and uses marked denominator', () => {
+  it('keeps unmarked separate from absent and uses total denominator', () => {
     expect(attendanceSummary(['present', 'absent', 'unmarked', 'late', 'half-day'])).toMatchObject({
       absent: 1,
       unmarked: 1,
       marked: 4,
       attended: 3,
-      percentage: 75,
+      percentage: 60,
     });
   });
   it('has a defined zero-denominator result', () => {

@@ -10,10 +10,16 @@ export interface SchoolFeatureData {
   selectedDate?: string;
   canViewStudentProfiles?: boolean;
   canManage: boolean;
+  canCreateTest?: boolean;
   routeAllowed?: (path: string) => boolean;
   canMarkAttendance?: boolean;
   canEditTest?: (id: string) => boolean;
-  canMarkSubject?: (classId: string, sectionId: string, subjectId: string) => boolean;
+  canMarkSubject?: (
+    classId: string,
+    sectionId: string,
+    subjectId: string,
+    subjectName?: string,
+  ) => boolean;
   unavailable: string[];
   refreshDate?: (date: string) => void;
   getSnapshot: () => DemoState;

@@ -87,18 +87,55 @@ export default function ClassStructureForm({
                 />
               </label>
               {kind === 'class' ? (
-                <details className="full">
-                  <summary>Curriculum level (optional)</summary>
-                  <label className="student-timing-field full">
-                    Level used for subject suggestions
-                    <input
-                      maxLength={80}
-                      value={draft.grade}
-                      onChange={(e) => setDraft({ ...draft, grade: e.target.value })}
-                      placeholder="For example, 6 or Pre-primary"
-                    />
-                  </label>
-                </details>
+                <>
+                  <div className="full" style={{ display: 'grid', gap: '6px' }}>
+                    <small style={{ color: '#475569' }}>
+                      Quick templates (11th & 12th Streams — Arts, Commerce, Science):
+                    </small>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {[
+                        { name: 'Class 11 Science', grade: '11 Science' },
+                        { name: 'Class 11 Commerce', grade: '11 Commerce' },
+                        { name: 'Class 11 Arts', grade: '11 Arts' },
+                        { name: 'Class 12 Science', grade: '12 Science' },
+                        { name: 'Class 12 Commerce', grade: '12 Commerce' },
+                        { name: 'Class 12 Arts', grade: '12 Arts' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.name}
+                          type="button"
+                          onClick={() =>
+                            setDraft({ ...draft, name: preset.name, grade: preset.grade })
+                          }
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            background: draft.name === preset.name ? '#e7f1ef' : '#f8fafc',
+                            color: '#182f49',
+                            fontSize: '0.8rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {preset.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <details className="full">
+                    <summary>Curriculum level (optional)</summary>
+                    <label className="student-timing-field full">
+                      Level used for subject suggestions
+                      <input
+                        maxLength={80}
+                        value={draft.grade}
+                        onChange={(e) => setDraft({ ...draft, grade: e.target.value })}
+                        placeholder="For example, 11 Science, 12 Commerce, 12 Arts, or 6"
+                      />
+                    </label>
+                  </details>
+                </>
               ) : (
                 <label className="student-timing-field full">
                   Class teacher

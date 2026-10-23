@@ -125,8 +125,10 @@ function StudentWorkspace({
     [access.schoolId, yearId, selectedClass, section, search, studentId, mode],
   );
   const list = useSetupList(load),
+    [adding, setAdding] = useState(false),
     [editing, setEditing] = useState<StudentRow | null>(null),
     [deleting, setDeleting] = useState<StudentRow | null>(null);
+  const inlineAddInSettings = Boolean(classId) || location.pathname.startsWith('/settings');
   const manage =
     access.permissions.includes('students.manage') &&
     snapshot.year.status !== 'closed' &&
@@ -327,12 +329,16 @@ function StudentWorkspace({
                 <Button variant="secondary" onClick={() => setInlineImport(true)}>
                   Import Excel (.xlsx)
                 </Button>
-                <Link
-                  className="button primary"
-                  to={`/students/new?${new URLSearchParams({ year: yearId, classId: selectedClass, sectionId: section === 'none' ? '' : section, returnTo: location.pathname + location.search })}`}
-                >
-                  Add student
-                </Link>
+                {inlineAddInSettings ? (
+                  <Button onClick={() => setAdding(true)}>Add student</Button>
+                ) : (
+                  <Link
+                    className="button primary"
+                    to={`/students/new?${new URLSearchParams({ year: yearId, classId: selectedClass, sectionId: section === 'none' ? '' : section, returnTo: location.pathname + location.search })}`}
+                  >
+                    Add student
+                  </Link>
+                )}
               </div>
             )
           }
@@ -402,12 +408,29 @@ function StudentWorkspace({
         </Panel>
       </LoadingOverlay>
       {manage && (inlineImport || params.has('import')) && importer}
+      {adding && (
+        <LiveStudentForm
+          schoolId={access.schoolId}
+          yearId={yearId}
+          snapshot={snapshot}
+          initialClassId={selectedClass}
+          initialSectionId={section === 'none' ? '' : section}
+          presentation="dialog"
+          close={() => setAdding(false)}
+          saved={() => {
+            setAdding(false);
+            if (onChanged) onChanged();
+            else list.reload();
+          }}
+        />
+      )}
       {editing && (
         <LiveStudentForm
           schoolId={access.schoolId}
           yearId={yearId}
           snapshot={snapshot}
           existing={editing}
+          presentation={inlineAddInSettings ? 'dialog' : 'page'}
           close={() => setEditing(null)}
           saved={() => {
             setEditing(null);
