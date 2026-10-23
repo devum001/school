@@ -96,6 +96,7 @@ export default function MarksDialog({
   const [assessmentConfirmed, setAssessmentConfirmed] = useState(false);
   const [replaceConfirmed, setReplaceConfirmed] = useState(false);
   const [reading, setReading] = useState(false);
+  const [sheetScrolled, setSheetScrolled] = useState(false);
 
   const request = useRef(0);
   const sampleDownload = useRef<HTMLDetailsElement>(null);
@@ -268,7 +269,7 @@ export default function MarksDialog({
           </Button>
         </div>
       ) : (
-        <>
+        <div className="marks-dialog-body" data-scrolled={sheetScrolled}>
           <div className="marks-scope-selectors">
             <label className="field">
               Class
@@ -517,6 +518,10 @@ export default function MarksDialog({
                 role="region"
                 aria-label="Marks sheet"
                 tabIndex={0}
+                onScroll={(e) => {
+                  const nextScrolled = e.currentTarget.scrollTop > 18;
+                  if (nextScrolled !== sheetScrolled) setSheetScrolled(nextScrolled);
+                }}
               >
                 <table>
                   <thead>
@@ -759,7 +764,7 @@ export default function MarksDialog({
               Save Marks
             </Button>
           </div>
-        </>
+        </div>
       )}
     </Modal>
   );

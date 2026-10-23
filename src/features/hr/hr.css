@@ -59,11 +59,34 @@
 .hr-workspace {
   min-width: 0;
 }
-.hr-period-toolbar {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-panel);
-  align-items: flex-end;
+.hr-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.hr-top-bar > .section-navigation {
+  margin-bottom: 0;
+}
+.hr-month-corner {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+.hr-month-corner input[type='month'] {
+  min-height: 36px;
+  padding: 6px 10px;
+  width: auto;
+  min-width: 150px;
+  max-width: 175px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--school-forest, #12373b);
+  background: var(--surface-panel, #fff);
+  border: 1px solid var(--border, #d3ddda);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
 }
 .hr-summary {
   display: grid;

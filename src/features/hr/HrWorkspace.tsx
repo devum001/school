@@ -159,39 +159,25 @@ export function HrWorkspace({
     : (state.data?.value ?? fallbackWorkspace);
   return (
     <div className="ledger-stack hr-workspace">
-      {!settings && !hideNavigation && items.length > 1 && (
-        <SectionNavigation label="Staff & HR" items={items} value={tab} onChange={setTab} />
-      )}
       {!settings && (
-        <div className="toolbar hr-period-toolbar">
-          <label className="field">
-            {self ? 'Calendar / salary month' : 'Salary / attendance month'}
+        <div className="hr-top-bar">
+          {!hideNavigation && items.length > 1 && (
+            <SectionNavigation label="Staff & HR" items={items} value={tab} onChange={setTab} />
+          )}
+          <label className="hr-month-corner">
+            <span className="sr-only">
+              {self ? 'Calendar / salary month' : 'Salary / attendance month'}
+            </span>
             <input
               type="month"
               required
+              aria-label={self ? 'Calendar / salary month' : 'Salary / attendance month'}
               value={month}
               onChange={(e) => {
                 if (e.target.value) setMonth(e.target.value);
               }}
             />
           </label>
-          <Button
-            variant="secondary"
-            aria-label="Previous month"
-            onClick={() => setMonth(shiftMonth(month, -1))}
-          >
-            Previous month
-          </Button>
-          <Button
-            variant="secondary"
-            aria-label="Next month"
-            onClick={() => setMonth(shiftMonth(month, 1))}
-          >
-            Next month
-          </Button>
-          <Button variant="secondary" onClick={state.reload}>
-            Refresh
-          </Button>
         </div>
       )}
       {!allowed ? (
@@ -1033,10 +1019,4 @@ function HrContent({
       )}
     </>
   );
-}
-
-function shiftMonth(month: string, by: number) {
-  const d = new Date(`${month}-01T12:00:00Z`);
-  d.setUTCMonth(d.getUTCMonth() + by);
-  return d.toISOString().slice(0, 7);
 }

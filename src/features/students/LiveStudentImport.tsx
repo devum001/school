@@ -1,5 +1,15 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  Info,
+  RefreshCw,
+  Trash2,
+  UploadCloud,
+} from 'lucide-react';
 import { Button, Modal } from '../../components/ui/Primitives';
 import { onboardingApi } from '../../services/onboardingService';
 import { STUDENT_IMPORT_HEADERS, downloadClassStudentTemplate } from '../../lib/studentTemplate';
@@ -10,6 +20,7 @@ import ImportJob from '../setup/ImportJob';
 import { History } from '../setup/RosterWorkspace';
 import { useDraftGuard } from '../academics/useDraftGuard';
 import '../setup/import.css';
+
 export default function LiveStudentImport({
   schoolId,
   yearId,
@@ -32,6 +43,7 @@ export default function LiveStudentImport({
     [scope, setScope] = useState('workbook');
   const jobId = params.get('import');
   const guard = useDraftGuard((!!grid || busy) && !jobId, close);
+
   function openJob(id: string | null) {
     guard.complete(() =>
       setParams((previous) => {
@@ -42,6 +54,22 @@ export default function LiveStudentImport({
       }),
     );
   }
+
+  async function handleFileSelect(file: File | undefined) {
+    setGrid(null);
+    setError('');
+    setFileName(file?.name ?? '');
+    if (!file) return;
+    setBusy(true);
+    try {
+      setGrid(await readRosterFile(file, 'students', STUDENT_IMPORT_HEADERS));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to read workbook.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Modal
       open
@@ -79,107 +107,173 @@ export default function LiveStudentImport({
               <>
                 <ImportSteps step={1} />
                 <div className="import-template-banner">
-                  <div className="import-template-banner-copy">
-                    <strong>Step 1: Download the sample Excel format</strong>
-                    <p>
-                      Use the Students sheet. Fill Class (for example Class 12 or 12th), Admission
-                      Number, Roll Number, Birth Date and Guardian Name. Leave Section blank only
-                      for a class with no sections.
-                    </p>
+                  <div className="import-template-banner-left">
+                    <span className="import-template-icon" aria-hidden="true">
+                      <FileSpreadsheet size={18} />
+                    </span>
+                    <div className="import-template-banner-copy">
+                      <strong>Need the template?</strong>
+                      <span>
+                        Ensure your columns match: Class, Section, Admission No, Roll No, Birth Date
+                        &amp; Guardian Name.
+                      </span>
+                    </div>
                   </div>
                   <Button
                     variant="secondary"
                     disabled={busy}
                     onClick={() => downloadClassStudentTemplate(name, sections)}
                   >
+                    <Download size={14} aria-hidden="true" />
                     Download Sample Excel
                   </Button>
                 </div>
-                <div className="import-dropzone-card">
-                  <div className="import-dropzone-header">
-                    <strong>Step 2: Upload your filled Excel workbook</strong>
-                    <span className="import-dropzone-badge">.xlsx · Max 1,000 rows · 1 MiB</span>
-                  </div>
-                  <label className="field">
-                    Excel file (.xlsx)
+
+                {!grid ? (
+                  <label className="import-dropzone-empty">
+                    <span className="sr-only">Excel file (.xlsx)</span>
+                    <span className="import-dropzone-cloud" aria-hidden="true">
+                      <UploadCloud size={22} />
+                    </span>
+                    <span className="import-dropzone-title">
+                      {busy ? 'Reading workbook…' : 'Choose Excel file or drag & drop here'}
+                    </span>
+                    <p className="import-dropzone-sub">
+                      Supports .xlsx up to 1,000 rows (Max 1 MiB)
+                    </p>
+                    <span className="import-browse-btn" aria-hidden="true">
+                      Browse File
+                    </span>
                     <input
+                      className="import-file-hidden"
+                      aria-label="Excel file (.xlsx)"
                       type="file"
                       accept=".xlsx"
                       disabled={busy}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         e.target.value = '';
-                        setGrid(null);
-                        setError('');
-                        setFileName(file?.name ?? '');
-                        if (!file) return;
-                        setBusy(true);
-                        try {
-                          setGrid(await readRosterFile(file, 'students', STUDENT_IMPORT_HEADERS));
-                        } catch (cause) {
-                          setError(
-                            cause instanceof Error ? cause.message : 'Unable to read workbook.',
-                          );
-                        } finally {
-                          setBusy(false);
-                        }
+                        await handleFileSelect(file);
                       }}
                     />
                   </label>
-                  {grid && (
-                    <p role="status" className="import-file-ready">
-                      <span>
-                        ✓ {fileName} · {grid.length - 1} rows selected. Preview before importing.
+                ) : (
+                  <div className="import-dropzone-filled">
+                    <div className="import-file-info">
+                      <span className="import-file-icon-box" aria-hidden="true">
+                        <CheckCircle2 size={22} />
                       </span>
-                    </p>
-                  )}
-                </div>
-                <div className="import-options-card">
-                  <h4 className="import-options-card-title">
-                    Step 3: Choose class routing & duplicate handling
-                  </h4>
-                  <div className="student-timing-form-grid">
-                    <label className="field">
-                      Which classes are in this file?
-                      <select
-                        value={scope}
+                      <div className="import-file-details">
+                        <div className="import-file-name-row">
+                          <strong>{fileName}</strong>
+                          <span className="import-validated-pill">Validated</span>
+                        </div>
+                        <p role="status" className="import-file-meta">
+                          ✓ {fileName} · {grid.length - 1} rows selected. Preview before importing.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="import-file-actions">
+                      <label className="import-replace-btn">
+                        <RefreshCw size={13} aria-hidden="true" />
+                        Replace file
+                        <input
+                          className="import-file-hidden"
+                          aria-label="Excel file (.xlsx)"
+                          type="file"
+                          accept=".xlsx"
+                          disabled={busy}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = '';
+                            await handleFileSelect(file);
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="import-remove-btn"
+                        title="Remove file"
+                        aria-label="Remove selected file"
                         disabled={busy}
-                        onChange={(e) => setScope(e.target.value)}
+                        onClick={() => {
+                          setGrid(null);
+                          setFileName('');
+                          setError('');
+                        }}
                       >
-                        <option value="workbook">Use the Class column</option>
-                        {name && <option value="selected">Only the selected class: {name}</option>}
-                      </select>
-                      <small>
-                        Read the Class column for each student, or restrict the file to this class.
-                      </small>
-                    </label>
-                    <label className="field">
-                      If an admission number already exists
-                      <select
-                        value={mode}
-                        disabled={busy}
-                        onChange={(e) => setMode(e.target.value as 'create' | 'update')}
-                      >
-                        <option value="create">Keep existing students unchanged</option>
-                        <option value="update">Update existing student details</option>
-                      </select>
-                      <small>
-                        Match by the numeric part of Admission Number: SH-12 and AB-12 identify the
-                        same record.
-                      </small>
-                    </label>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                  <p className="import-note">
+                )}
+
+                <div className="import-config-grid">
+                  <div className="import-config-card">
+                    <div className="import-config-card-head">
+                      <label className="field" style={{ width: '100%' }}>
+                        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <strong style={{ color: '#1e293b', fontSize: 12 }}>
+                            Which classes are in this file?
+                          </strong>
+                          <span className="import-config-tag">Class Routing</span>
+                        </span>
+                        <select
+                          value={scope}
+                          disabled={busy}
+                          onChange={(e) => setScope(e.target.value)}
+                        >
+                          <option value="workbook">Use the Class column</option>
+                          {name && <option value="selected">Only the selected class: {name}</option>}
+                        </select>
+                      </label>
+                    </div>
+                    <small>
+                      Read the Class column for each student, or restrict the file to this class.
+                    </small>
+                  </div>
+
+                  <div className="import-config-card">
+                    <div className="import-config-card-head">
+                      <label className="field" style={{ width: '100%' }}>
+                        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <strong style={{ color: '#1e293b', fontSize: 12 }}>
+                            If an admission number already exists
+                          </strong>
+                          <span className="import-config-tag">Duplicate Handling</span>
+                        </span>
+                        <select
+                          value={mode}
+                          disabled={busy}
+                          onChange={(e) => setMode(e.target.value as 'create' | 'update')}
+                        >
+                          <option value="create">Keep existing students unchanged</option>
+                          <option value="update">Update existing student details</option>
+                        </select>
+                      </label>
+                    </div>
+                    <small>
+                      Match by the numeric part of Admission Number: SH-12 and AB-12 identify the
+                      same record.
+                    </small>
+                  </div>
+                </div>
+
+                <div className="import-info-strip">
+                  <Info size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
+                  <p>
                     {mode === 'update'
                       ? 'Add new students and update matching profiles. Blank optional cells clear existing values. Existing classes and roll numbers stay unchanged.'
                       : 'Add new students and skip identical records. Existing students with different details are flagged for review.'}
                   </p>
                 </div>
+
                 {error && (
                   <p role="alert" className="form-error">
                     {error}
                   </p>
                 )}
+
                 <div className="modal-actions">
                   <Button variant="secondary" disabled={busy} onClick={guard.requestClose}>
                     Cancel
@@ -224,6 +318,7 @@ export default function LiveStudentImport({
                     }}
                   >
                     {busy ? 'Preparing preview…' : 'Next: preview'}
+                    {!busy && <ArrowRight size={14} aria-hidden="true" />}
                   </Button>
                 </div>
                 <History schoolId={schoolId} kind="students" openJob={openJob} />

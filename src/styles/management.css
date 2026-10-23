@@ -94,7 +94,23 @@
 .teacher-directory .toolbar {
   flex-wrap: wrap;
 }
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.panel-header-actions .search-input {
+  min-width: 240px;
+}
 @media (max-width: 600px) {
+  .panel-header-actions {
+    width: 100%;
+  }
+  .panel-header-actions .search-input {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
   .teacher-profile-grid,
   .teacher-assignment-grid {
     grid-template-columns: 1fr;

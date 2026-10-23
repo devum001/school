@@ -116,20 +116,20 @@ export default function LiveStaff({
           <Panel
             title={teachersOnly ? 'Teachers' : 'Staff & HR'}
             action={
-              manage && (
-                <Button onClick={() => setEditing('new')}>
-                  {teachersOnly ? 'Add Teacher' : 'Add Staff'}
-                </Button>
-              )
+              <div className="panel-header-actions">
+                <SearchInput
+                  value={query}
+                  onChange={setQuery}
+                  placeholder="Search staff name or code…"
+                />
+                {manage && (
+                  <Button onClick={() => setEditing('new')}>
+                    {teachersOnly ? 'Add Teacher' : 'Add Staff'}
+                  </Button>
+                )}
+              </div>
             }
           >
-            <div className="toolbar">
-              <SearchInput
-                value={query}
-                onChange={setQuery}
-                placeholder="Search staff name or code…"
-              />
-            </div>
             {state.error && <LoadState {...state} loading={false} retry={state.reload} />}
             {!state.error && (
               <>

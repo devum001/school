@@ -1,9 +1,12 @@
+import { Check } from 'lucide-react';
 import './import.css';
+
 const STEP_META = [
-  { label: 'File & options', hint: 'Download template & choose workbook' },
-  { label: 'Review & correct', hint: 'Check rows & fix flagged cells' },
-  { label: 'Submit', hint: 'Confirm & enroll students' },
+  { label: 'Upload File' },
+  { label: 'Review & Correct' },
+  { label: 'Submit' },
 ];
+
 export default function ImportSteps({ step }: { step: 1 | 2 | 3 }) {
   return (
     <ol className="import-steps" aria-label="Import steps">
@@ -16,11 +19,19 @@ export default function ImportSteps({ step }: { step: 1 | 2 | 3 }) {
             data-step-state={state}
             aria-current={step === number ? 'step' : undefined}
           >
-            <span>{step > number ? '✓' : number}</span>
-            <div className="import-step-copy">
+            <div className="import-step-pill">
+              <span className="import-step-num" aria-hidden="true">
+                {step > number ? <Check size={12} strokeWidth={3} /> : number}
+              </span>
               <strong>{item.label}</strong>
-              <small>{item.hint}</small>
             </div>
+            {index < STEP_META.length - 1 && (
+              <div
+                className="import-step-divider"
+                data-done={step > number ? 'true' : undefined}
+                aria-hidden="true"
+              />
+            )}
           </li>
         );
       })}
