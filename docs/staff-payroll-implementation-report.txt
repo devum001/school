@@ -1,0 +1,191 @@
+STAFF PAYROLL AND TEACHER ATTENDANCE — IMPLEMENTATION REPORT
+
+Scope
+Implemented live staff salary setup, effective-month salary and attendance policies,
+manual attendance decisions, teacher location-based punch-in/out, leave requests and
+paid/unpaid review, monthly payroll drafts and approval, partial/full payments,
+advance issuance/recovery, outstanding balances, and printable salary statements.
+Existing staff entry and Excel import remain the source of staff identities.
+Existing demo screens and their local repository have not been replaced.
+The new approval/punch workflow is live-only; the demo retains its existing salary
+and attendance behavior. There is no live fallback to local demo records.
+
+Where to use it
+- Staff & HR: existing directory and import, plus Attendance, Leave and Salary Expenses.
+- Finance (/fees): salary workspace; /attendance/staff: staff attendance review.
+- School settings > Staff & Payroll: Departments, Work & Leave, Payroll.
+- My attendance & salary (/staff/self): linked account's own records and punch controls.
+- Roles & Permissions: six explicit new capabilities, independently assignable.
+Teacher accounts need attendance.self and an active membership. Payroll managers
+need payroll.view and payroll.manage. Approval and payment permissions are separate.
+School account linking also requires memberships.view and memberships.manage.
+Super Admin access does not bypass school membership/tenant checks.
+
+Financial behavior
+Amounts are integer paise. Salary period is a calendar month; payment due day is in
+the following month. A due date never creates a payment or marks salary paid.
+Joining/leaving prorates monthly earnings using calendar employment days.
+Unpaid-day deduction uses configured basic/gross basis and calendar/working/30 divisor.
+Missed punches, unmarked attendance and unresolved leave block approval, rather than
+automatically reducing pay. Admins explicitly choose paid/unpaid attendance treatment.
+Approval is available after the salary month ends and freezes its financial snapshot.
+Changes to approved periods require an adjustment in an open period.
+Payment records are append-only, idempotent on retry, and cannot exceed outstanding pay.
+Advance recovery is bounded by the outstanding advance ledger; approved payroll reserves
+that recovery even while its salary payment is outstanding.
+These screens record payments already made. They do not send money through a bank.
+
+Attendance and leave
+School-specific campus centres and radii: 25–1,000 metres, up to ten locations.
+Fresh device coordinates and accuracy are checked against the school area; the accuracy
+circle must fit inside the radius. Server time and school timezone determine the day.
+Only linked, active teaching staff with punch attendance enabled may punch.
+One in/out pair per local day; incomplete/late/short attendance requires review.
+Original punch events remain separate from administrative attendance decisions.
+A person cannot approve their own leave or attendance correction.
+Leave requests are prospective; the reviewer chooses paid or unpaid. The current paid
+allowance is measured per calendar year, not per academic year. Approved charge dates
+and paid days are retained when work-day settings subsequently change.
+Default start/end/late/half-day rules and paid allowance follow the existing demo values
+(08:00–15:00, 08:15, 210 minutes, 18 paid days). Configure school policy before use.
+The live version currently enforces one combined paid allowance; the demo's separate
+casual/sick quotas and academic-year leave-limit configuration are not connected to it.
+
+Security and persistence
+Every write rechecks school membership and explicit permission grants inside the
+existing school-authorization transaction. CSRF checks apply to all HR mutations.
+Staff.view alone does not expose salary data. Self-service filters to the linked staff ID.
+Revision checks protect configuration, decisions and payroll drafts against lost updates.
+Draft approval detects changes in calculation inputs. Audit events record every mutation.
+ObjectIds are serialized as strings; errors expose only fixed public messages.
+Read requests use the existing scoped, coalesced cache; writes invalidate reads.
+Date/month indexes support the actual HR queries. No per-row frontend polling is added.
+School access/role behavior remains based on stored grants; an initial owner bypass was
+caught by regression tests and removed.
+A read-only readiness check rejects HR requests if the declared indexes are missing.
+Application startup does NOT create HR collections or change permissions.
+
+Activation — PREPARED, NOT EXECUTED AGAINST YOUR DATABASE
+From /home/devendra/scholl backend/type-ORM-backend-Node:
+
+  ./node_modules/.bin/ts-node commands/initialize-staff-hr.ts --preflight
+  ./node_modules/.bin/ts-node commands/initialize-staff-hr.ts --apply
+  ./node_modules/.bin/ts-node commands/grant-staff-hr-owner-permissions.ts --apply
+
+The first command reports collection presence; it is not a full duplicate-index audit.
+The second creates the eight new HR collections and declared indexes; it does not
+remove existing collections, records or indexes. Index conflicts fail explicitly.
+The third explicitly grants the six HR permissions to owner roles of active schools,
+with operator audit events. Other role permissions are not changed. Re-running this
+explicit grant command can restore HR permissions deliberately removed from an owner.
+New schools already receive the current explicit owner permission catalog.
+Review these commands before applying them to the configured database.
+Then restart the backend and refresh/re-sign-in so membership permissions refresh.
+Configure campus coordinates, timezone, workdays/holidays and payroll rules. Create or
+select teacher login accounts, grant attendance.self, link them under Salary setup,
+and enable punch attendance with its effective month.
+For phones deployed away from localhost, serve the frontend over HTTPS so browser
+geolocation is available. Keep exact allowed origins and secure authentication settings.
+No .env, credentials, dependencies or lockfiles were changed by this task.
+
+Verification
+- Backend full Jest suite: 29 suites, 190 tests passed in the isolated MongoDB replica fixture.
+- Subsequent focused HR rerun: 9 tests passed with final defaults/indexes.
+- Frontend Vitest: 48 files, 282 tests passed.
+- Frontend/backend TypeScript checks passed. Operator commands were also type-checked
+  without executing them.
+- Backend lint passed. Frontend lint: zero errors; two existing Fast Refresh warnings
+  in AppIcon.tsx and Primitives.tsx.
+- Backend build and frontend demo/live production builds were run; final rerun results
+  passed for backend and both frontend modes.
+- Live Chrome tests cover salary setup, approval, partial payment, reload persistence,
+  statement/mobile width, teacher account linking, campus configuration, accepted punch,
+  outside-campus rejection, punch-out and unsaved-change confirmation.
+- New demo Chrome test passed: local staff salary edit/payment persists after reload
+  and issues no backend API requests.
+- Older demo staff-hierarchy/staff-tracker run: 2 passed, 3 failed. Failures reference
+  absent .school-finance-values and .attendance-rule-section elements in existing demo
+  screens. The affected demo implementation files were not modified in this task.
+  Those legacy failures are NOT counted as passing.
+- No Atlas connection, real database runtime test, real payment, or physical-device
+  geolocation/anti-spoof test was performed. Browser geolocation was simulated.
+
+Commands run (checks, including failed exploratory runs)
+Frontend: npm run typecheck; npm run lint; npm test;
+  VITE_APP_MODE=demo npm run build; VITE_APP_MODE=live npm run build;
+  Playwright with playwright.hr.config.ts, hr-demo-preservation.e2e.ts,
+  staff-hierarchy.e2e.ts and staff-tracker.e2e.ts (Chrome executable override).
+Backend: tsc --noEmit --incremental false; eslint . --ext .ts;
+  jest --runInBand; focused hr.integration and foundation.integration suites; yarn build.
+Targeted Prettier/ESLint formatting was applied only to changed source files.
+A TypeScript compiler API check included the two new operator commands without running them.
+Git status was inspected and saved before changes in both repositories.
+No reset, clean, commit or push was performed. Existing unrelated edits were preserved.
+
+Changed/added frontend files
+src/services/hrService.ts
+src/services/hrService.test.ts
+src/services/apiService.ts
+src/services/schoolAccessService.ts
+src/features/hr/EmploymentDialog.tsx
+src/features/hr/HrActions.tsx
+src/features/hr/HrForms.tsx
+src/features/hr/HrSettingsPanel.tsx
+src/features/hr/HrWorkspace.tsx
+src/features/hr/StaffAccountPicker.tsx
+src/features/hr/StaffDepartmentOptions.tsx
+src/features/hr/hr.css
+src/features/teachers/LiveStaff.tsx
+src/features/live/LiveSchoolSettings.tsx
+src/features/live/LiveSchoolWorkspace.tsx
+src/app/liveRouter.tsx
+playwright.hr.config.ts
+playwright.config.ts (exclude live-only test from demo runs)
+tests/staff-payroll-live.e2e.ts
+tests/hr-demo-preservation.e2e.ts
+this report
+
+Changed/added backend files
+src/api/models/hr.models.ts
+src/api/controllers/hr.controller.ts
+src/api/controllers/requests/hr.request.ts
+src/api/controllers/registeredControllers.ts
+src/api/middlewares/hrReady.middleware.ts
+src/api/middlewares/errorHandler.middleware.ts
+src/api/services/hrCommon.ts
+src/api/services/hrRules.ts
+src/api/services/hrSettings.service.ts
+src/api/services/hrAttendance.service.ts
+src/api/services/hrLeave.service.ts
+src/api/services/hrPayroll.service.ts
+src/api/services/hrRead.service.ts
+src/security/permissions.ts
+src/security/foundation.integration.test.ts (assert current catalog size, not old literal 21)
+src/test/prepareFoundation.ts (isolated-test HR initialization only)
+src/test/hr.integration.test.ts
+commands/initialize-staff-hr.ts
+commands/grant-staff-hr-owner-permissions.ts
+
+Limits and remaining work
+GPS is a convenience control, not spoof-proof proof of physical presence. No biometric,
+device-attestation or continuous tracking system is implemented. Use admin review for
+location failures. Overnight/multiple-shift attendance needs a separate workflow.
+The HR workspace has explicit bounds: 500 staff, 16,000 daily records/month, 2,000 leave
+records in the selected month, and 5,000 advance/payment records in its result scope.
+It fails clearly instead of returning a silently truncated financial ledger. Large-school
+pagination and measured production load testing remain future work; no latency SLA claimed.
+The existing demo has not been upgraded to the new live approval/payment model.
+This implementation does not calculate statutory tax, PF/ESI, bank transfers or automatic
+payment reversals. Payment corrections need an explicit audited reversal workflow before
+allowing operators to amend an incorrectly entered payment.
+Existing demo document-template customization is not yet used by the live printable
+salary statement. The statement is an explicit live calculation/payment record.
+The live staff import continues importing existing profile columns; salary configuration
+is individual, and is not silently inferred from Excel or converted into login accounts.
+
+Approval boundary
+Automatic approval review rejected adding collection/index creation to startup because
+that could mutate the configured database under the prior no-migrations restriction.
+That rejected startup change was not applied. The reviewable alternative is the separate
+manual initialization and explicit permission-grant commands above. They require approval
+before execution against the configured database.

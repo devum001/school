@@ -1,0 +1,281 @@
+.setup-workspace,
+.setup-stack {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.setup-progress {
+  border-top: 3px solid #c8af70;
+}
+.setup-intro {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+}
+.setup-intro h2 {
+  font-size: 24px;
+  margin: 8px 0;
+}
+.setup-intro p {
+  color: #526174;
+  line-height: 1.6;
+}
+.setup-count {
+  white-space: nowrap;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #e7f1ef;
+  color: #174c4b;
+  font-weight: 700;
+}
+.setup-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.setup-steps a {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dbe3eb;
+  border-radius: 8px;
+  padding: 14px;
+  color: #243e52;
+}
+.setup-steps a[aria-current] {
+  border-color: #245e63;
+  background: #edf5f3;
+}
+.setup-steps small {
+  display: block;
+  margin-top: 4px;
+  color: #526174;
+  text-transform: capitalize;
+}
+.setup-step-icon {
+  display: flex;
+  color: #5f7182;
+}
+.setup-step-icon.complete {
+  color: #246347;
+}
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  min-width: 0;
+}
+.setup-weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.setup-class-list {
+  display: grid;
+  gap: 10px;
+}
+.setup-class-item {
+  border: 1px solid #dae3eb;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.setup-class-item.selected {
+  background: #edf5f3;
+  border-color: #245e63;
+}
+.setup-class-select {
+  display: grid;
+  gap: 6px;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: #193a4c;
+  cursor: pointer;
+}
+.setup-class-select small {
+  color: #526174;
+}
+.setup-records,
+.setup-review {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.setup-records li,
+.setup-review li {
+  padding: 16px 0;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.setup-review p {
+  margin: 6px 0 0;
+  color: #526174;
+}
+.setup-workspace a:focus-visible,
+.setup-class-select:focus-visible {
+  outline: 3px solid #248887;
+  outline-offset: 3px;
+}
+@media (max-width: 900px) {
+  .setup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .setup-steps {
+    grid-template-columns: 1fr;
+  }
+  .setup-intro {
+    align-items: start;
+    flex-direction: column;
+  }
+  .setup-class-item {
+    flex-direction: column;
+  }
+}
+.bulk-tools {
+  border: 1px solid #dbe3eb;
+  border-radius: 10px;
+  padding: 18px;
+  margin: 20px 0;
+  display: grid;
+  gap: 14px;
+}
+.bulk-tools legend {
+  font-weight: 700;
+  padding: 0 8px;
+}
+.bulk-grades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+}
+.bulk-grades label,
+.bulk-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.bulk-grades input,
+.bulk-check input {
+  width: auto;
+}
+.bulk-matrix {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+}
+.bulk-class {
+  padding: 16px;
+  background: #f7fafb;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+.bulk-class h3 {
+  margin-top: 0;
+}
+.bulk-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+.bulk-item input:not([type='checkbox']) {
+  flex: 1;
+  min-width: 120px;
+  max-width: 320px;
+}
+.bulk-item small {
+  min-width: 50px;
+}
+.onboarding-table {
+  width: 100%;
+  overflow: auto;
+  margin: 20px 0;
+}
+.onboarding-table table {
+  min-width: 620px;
+  width: 100%;
+  border-collapse: collapse;
+}
+.onboarding-table th,
+.onboarding-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+  max-width: 240px;
+  overflow-wrap: anywhere;
+}
+.onboarding-table th {
+  background: #f4f7fa;
+}
+.onboarding-table caption {
+  text-align: left;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.onboarding-table small,
+.setup-records small {
+  display: block;
+  margin-top: 6px;
+  color: #526174;
+}
+.roster-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.roster-totals > div {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  background: #edf5f3;
+  border-radius: 10px;
+}
+.roster-totals strong {
+  font-size: 25px;
+  color: #174c4b;
+}
+.roster-totals span {
+  text-transform: capitalize;
+}
+.roster-upload {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  border: 2px dashed #98b5b3;
+  border-radius: 10px;
+  background: #f7fbfa;
+}
+.setup-workspace details > summary {
+  cursor: pointer;
+  padding: 16px 0;
+  font-weight: 600;
+}
+.setup-workspace progress {
+  width: 100%;
+  accent-color: #245e63;
+}
+@media (max-width: 600px) {
+  .bulk-item {
+    align-items: stretch;
+  }
+  .bulk-tools {
+    padding: 12px;
+  }
+  .bulk-grades {
+    gap: 14px;
+  }
+}

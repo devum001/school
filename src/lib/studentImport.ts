@@ -1,19 +1,12 @@
+import { rollValue, validRoll } from './studentIdentifiers';
+import { parseCalendarDate } from './displayFormat';
+import { classNameKey } from './classNames';
 import { z } from 'zod';
 import type { DemoState } from '../types/domain';
 import { saveStudent, type StudentInput } from './management';
 import { excelBirthDate, type ExcelCell } from './xlsx';
 
-export const STUDENT_IMPORT_HEADERS = [
-  'Student Name',
-  'Admission Number',
-  'Birth Date',
-  'Guardian Name',
-  'Relationship',
-  'Parent Mobile',
-  'Address',
-  'Roll Number',
-  'Section',
-];
+export { STUDENT_IMPORT_HEADERS } from './studentTemplate';
 export interface StudentImportRow {
   row: number;
   input: StudentInput;
@@ -41,11 +34,10 @@ export function previewStudentImport(
   const schoolClass = state.classes.find(
     (c) => c.schoolId === state.school.id && c.id === (legacySection?.classId ?? scopeId),
   );
-  if (!schoolClass) throw new Error('Choose a class from this school.');
+  if (!schoolClass && !(grid[0] ?? []).some((h) => String(h).trim().toLowerCase() === 'class'))
+    throw new Error('Choose a class from this school or include the Class column.');
   if (grid.length > 1001) throw new Error('Import up to 1,000 students per file.');
-  const sections = state.sections.filter(
-    (s) => s.schoolId === state.school.id && s.classId === schoolClass.id,
-  );
+
   const headers = (grid[0] ?? []).map((value) => String(value).trim().toLowerCase());
   for (const header of [
     'Student Name',
@@ -66,12 +58,28 @@ export function previewStudentImport(
     if (!cells.some((value) => String(value).trim() !== '')) return;
     const value = (header: string) => cells[headers.indexOf(header.toLowerCase())] ?? '';
     const text = (header: string) => String(value(header)).trim();
+    const classMatches = text('Class')
+      ? state.classes.filter(
+          (c) =>
+            c.schoolId === state.school.id && classNameKey(c.name) === classNameKey(text('Class')),
+        )
+      : [];
+    const targetClass = headers.includes('class')
+      ? classMatches.length === 1
+        ? classMatches[0]
+        : undefined
+      : schoolClass;
+    const sections = state.sections.filter(
+      (s) => s.schoolId === state.school.id && s.classId === targetClass?.id,
+    );
     const matches = sections.filter((s) => sectionKey(s.name) === sectionKey(text('Section')));
     const section = text('Section')
       ? matches.length === 1
         ? matches[0]
         : undefined
-      : legacySection;
+      : !headers.includes('class')
+        ? legacySection
+        : undefined;
     const roll = text('Roll Number');
     let birthDate = text('Birth Date'),
       dateError = '';
@@ -79,8 +87,9 @@ export function previewStudentImport(
       if (typeof value('Birth Date') === 'number')
         birthDate = excelBirthDate(Number(value('Birth Date')));
     } catch {
-      dateError = 'Use a real birth date in YYYY-MM-DD format.';
+      dateError = 'Use a real birth date in DD-MM-YYYY format.';
     }
+    birthDate = parseCalendarDate(birthDate) ?? birthDate;
     const input: StudentInput = {
       name: text('Student Name'),
       admissionNumber: text('Admission Number'),
@@ -92,22 +101,28 @@ export function previewStudentImport(
       },
       address: text('Address'),
       status: 'active',
-      classId: schoolClass.id,
+      classId: targetClass?.id ?? '',
       sectionId: section?.id ?? '',
-      rollNumber: Number(roll),
+      rollNumber: rollValue(roll),
     };
     let error: string | undefined;
     try {
-      if (!section)
+      if (!targetClass)
         throw new Error(
-          `Section must match a configured section of ${schoolClass.name}: ${sections.map((s) => s.name).join(', ')}.`,
+          'Class must match exactly one configured class. Fill the Class column; unknown or ambiguous classes are not created automatically.',
+        );
+      if (!section && (text('Section') || sections.length))
+        throw new Error(
+          `Section must match a configured section of ${targetClass.name}: ${sections.map((s) => s.name).join(', ')}.`,
         );
       if (dateError || !z.iso.date().safeParse(birthDate).success)
         throw new Error(
-          dateError || 'Birth Date must be a valid YYYY-MM-DD date or Excel date cell.',
+          dateError || 'Birth Date must be a valid DD-MM-YYYY date or Excel date cell.',
         );
-      if (!/^\d+$/.test(roll) || Number(roll) <= 0)
-        throw new Error('Enter Roll Number as a positive whole number.');
+      if (!validRoll(roll))
+        throw new Error(
+          'Enter a valid Roll Number using letters, numbers, hyphens, slashes or underscores.',
+        );
       if (!input.admissionNumber) throw new Error('Admission Number is required.');
       validationState = saveStudent(validationState, input);
     } catch (cause) {

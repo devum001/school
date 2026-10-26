@@ -1,0 +1,128 @@
+.hr-personal-calendar {
+  margin: 24px;
+  min-width: 0;
+}
+.hr-personal-calendar-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.hr-personal-calendar-heading span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.hr-personal-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+}
+.hr-calendar-weekday {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 6px 0;
+}
+.hr-calendar-day {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 5px;
+  min-height: 65px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+  cursor: pointer;
+}
+.hr-calendar-day span {
+  font-size: 10px;
+}
+.hr-calendar-day[aria-current='date'] {
+  outline: 2px solid var(--school-forest, #285e60);
+  outline-offset: 1px;
+}
+.hr-calendar-day[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+.hr-day-status-present {
+  background: #dff2e6;
+  color: #215d40;
+}
+.hr-day-status-late {
+  background: #fff0cb;
+  color: #855711;
+}
+.hr-day-status-half-day {
+  background: #eee4fa;
+  color: #634391;
+}
+.hr-day-status-absent {
+  background: #fce3e1;
+  color: #943c3b;
+}
+.hr-day-status-review {
+  background: #ffe9d4;
+  color: #8b511c;
+}
+.hr-day-status-leave {
+  background: #dceefa;
+  color: #295e85;
+}
+.hr-day-status-holiday,
+.hr-day-status-off {
+  background: #edf0f2;
+  color: #5b6571;
+}
+.hr-day-status-unmarked,
+.hr-day-status-upcoming {
+  background: #fafcfb;
+  color: #63716c;
+}
+.hr-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+  font-size: 11px;
+}
+.hr-calendar-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.hr-calendar-legend i {
+  width: 12px;
+  height: 12px;
+  border: 1px solid #bccbc5;
+  border-radius: 3px;
+}
+.hr-calendar-day-detail {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--surface-toolbar);
+  font-size: 12px;
+  line-height: 1.8;
+}
+@media (max-width: 540px) {
+  .hr-personal-calendar {
+    margin: 16px 10px;
+  }
+  .hr-personal-calendar-grid {
+    gap: 3px;
+  }
+  .hr-calendar-day {
+    border-radius: 6px;
+    min-height: 52px;
+    padding: 8px 1px;
+  }
+  .hr-calendar-day span {
+    font-size: 8px;
+    overflow-wrap: anywhere;
+  }
+}
+.hr-day-status-half-day-leave {
+  background: #e5ecfa;
+  color: #4e5186;
+}

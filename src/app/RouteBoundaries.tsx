@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { Outlet, useRouteError } from 'react-router-dom';
+import { AppLoader } from '../components/ui/Primitives';
 export function RouteError() {
   const error = useRouteError();
   return (
@@ -19,8 +20,11 @@ export function LazyBoundary() {
     <Suspense
       fallback={
         <div className="loading-state" role="status">
-          <span className="spinner" />
-          Opening your workspace…
+          <AppLoader
+            size="xl"
+            label="Opening your workspace…"
+            message="Opening your workspace…"
+          />
         </div>
       }
     >

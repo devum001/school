@@ -113,7 +113,7 @@ describe('bulk marks import with section and roll numbers', () => {
     expect(state.results).toHaveLength(3);
   });
 
-  it('matches the same roll number in different sections to different enrollments', () => {
+  it('matches repeated rolls across sections to the correct enrollment', () => {
     const { exam, students, row, headers } = fixture();
     const sectionA = students.find(
       (student) => student.sectionName === 'A' && student.enrollment.rollNumber === 1,

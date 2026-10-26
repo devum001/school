@@ -1,0 +1,110 @@
+Portal permissions and staff flow — 20 October 2026
+
+What the permission catalogue actually covers
+The backend exposes 27 school permissions:
+- Memberships: view/manage
+- Roles: view/manage
+- School profile: view/manage
+- Academic years: view/manage
+- Classes, sections, subjects: view/manage for each
+- Staff, students, teaching assignments: view/manage for each
+- Audit: view
+- Own attendance and salary: self-service (also leave requests)
+- Attendance: manage (includes reviewing attendance and leave)
+- Payroll: view, manage, approve, pay
+These are not individual switches for every demo feature or button. Departments and
+work/payroll rules share existing HR permissions; leave approval shares attendance
+management. Notifications, examinations/marks workflows and other unconnected demo
+features do not gain authority from imaginary permissions. They remain in demo;
+placeholder-only areas are no longer offered as usable live navigation.
+
+Role editor
+The editor displays every capability returned by the backend across View and Manage
+tabs. Own attendance and salary is in View; salary approval and payment are explicit
+Manage choices. Both tabs preserve selections. Selecting a manage capability includes
+its matching view capability when one exists. Removing that view removes dependent
+manage choices. Delegation remains restricted to the actor's granted permissions.
+Backend checks remain authoritative. Hidden links do not replace authorization.
+
+Live navigation
+The shared shell accepts a route-visibility filter; demo defaults remain unchanged.
+Students, Teachers/Staff, Finance and staff attendance appear only for users who can
+read/use those areas. Unsupported live placeholder navigation is hidden. Inaccessible
+routes redirect to the user's available landing area. Account settings remain available.
+Settings tabs/subtabs also use the actual view/manage permissions. Teacher self-service
+users see their own attendance/salary link and account settings, not school-wide records.
+Unavailable notifications and unauthorized student search are removed from live controls.
+
+Staff flow
+Add staff/teacher -> save profile -> salary and attendance setup opens directly.
+Setup may be closed and finished later. Existing records have Salary & attendance in
+the directory. The monthly salary area also offers Enable login for eligible unlinked
+staff, so creating their account no longer requires returning to a separate screen.
+Monthly workflow stays Prepare salary -> review/approve -> Record payment -> Statement.
+Payment records represent actual money paid; a simple paid flag would lose partial
+payments, balances and audit history. Advances are under More actions.
+Teacher directory and its HR tabs are restricted to teaching staff. Staff & HR remains
+the combined directory, including teachers. Department CRUD remains in school settings.
+
+Personal attendance
+The self-service endpoint already returns only the linked user's records; it is still
+used exclusively. Responsive seven-column monthly calendar, coloured statuses, text
+labels, legend, keyboard-focusable days and details on selection. Explicit absent,
+late, half-day, review, leave, half-day leave, holidays, off days, unmarked and upcoming
+states are distinct. Missing records are not invented absences. Leave snapshots use
+approvedDates where present. Salary is shown in a compact personal card with Statement.
+
+Login/logout
+Branded forest/cream sign-in layout using existing primitives, responsive layout,
+password visibility toggle and existing secure session flow. Logout remains an action
+with a progress state, followed by the sign-in screen. No authentication storage or
+backend security behavior was replaced.
+
+Files changed
+src/components/layout/AppShell.tsx
+src/components/layout/TopbarControls.tsx
+src/app/liveRouter.tsx
+src/features/auth/LoginScreen.tsx
+src/features/live/LiveSchoolWorkspace.tsx
+src/features/live/LiveSchoolSettings.tsx
+src/features/live/LiveRoles.tsx
+src/features/live/live.css
+src/features/live/portalAccess.ts and portalAccess.test.ts (new)
+src/features/live/permissionChoices.ts (new)
+src/features/settings/SettingsPage.tsx
+src/features/teachers/LiveStaff.tsx
+src/features/hr/HrWorkspace.tsx and hr.css
+src/features/hr/AttendanceCalendar.tsx and hr-personal-calendar.css (new)
+src/features/hr/attendanceCalendarModel.ts and attendanceCalendarModel.test.ts (new)
+src/services/hrService.ts (optional approved leave date snapshots)
+tests/staff-payroll-live.e2e.ts
+
+No backend source, database schema, dependencies, lockfiles or configured school records
+were changed. The existing authenticated APIs are reused. Preserve current uncommitted
+work; no reset/clean/commit was performed.
+
+Verification executed
+- npm test: 50 files, 287 tests passed.
+- VITE_APP_MODE=live npm run build: passed (includes TypeScript checking).
+- VITE_APP_MODE=demo npm run build: passed (includes TypeScript checking).
+- npm run lint: no errors; two existing react-refresh/only-export-components warnings
+  in src/components/ui/AppIcon.tsx and src/components/ui/Primitives.tsx.
+- PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test
+  --config=playwright.hr.config.ts: 3 passed against the isolated local test backend.
+  Covers salary setup/payment, campus punching, department management, teacher login,
+  permission-filtered sidebar, teaching-only salary scope and mobile calendar layout.
+- PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test
+  tests/hr-demo-preservation.e2e.ts --config=playwright.config.ts: 1 passed.
+- git diff --check: passed.
+- Visually inspected desktop login and 390px-wide personal attendance calendar.
+The live browser suite uses isolated test records, not the configured school's database.
+No backend standalone test suite was rerun for this frontend-only change.
+
+Try the flow
+1. As school owner, open Roles & Permissions; create a role using View/Manage.
+2. Add a teacher. Save the profile, then complete salary and attendance setup.
+3. Use Enable login for the teacher and assign the intended school role.
+4. Sign in as that teacher in a separate browser profile. Open My attendance & salary.
+5. As owner, prepare the monthly salary, review/approve and record actual payment.
+   Outstanding balance and payment status follow the recorded amounts.
+Existing demo-only modules still require backend implementation before live access.

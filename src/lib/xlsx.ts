@@ -1,3 +1,4 @@
+import { formatExportCell } from './displayFormat';
 /** Minimal XLSX interchange for the student template, using browser ZIP/XML APIs. */
 export type ExcelCell = string | number;
 const encoder = new TextEncoder();
@@ -200,7 +201,7 @@ const tags = (parent: Document | Element, name: string) =>
   Array.from(parent.getElementsByTagNameNS('*', name));
 export function excelBirthDate(serial: number, date1904 = false): string {
   if (!Number.isInteger(serial) || serial < 1 || serial > 100000 || (!date1904 && serial === 60))
-    throw new Error('Use a real birth date in YYYY-MM-DD format.');
+    throw new Error('Use a real birth date in DD-MM-YYYY format.');
   const base = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 31);
   return new Date(base + (serial - (!date1904 && serial > 60 ? 1 : 0)) * 86400000)
     .toISOString()
@@ -270,15 +271,16 @@ export async function readStudentWorkbook(file: File): Promise<ExcelCell[][]> {
     }
     rows[index] = values;
   }
-  const birthColumn =
-    rows[0]?.findIndex((cell) => String(cell).trim().toLowerCase() === 'birth date') ?? -1;
   const date1904 = ['1', 'true'].includes(
     tags(workbook, 'workbookPr')[0]?.getAttribute('date1904') ?? '',
   );
-  if (birthColumn >= 0)
-    for (const row of rows)
-      if (typeof row?.[birthColumn] === 'number')
-        row[birthColumn] = excelBirthDate(row[birthColumn] as number, date1904);
+  for (const header of ['birth date', 'joined on']) {
+    const column = rows[0]?.findIndex((cell) => String(cell).trim().toLowerCase() === header) ?? -1;
+    if (column >= 0)
+      for (const row of rows)
+        if (typeof row?.[column] === 'number')
+          row[column] = excelBirthDate(row[column] as number, date1904);
+  }
   return Array.from({ length: rows.length }, (_, index) => rows[index] ?? []);
 }
 export function downloadStudentWorkbook(
@@ -287,7 +289,17 @@ export function downloadStudentWorkbook(
   instructions: string[],
   sheetName = 'Students',
 ) {
-  const url = URL.createObjectURL(studentWorkbook(rows, instructions, sheetName)),
+  const url = URL.createObjectURL(
+      studentWorkbook(
+        rows.map((row, index) =>
+          index === 0
+            ? row
+            : row.map((cell, i) => formatExportCell(String(rows[0]?.[i] ?? ''), cell)),
+        ),
+        instructions,
+        sheetName,
+      ),
+    ),
     anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;

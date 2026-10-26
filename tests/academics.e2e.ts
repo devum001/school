@@ -1,14 +1,15 @@
 import { test, expect } from '@playwright/test';
 import { loadAcademicFixture, openSheet, savedAcademics } from './academicFixture';
 
-test('test creation uses subjects and multiple sections without a test type; pencil opens marks later', async ({
+test('test creation uses subjects and multiple sections with a structured test type and assessment maxima; pencil opens marks later', async ({
   page,
 }) => {
   await loadAcademicFixture(page);
   await page.goto('/academics?class=class-8');
   await page.getByRole('button', { name: 'Add Test / Exam', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByLabel('Test type', { exact: true })).toHaveCount(0);
+  await dialog.getByLabel('Test type', { exact: true }).fill('Monthly test');
+  await dialog.getByLabel('Default maximum marks').fill('20');
   await expect(dialog.getByText('Subjects & maximum marks')).toHaveCount(0);
   await dialog.getByLabel('Test name', { exact: true }).fill('October Learning Check');
   await dialog.getByLabel('Grade 8 Section A', { exact: true }).check();
@@ -17,11 +18,11 @@ test('test creation uses subjects and multiple sections without a test type; pen
   await expect(dialog).toHaveCount(0);
   const card = page.locator('.academic-test-card').filter({ hasText: 'October Learning Check' });
   await expect(card).toContainText('Marks Not Added');
-  await expect(card).toContainText('Sections A, B');
+  await expect(card).toContainText('Section A, Section B');
   await card.getByRole('button', { name: 'Add/Edit Marks for October Learning Check' }).click();
-  await expect(dialog.getByLabel('Marks section')).toHaveValue('class-8-a');
-  await expect(dialog.getByLabel('Marks section').locator('option')).toHaveCount(2);
-  await expect(page.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('');
+  await expect(dialog.getByLabel('Marks section')).toHaveValue('');
+  await expect(dialog.getByLabel('Marks section').locator('option')).toHaveCount(3);
+  await expect(page.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('20');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   const saved = await savedAcademics(page);
   expect(saved.exams.find((e) => e.name === 'October Learning Check')?.subjects).toEqual([]);
@@ -41,25 +42,25 @@ test('marks save numbers, A, pending cells and exclude blank subjects with secti
   await second.locator('input').nth(0).fill('A');
   await second.locator('input').nth(2).fill('45');
   await dialog.getByLabel('Marks section').selectOption('class-8-b');
-  await expect(dialog.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('');
-  await dialog.getByLabel('Mathematics maximum marks', { exact: true }).fill('100');
-  await dialog.locator('tbody tr').first().locator('input').first().fill('80');
+  await expect(dialog.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('20');
+  await dialog.locator('tbody tr').first().locator('input').first().fill('16');
   await dialog.getByRole('button', { name: 'Save Marks', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.academic-test-card')).toContainText('Marks Added');
   await page.getByRole('tab', { name: 'Results', exact: true }).click();
   await page.getByRole('tab', { name: 'Recent Results', exact: true }).click();
   await page.getByRole('button', { name: 'View Result', exact: true }).click();
-  await expect(dialog.getByRole('columnheader', { name: /Mathematics/ })).toBeVisible();
-  await expect(dialog.getByRole('columnheader', { name: /English/ })).toBeVisible();
-  await expect(dialog.getByRole('columnheader', { name: /Science/ })).toHaveCount(0);
-  await expect(dialog).toContainText('18/20');
-  await expect(dialog).toContainText('Absent');
-  await expect(dialog).toContainText('45/50');
-  await expect(dialog).toContainText('Pending');
-  await dialog.getByRole('button', { name: 'Close dialog' }).click();
+  const result = page.locator('.assessment-result-page');
+  await expect(result.getByRole('columnheader', { name: /Mathematics/ })).toBeVisible();
+  await expect(result.getByRole('columnheader', { name: /English/ })).toBeVisible();
+  await expect(result.getByRole('columnheader', { name: /Science/ })).toHaveCount(0);
+  await expect(result).toContainText('18/20');
+  await expect(result).toContainText('Absent');
+  await expect(result).toContainText('45/50');
+  await expect(result).toContainText('Pending');
+  await result.getByRole('button', { name: 'Back to results' }).click();
   await page.reload();
-  await expect(page.getByLabel('Recent results section')).toHaveValue('class-8-a');
+  await expect(page.getByLabel('Recent results section')).toHaveValue('');
   const saved = await savedAcademics(page);
   expect(saved.exams[0].sheets).toHaveLength(2);
   expect(saved.exams[0].sheets?.[0].subjects.map((s) => s.name)).toEqual([

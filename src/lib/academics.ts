@@ -5,7 +5,16 @@ import { roster, resultSummary } from './selectors';
 import { getSchoolDate } from './dates';
 import { isTestSubjectSelected, validateTestSubjects } from './testSubjects';
 
-export const testKinds = ['Daily test', 'Monthly test', 'Pre-board', 'Term exam'] as const;
+import { reconcileMaximums, validateMaximums } from './assessmentMaximums';
+export const testKinds = [
+  'Daily test',
+  'Monthly test',
+  'Half-Yearly Examination',
+  'Pre-Board Examination',
+  'Pre-board',
+  'Yearly Examination',
+  'Term exam',
+] as const;
 const subjectSchema = z.object({
   subjectId: z.string().optional(),
   name: z.string().trim().min(1).max(60),
@@ -22,10 +31,28 @@ export const examinationSchema = z.object({
   sectionId: z.string(),
   classIds: z.array(z.string()).optional(),
   sectionIds: z.array(z.string()).optional(),
+  sectionlessClassIds: z.array(z.string()).optional(),
   subjectSelections: z
     .array(z.object({ classId: z.string(), subjectIds: z.array(z.string()).max(30) }))
     .optional(),
-  sheets: z.array(z.object({ sectionId: z.string(), subjects: z.array(subjectSchema) })).optional(),
+  subjectMaximums: z
+    .array(
+      z.object({
+        classId: z.string(),
+        subjectId: z.string(),
+        maxMarks: z.number().finite().positive().max(10000),
+      }),
+    )
+    .optional(),
+  sheets: z
+    .array(
+      z.object({
+        classId: z.string().optional(),
+        sectionId: z.string(),
+        subjects: z.array(subjectSchema),
+      }),
+    )
+    .optional(),
   subjects: z.array(subjectSchema).max(30),
 });
 export const examResultSchema = z.object({
@@ -107,10 +134,11 @@ export function createTest(state: DemoState, input: NewTest): DemoState {
     : parsed.data;
   validateTestScope(state, exam, true);
   validateTestSubjects(state, exam);
+  validateMaximums(state, exam, input.subjectMaximums !== undefined);
   if (
     exam.date < state.academicYear.start ||
     exam.date > state.academicYear.end ||
-    exam.date > getSchoolDate()
+    exam.date > getSchoolDate(new Date(), state.school.timezone)
   )
     throw new Error('Choose a date in this academic year, up to today.');
   if (new Set(exam.subjects.map((s) => s.name.toLowerCase())).size !== exam.subjects.length)
@@ -189,7 +217,7 @@ export function rankResults(
     .map((student) => {
       const results = included
         .flatMap((e) => testResults(state, e, [student]))
-        .filter((result) => requireComplete || !result.absent);
+        .filter((result) => resultSummary(result).maximum > 0);
       const marks = results.reduce((n, r) => n + resultSummary(r).marks, 0);
       const maximum = results.reduce((n, r) => n + resultSummary(r).maximum, 0);
       return {
@@ -205,7 +233,9 @@ export function rankResults(
     .sort((a, b) => b.percentage - a.percentage || a.student.name.localeCompare(b.student.name));
   rows.forEach((row, i) => {
     row.rank =
-      i > 0 && Math.abs(row.percentage - rows[i - 1].percentage) < 1e-9 ? rows[i - 1].rank : i + 1;
+      i > 0 && row.marks * rows[i - 1].maximum === rows[i - 1].marks * row.maximum
+        ? rows[i - 1].rank
+        : i + 1;
   });
   return { rows, included };
 }
@@ -238,7 +268,7 @@ export function updateTest(state: DemoState, examId: string, input: NewTest): De
   if (
     exam.date < state.academicYear.start ||
     exam.date > state.academicYear.end ||
-    exam.date > getSchoolDate()
+    exam.date > getSchoolDate(new Date(), state.school.timezone)
   )
     throw new Error('Choose a date in this academic year, up to today.');
   if (new Set(exam.subjects.map((s) => s.name.toLowerCase())).size !== exam.subjects.length)
@@ -272,7 +302,7 @@ export function updateTest(state: DemoState, examId: string, input: NewTest): De
     );
   if (input.subjects && recorded.length && exam.subjects.length !== existing.subjects.length)
     throw new Error('Keep the legacy subject count unchanged after marks are recorded.');
-  if (recorded.some((r) => !allowed.has(r.enrollmentId)))
+  if (recorded.some((r) => !allowed.has(r.enrollmentId) && r.subjects.some((s) => !s.pending)))
     throw new Error(
       'This change would remove students with saved marks. Keep their class and sections unchanged, or clear those marks first.',
     );
@@ -285,50 +315,65 @@ export function updateTest(state: DemoState, examId: string, input: NewTest): De
     )
   )
     throw new Error('A maximum cannot be lower than marks already recorded.');
-  return {
-    ...state,
-    exams: state.exams.map((e) =>
-      e.id === examId
-        ? {
-            ...exam,
-            sheets: exam.sheets?.map((sheet) => ({
-              ...sheet,
-              subjects: sheet.subjects.filter((subject) =>
-                isTestSubjectSelected(
-                  state,
-                  exam,
-                  state.sections.find((section) => section.id === sheet.sectionId)?.classId ?? '',
-                  subject,
-                ),
-              ),
-            })),
-          }
-        : e,
-    ),
-    results: state.results
-      .map((r) =>
-        r.schoolId === state.school.id && r.examId === examId
+  if (input.subjectMaximums === undefined && exam.subjectMaximums) {
+    exam.subjectMaximums = exam.subjectMaximums.filter((m) =>
+      isTestSubjectSelected(state, exam, m.classId, { subjectId: m.subjectId, name: '' }),
+    );
+  }
+  validateMaximums(state, exam, input.subjectMaximums !== undefined);
+  return reconcileMaximums(
+    {
+      ...state,
+      exams: state.exams.map((e) =>
+        e.id === examId
           ? {
-              ...r,
-              subjects: r.subjects
-                .map((s, i) => ({
-                  ...s,
-                  ...(input.subjects ? exam.subjects[i] : {}),
-                }))
-                .filter((subject) =>
+              ...exam,
+              sheets: exam.sheets?.map((sheet) => ({
+                ...sheet,
+                subjects: sheet.subjects.filter((subject) =>
                   isTestSubjectSelected(
                     state,
                     exam,
-                    state.enrollments.find((enrollment) => enrollment.id === r.enrollmentId)
-                      ?.classId ?? '',
+                    sheet.classId ??
+                      state.sections.find((section) => section.id === sheet.sectionId)?.classId ??
+                      exam.classId,
                     subject,
                   ),
                 ),
+              })),
             }
-          : r,
-      )
-      .filter((result) => result.subjects.length > 0),
-  };
+          : e,
+      ),
+      results: state.results
+        .map((r) =>
+          r.schoolId === state.school.id && r.examId === examId
+            ? {
+                ...r,
+                subjects: r.subjects
+                  .map((s, i) => ({
+                    ...s,
+                    ...(input.subjects ? exam.subjects[i] : {}),
+                  }))
+                  .filter((subject) =>
+                    isTestSubjectSelected(
+                      state,
+                      exam,
+                      state.enrollments.find((enrollment) => enrollment.id === r.enrollmentId)
+                        ?.classId ?? '',
+                      subject,
+                    ),
+                  ),
+              }
+            : r,
+        )
+        .filter(
+          (result) =>
+            result.subjects.length > 0 &&
+            (result.examId !== examId || allowed.has(result.enrollmentId)),
+        ),
+    },
+    exam,
+  );
 }
 export function deleteTest(state: DemoState, examId: string): DemoState {
   if (!state.exams.some((e) => e.id === examId && e.schoolId === state.school.id))

@@ -35,7 +35,7 @@ export function studentReportMessage(
           r.enrollmentId === row.enrollment.id &&
           r.examId === exam.id,
       );
-      if (!result || !resultSummary(result).maximum) return [];
+      if (!result || !result.subjects.some((s) => !s.pending)) return [];
       const summary = resultSummary(result);
       return [
         {
@@ -49,8 +49,12 @@ export function studentReportMessage(
                   (s) =>
                     `${subjectName(state, row.enrollment.classId, s)}: ${s.pending ? 'लंबित' : s.absent ? 'अनुपस्थित' : `${s.marks} / ${s.maxMarks}`}`,
                 )),
-            `कुल अंक: ${summary.marks} / ${summary.maximum}`,
-            `प्रतिशत: ${summary.percentage}%${result.absent ? '' : ` · ग्रेड: ${summary.grade}`}`,
+            ...(summary.maximum
+              ? [
+                  `कुल अंक: ${summary.marks} / ${summary.maximum}`,
+                  `प्रतिशत: ${summary.percentage.toFixed(1)}% · ग्रेड: ${summary.grade}`,
+                ]
+              : ['प्रतिशत: — (अनुपस्थित या लंबित)']),
           ].join('\n'),
         },
       ];

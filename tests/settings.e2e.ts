@@ -124,14 +124,12 @@ test('settings tabs work with keyboard and fit desktop, tablet, and mobile', asy
   await page.goto('/settings');
   await page.getByRole('tab', { name: 'General', exact: true }).focus();
   await page.keyboard.press('ArrowRight');
-  await expect(
-    page.getByRole('tab', { name: 'Classes, Sections & Grades', exact: true }),
-  ).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'Classes & sections', exact: true })).toBeFocused();
   for (const width of [1600, 768, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     for (const tab of [
       'General',
-      'Classes, Sections & Grades',
+      'Classes & sections',
       'Attendance',
       'Staff & Payroll',
       'Communication',

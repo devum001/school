@@ -1,0 +1,109 @@
+PHASE 1 REPAIR — REVIEW HANDOFF
+
+Scope
+Shared school shell, route structure, school context, General settings, class/section dialogs and subject settings. Phases 2 and 3 have not been implemented. Baseline: docs/phase1-ui-baseline.json.
+
+Implementation
+- AppShell, TopbarControls and SettingsPage now provide the same presentation to both modes. Demo wrappers retain the existing repository, user presentation, preferences, notifications and local persistence.
+- Live school context verifies membership and loads school data through typed API services. School changes dispose the previous context and protect unsaved drafts. Authenticated user and real school branding replace demo identities.
+- The original workspace navigation, eight settings tabs, nested settings labels and / Overview route are retained. Old /overview and legacy settings links resolve to the shared routes. Unconnected operational routes display an explicit dependency message, not seeded or fabricated data.
+- General retains the original profile/timing form. Existing backend-only address/timezone/branding fields are preserved in save payloads rather than added to the demo's form. Registration code remains visible but server-owned and read-only in live mode.
+- ClassSettingsSource and ProfileSource define feature-level boundaries. Demo adapters call the repository; the live adapter calls scoped APIs and retains server revisions. Demo subscriptions still refresh class summaries after nested repository changes.
+- Class/section add/edit/delete dialogs and subject editing share the existing presentation. The separate live bulk toolbar and optional-subject checkbox are no longer mounted here; their APIs and prior setup components are retained. Existing optional metadata is preserved during subject edits.
+- Live deletion now implements the original unused-record Delete action with CSRF, permissions, revision checks, school/year scope, transactions, last-record and historical-reference guards, plus audit records. Unused class subjects are deleted with their parent; enrolled or assigned records cannot be deleted, including inactive history.
+- Subject defaults come from the existing backend demo catalog. A new GET previews those defaults without database mutation for older unconfigured classes. Save subjects persists the draft. Newly created classes continue to use the existing authorized default-copy operation.
+- Grade length accepts the original 80-character field in validation and schema.
+- Global search bridges to the current live student query parameter without changing the student implementation.
+
+API dependencies (relative to /api/v1)
+Existing: /auth/*; /schools/:schoolId/memberships/me; /schools/:schoolId/profile GET/PATCH; /schools/:schoolId/onboarding; academic-year list/create/update/select/close; structure GET and structure-batch POST; staff lookup; student counts; existing role/membership/audit APIs.
+Added:
+GET /schools/:schoolId/academic-years/:yearId/classes/:classId/subject-defaults
+DELETE /schools/:schoolId/academic-years/:yearId/classes/:classId
+DELETE /schools/:schoolId/academic-years/:yearId/classes/:classId/sections/:id
+DELETE requests require {revision}. Existing subject-default POST remains available.
+No new persistence layer, dependencies, indexes, credentials or environment variables. No migration needed for these changes on an already initialized backend.
+
+Verification executed
+Frontend:
+  npm run typecheck — passed.
+  npm run lint — passed, with the two existing Fast Refresh warnings in AppIcon.tsx and Primitives.tsx.
+  npm test — 258 tests, 42 files passed.
+  npm run build — passed (demo).
+  VITE_APP_MODE=live npm run build — passed.
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test --config=playwright.repair.config.ts — 4 passed.
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test --config=playwright.live.config.ts --grep 'JWT access renews|application bootstrap|switching from Super Admin|Super Admin manages' — 4 passed.
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test --config=playwright.config.ts tests/phase1-demo.e2e.ts tests/navigation-refresh.e2e.ts tests/settings.e2e.ts tests/management.e2e.ts --grep 'recorded shell|one class roster|single workbook|unsaved subjects|new navigation|settings capsule|finance and academics|preferences and letterhead|school profile edit|teaching staff opens|management pages' --workers=2 — 11 passed.
+Backend:
+  ./node_modules/.bin/tsc --noEmit --incremental false — passed.
+  ./node_modules/.bin/eslint . --ext .ts — passed.
+  ./node_modules/.bin/jest --runInBand — 166 tests, 25 suites passed, including 3 new API integration tests.
+  yarn build — passed.
+Both: git diff --check — passed.
+
+Runtime testing used actual HTTP APIs and MongoDB transactions against disposable local replica sets. It did not connect to Atlas or alter your configured database. Browser fixture accounts are test-only. No migrations or real seed commands were run. Both repositories' existing changes were preserved; nothing was reset, cleaned or committed.
+
+Initial validation failures were corrected: TypeScript model-union/literal typing, test JSON loading, and test button labels. One existing platform test now asserts the shared / Overview route and then opens School settings; its authorization assertions remain intact.
+
+Remaining dependencies and limits
+- The class Students tab remains visible and uses the pre-existing live student implementation. Full presentation parity for that content, the directory, admission/fee-plan editor, five-tab profile and exact import interaction is Phase 2. It is not claimed complete in Phase 1.
+- Teacher/staff pages, departments, payroll settings and the staff-permission presentation remain Phase 3. Existing working live account/role/membership/audit tools remain available; they are not yet a complete reproduction of the demo staff-access UI.
+- Other settings retain their original tabs but clearly identify missing backend integration. Academic-year management is reachable through Preferences > Default Context and the original header year-details link, without an added top-level settings tab.
+- Overview aggregates, the separate /classes summary, attendance, finance, examinations, documents/templates and communications are not implemented by this phase. Notification counts are unavailable rather than represented as fake zero data. The shared workspace guide still describes the full product; dependent modules remain unavailable in live mode.
+- Live regional/display preferences and the existing demo timezone formatter are not yet adapted to persisted preferences. General updates preserve existing backend timezone values.
+- Historical examination subject aliases need mapping when examinations are implemented. New future dependent collections must extend deletion-reference guards before enabling their workflows.
+- Existing bounded structure API limits remain; an incomplete structure fails visibly instead of allowing edits against a partial snapshot.
+- This report does not claim the entire historical browser suite passes. The selected checks above passed; older demo test failures documented in docs/product-integration.md and later-phase workflow tests are outside this phase's acceptance run.
+
+Manual review
+Restart the backend normally to load the new endpoints. Run the frontend with VITE_APP_MODE=live npm run dev, then open /settings. Review General > School Profile / School Timing and Classes, Sections & Grades > Sections / Subjects. Configure/select an academic year through Preferences > Default Context if none exists. Demo mode remains available through VITE_APP_MODE=demo npm run dev. Existing .env files were not changed.
+
+Stop point
+Phase 1 is ready for review with the dependencies above explicitly outstanding. Do not begin Phase 2 until the user reviews and approves it.
+
+Files changed in this phase (compared with the captured working tree, not HEAD)
+
+/home/devendra/schooool
+  docs/phase1-ui-baseline.json
+  playwright.config.ts
+  playwright.repair.config.ts
+  src/app/demoRouter.tsx
+  src/app/liveRouter.tsx
+  src/components/layout/AppShell.tsx
+  src/components/layout/DemoAppShell.tsx
+  src/components/layout/TopbarControls.tsx
+  src/features/live/LiveApp.tsx
+  src/features/live/LiveRouteContent.tsx
+  src/features/live/LiveSchoolSettings.tsx
+  src/features/live/LiveSchoolWorkspace.tsx
+  src/features/live/schoolContext.ts
+  src/features/settings/ClassStructureSettings.tsx
+  src/features/settings/ClassStructureView.tsx
+  src/features/settings/DemoClassStructureSettings.tsx
+  src/features/settings/DemoSettingsPage.tsx
+  src/features/settings/LiveClassStructure.tsx
+  src/features/settings/LiveSchoolProfile.tsx
+  src/features/settings/SchoolProfile.tsx
+  src/features/settings/SchoolProfileView.tsx
+  src/features/settings/SettingsPage.tsx
+  src/features/settings/SubjectEditor.tsx
+  src/features/settings/data/contracts.ts
+  src/features/settings/data/demoSettings.ts
+  src/features/settings/data/liveClassSettings.test.ts
+  src/features/settings/data/liveClassSettings.ts
+  tests/live-api.e2e.ts
+  tests/phase1-demo.e2e.ts
+  tests/phase1-repair.e2e.ts
+
+/home/devendra/scholl backend/type-ORM-backend-Node
+  src/api/controllers/bulkSetup.controller.ts
+  src/api/controllers/classStructure.controller.ts
+  src/api/controllers/requests/bulkSetup.request.ts
+  src/api/controllers/requests/schoolSetup.request.ts
+  src/api/controllers/sections.controller.ts
+  src/api/models/academic.models.ts
+  src/api/services/deleteStructure.service.ts
+  src/api/services/setupRules.ts
+  src/security/phase1Repair.integration.test.ts
+
+Report artifact: docs/phase1-repair-report.txt

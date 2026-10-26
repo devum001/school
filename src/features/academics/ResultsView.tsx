@@ -1,7 +1,9 @@
+import { matchesAcademicScope } from '../../lib/academicGroups';
+import ClassName from '../../components/shared/ClassName';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import TestResult from './TestResult';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import StudentRecordLink from '../../components/shared/StudentRecordLink';
 import { ArrowRight } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
@@ -20,8 +22,10 @@ import {
   marksAdded,
   overallLeaderboard,
   savedSubjects,
+  scopeStateForFeature,
   sectionStats,
 } from '../../lib/academicSheets';
+import { useSchoolFeature } from '../../app/schoolFeatureContext';
 import { displayDate } from '../../lib/config';
 import { downloadCsv } from '../../lib/download';
 import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
@@ -40,19 +44,32 @@ export default function ResultsView({
   change: (values: Record<string, string | null>) => void;
 }) {
   const recentView = params.get('resultsView') === 'recent' || !!params.get('test');
-  const state = useSchool(),
+  const rawState = useSchool(),
+    feature = useSchoolFeature(),
+    state = scopeStateForFeature(rawState, feature?.canMarkSubject),
     today = useToday();
   const sections = state.sections.filter(
     (s) => s.schoolId === state.school.id && s.classId === classId,
   );
-  const scope = sections.find((s) => s.id === params.get('scope'))?.id ?? '';
-  const section = sections.find((s) => s.id === params.get('section'))?.id ?? sections[0]?.id ?? '';
+  const requestedScope = params.get(recentView ? 'section' : 'scope') ?? '';
+  const hasSectionless = roster(state).some(
+    (r) => r.enrollment.classId === classId && !r.enrollment.sectionId,
+  );
+  const scope =
+    requestedScope === 'unsectioned' && hasSectionless
+      ? requestedScope
+      : (sections.find((s) => s.id === requestedScope)?.id ?? '');
+  const section = scope === 'unsectioned' ? '' : scope || undefined;
+  const scopeLabel =
+    scope === 'unsectioned'
+      ? 'Without section'
+      : scope
+        ? sectionLabel(sections.find((s) => s.id === scope)!.name)
+        : 'Whole class';
   const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month') ?? '')
     ? params.get('month')!
     : today.slice(0, 7);
-  const all = roster(state).filter(
-    (r) => r.enrollment.classId === classId && (!scope || r.enrollment.sectionId === scope),
-  );
+  const all = roster(state).filter((r) => matchesAcademicScope(r.enrollment, classId, section));
   const ranked = overallLeaderboard(state, all, exams);
   const fullRanking = [
     ...ranked,
@@ -65,13 +82,13 @@ export default function ResultsView({
       examIncludes(e, classId, section) &&
       e.date.startsWith(month) &&
       e.date <= today &&
-      marksAdded(state, e, section),
+      marksAdded(state, e, section, classId),
   );
   const exam = exams.find(
     (e) =>
       e.id === params.get('test') &&
       examIncludes(e, classId, section) &&
-      marksAdded(state, e, section),
+      marksAdded(state, e, section, classId),
   );
   const [search, setSearch] = useState('');
   const name = state.classes.find((c) => c.id === classId)?.name ?? 'Class';
@@ -85,6 +102,8 @@ export default function ResultsView({
             <th>Rank</th>
             <th>Student</th>
             {!scope && <th>Section</th>}
+            <th>Admission number</th>
+            <th>Marks / Maximum</th>
             <th>Overall</th>
             <th>Tests</th>
           </tr>
@@ -94,12 +113,14 @@ export default function ResultsView({
             <tr key={r.enrollment.id}>
               <td>{r.rank ? `#${r.rank}` : '—'}</td>
               <td>
-                <Link className="text-link" to={history(r.student.id)}>
+                <StudentRecordLink className="text-link" to={history(r.student.id)}>
                   {r.student.name}
-                </Link>
+                </StudentRecordLink>
                 <small>Roll {r.enrollment.rollNumber}</small>
               </td>
-              {!scope && <td>{r.sectionName}</td>}
+              {!scope && <td>{r.sectionName || 'Without section'}</td>}
+              <td>{r.student.admissionNumber || '—'}</td>
+              <td>{r.count ? `${r.marks} / ${r.maximum}` : '—'}</td>
               <td>
                 <strong>{r.count ? `${r.percentage.toFixed(1)}%` : 'Pending'}</strong>
               </td>
@@ -143,16 +164,18 @@ export default function ResultsView({
           Section
           <select
             aria-label={recentView ? 'Recent results section' : 'Leaderboard section scope'}
-            value={recentView ? section : scope}
+            value={scope}
             onChange={(event) =>
               change({
-                [recentView ? 'section' : 'scope']: event.target.value,
+                section: event.target.value,
+                scope: event.target.value,
                 test: null,
                 leaderboard: null,
               })
             }
           >
-            {!recentView && <option value="">All Sections</option>}
+            <option value="">Whole class</option>
+            {hasSectionless && <option value="unsectioned">Without section</option>}
             {sections.map((item) => (
               <option key={item.id} value={item.id}>
                 {sectionLabel(item.name)}
@@ -185,72 +208,100 @@ export default function ResultsView({
           { id: 'recent', label: 'Recent Results' },
         ]}
         value={recentView ? 'recent' : 'overall'}
-        onChange={(value) => change({ resultsView: value, test: null, leaderboard: null })}
+        onChange={(value) =>
+          change({ resultsView: value, section: scope, scope, test: null, leaderboard: null })
+        }
       />
-      {!recentView && (
-        <section className="academic-overall" aria-labelledby="overall-performance">
-          <div className="academic-list-heading">
-            <div>
-              <h2 id="overall-performance">
-                <AppIcon name="trophy" size={24} />
-                Overall Performance — {name}
-              </h2>
-              <p>Through {displayDate(today)}</p>
+      {exam && params.get('marks') !== '1' ? (
+        <TestResult
+          key={`${exam.id}-${section}`}
+          exam={exam}
+          sectionId={section}
+          classId={classId}
+          onClose={() => change({ test: null })}
+          onEdit={() => change({ marks: '1', section: scope })}
+          from={from}
+        />
+      ) : (
+        !recentView && (
+          <section className="academic-overall" aria-labelledby="overall-performance">
+            <div className="academic-list-heading">
+              <div>
+                <h2 id="overall-performance">
+                  <AppIcon name="trophy" size={24} />
+                  Overall Performance — <ClassName name={name} />
+                </h2>
+                <p>
+                  {state.academicYear.name} · Aggregate recorded marks ÷ recorded maximum × 100.
+                  Absent and pending subjects are excluded; ties share competition ranks (1, 2, 2,
+                  4).
+                </p>
+                <p>
+                  {scopeLabel} · {all.length} students · Through {displayDate(today)}
+                </p>
+              </div>
             </div>
-          </div>
-          {ranked.length ? (
-            <>
-              <div className="academic-podium">
-                {ranked.slice(0, 3).map((r, i) => (
-                  <Link
-                    key={r.enrollment.id}
-                    to={history(r.student.id)}
-                    className={`academic-award award-${i + 1}`}
-                  >
-                    {['left', 'right'].map((side) => (
-                      <span key={side} className={`award-laurel ${side}`} aria-hidden="true">
-                        {Array.from({ length: 7 }, (_, leaf) => (
-                          <i key={leaf} />
-                        ))}
+            {ranked.length ? (
+              <>
+                <div className="academic-podium">
+                  {ranked.slice(0, 3).map((r, i) => (
+                    <StudentRecordLink
+                      key={r.enrollment.id}
+                      to={history(r.student.id)}
+                      className={`academic-award award-${i + 1}`}
+                    >
+                      {['left', 'right'].map((side) => (
+                        <span key={side} className={`award-laurel ${side}`} aria-hidden="true">
+                          {Array.from({ length: 7 }, (_, leaf) => (
+                            <i key={leaf} />
+                          ))}
+                        </span>
+                      ))}
+                      <h3>{r.student.name}</h3>
+                      {!scope && (
+                        <span className="award-section">
+                          {r.sectionName ? sectionLabel(r.sectionName) : 'Without section'}
+                        </span>
+                      )}
+                      <strong className="award-percentage">
+                        {r.percentage.toFixed(1)}
+                        <small>%</small>
+                      </strong>
+                      <span>
+                        {r.marks} / {r.maximum} marks
                       </span>
-                    ))}
-                    <h3>{r.student.name}</h3>
-                    {!scope && <span className="award-section">{sectionLabel(r.sectionName)}</span>}
-                    <strong className="award-percentage">
-                      {r.percentage.toFixed(1)}
-                      <small>%</small>
-                    </strong>
-                    <span className="award-tests">
-                      {r.count} {r.count === 1 ? 'test' : 'tests'} counted
-                    </span>
-                    <span className="award-rank" aria-label={`Rank ${r.rank}`}>
-                      {r.rank}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-              {ranked.length > 3 && (
-                <Panel className="academic-rank-table">{rankingTable(ranked.slice(3, 10))}</Panel>
-              )}
-              <div className="academic-leaderboard-footer">
-                <Button variant="secondary" onClick={() => change({ leaderboard: 'all' })}>
-                  View All Students <ArrowRight size={16} />
-                </Button>
-              </div>
-            </>
-          ) : (
-            <EmptyState
-              title="No ranked results yet"
-              description="Save marks for a test to see the class’s overall performance."
-            />
-          )}
-        </section>
+                      <span className="award-tests">
+                        {r.count} {r.count === 1 ? 'test' : 'tests'} counted
+                      </span>
+                      <span className="award-rank" aria-label={`Rank ${r.rank}`}>
+                        {r.rank}
+                      </span>
+                    </StudentRecordLink>
+                  ))}
+                </div>
+                {ranked.length > 3 && (
+                  <Panel className="academic-rank-table">{rankingTable(ranked.slice(3, 10))}</Panel>
+                )}
+                <div className="academic-leaderboard-footer">
+                  <Button variant="secondary" onClick={() => change({ leaderboard: 'all' })}>
+                    View All Students <ArrowRight size={16} />
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <EmptyState
+                title="No ranked results yet"
+                description="Save marks for a test to see the class’s overall performance."
+              />
+            )}
+          </section>
+        )
       )}
-      {recentView && (
+      {recentView && !exam && (
         <section className="academic-recent-results" aria-label="Recent test results">
           <div className="academic-test-list">
             {recent.map((e) => {
-              const stats = sectionStats(state, e, section);
+              const stats = sectionStats(state, e, section, classId);
               return (
                 <article className="panel academic-result-card" key={e.id}>
                   <div className="academic-result-card-heading">
@@ -260,7 +311,7 @@ export default function ResultsView({
                     <span>{displayDate(e.date)}</span>
                   </div>
                   <p className="academic-included-subjects">
-                    {savedSubjects(state, e, section)
+                    {savedSubjects(state, e, section, classId)
                       .map((s) => s.name)
                       .join(' · ')}
                   </p>
@@ -283,7 +334,10 @@ export default function ResultsView({
                         <dd>{stats.pending}</dd>
                       </div>
                     </dl>
-                    <Button variant="secondary" onClick={() => change({ test: e.id, section })}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => change({ test: e.id, section: scope })}
+                    >
                       View Result <ArrowRight size={15} />
                     </Button>
                   </div>
@@ -294,7 +348,7 @@ export default function ResultsView({
           {!recent.length && (
             <EmptyState
               title="No results for this month"
-              description="Choose another month or save marks for a test in this section."
+              description="Choose another month or save marks for a test in this class or section."
             />
           )}
         </section>
@@ -304,7 +358,7 @@ export default function ResultsView({
           open
           wide
           title={`Overall Leaderboard — ${name}`}
-          description={`${scope ? sectionLabel(sections.find((s) => s.id === scope)!.name) : 'All Sections'} · Through ${displayDate(today)}`}
+          description={`${scopeLabel} · Through ${displayDate(today)}`}
           onClose={() => change({ leaderboard: null })}
         >
           <div className="sheet-tools">
@@ -323,6 +377,9 @@ export default function ResultsView({
                     'Roll No.',
                     'Student',
                     ...(!scope ? ['Section'] : []),
+                    'Admission number',
+                    'Marks obtained',
+                    'Maximum marks',
                     'Overall %',
                     'Tests',
                   ],
@@ -330,7 +387,10 @@ export default function ResultsView({
                     r.rank || '',
                     r.enrollment.rollNumber,
                     r.student.name,
-                    ...(!scope ? [r.sectionName] : []),
+                    ...(!scope ? [r.sectionName || 'Without section'] : []),
+                    r.student.admissionNumber,
+                    r.marks,
+                    r.maximum,
                     r.count ? r.percentage.toFixed(1) : 'Pending',
                     r.count,
                   ]),
@@ -354,16 +414,6 @@ export default function ResultsView({
               String(r.enrollment.rollNumber) === search,
           ) && <EmptyState title="No matching students" />}
         </Modal>
-      )}
-      {exam && params.get('marks') !== '1' && (
-        <TestResult
-          key={`${exam.id}-${section}`}
-          exam={exam}
-          sectionId={section}
-          onClose={() => change({ test: null })}
-          onEdit={() => change({ marks: '1', section })}
-          from={from}
-        />
       )}
     </div>
   );

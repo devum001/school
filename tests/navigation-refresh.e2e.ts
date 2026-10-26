@@ -82,10 +82,14 @@ test('settings capsule and feature routes remove unwanted sections and work on m
     fullPage: true,
     animations: 'disabled',
   });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    .toBe(true);
   await page.getByRole('tab', { name: 'Students', exact: true }).click();
   await expect(page.getByLabel('Class students section')).toHaveValue('');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    .toBe(true);
   expect(errors).toEqual([]);
 });
 
@@ -148,12 +152,13 @@ test('single workbook routes students to multiple sections and rejects invalid r
   await page.getByRole('button', { name: 'Download Sample Excel' }).click();
   expect((await download).suggestedFilename()).toContain('.xlsx');
   await page.getByRole('button', { name: 'Import Excel (.xlsx)', exact: true }).click();
-  await expect(page).toHaveURL(/students\/import\?/);
+  await expect(page).toHaveURL(/settings\?.*section=students/);
+  await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Import students from Excel' })).toBeInViewport();
   const grid = [
     STUDENT_IMPORT_HEADERS,
-    ['Batch Alpha', 'BATCH-A-1', '2015-05-21', 'Parent', '', '', '', 51, 'A'],
-    ['Batch Beta', 'BATCH-B-1', '2015-05-21', 'Parent', '', '', '', 51, 'Section B'],
+    ['Batch Alpha', 'BATCH-A-1', '2015-05-21', 'Parent', '', '', '', 51, 'A', 'Class 5'],
+    ['Batch Beta', 'BATCH-B-2', '2015-05-21', 'Parent', '', '', '', 51, 'Section B', '5th'],
   ];
   const upload = async (rows: (string | number)[][]) =>
     page.getByLabel('Excel file (.xlsx)').setInputFiles({
@@ -164,24 +169,28 @@ test('single workbook routes students to multiple sections and rejects invalid r
   const invalid = grid.map((row) => [...row]);
   invalid[2][8] = 'Z';
   await upload(invalid);
-  await expect(page.getByRole('button', { name: 'Import 2 students', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Next: preview', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Next: submit', exact: true })).toBeDisabled();
   expect(
     (await saved(page)).students.some((student) => student.admissionNumber === 'BATCH-A-1'),
   ).toBe(false);
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await upload(grid);
-  await expect(page.getByRole('button', { name: 'Import 2 students', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Next: preview', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Next: submit', exact: true })).toBeEnabled();
   await expect(page.locator('.import-preview')).toContainText('Section B');
   await page.screenshot({
     path: info.outputPath('class-import-preview.png'),
     fullPage: true,
     animations: 'disabled',
   });
+  await page.getByRole('button', { name: 'Next: submit', exact: true }).click();
   await page.getByRole('button', { name: 'Import 2 students', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Grade 5 students', exact: true })).toBeVisible();
   const state = await saved(page);
   for (const [admission, section] of [
     ['BATCH-A-1', 'class-5-a'],
-    ['BATCH-B-1', 'class-5-b'],
+    ['BATCH-B-2', 'class-5-b'],
   ]) {
     const student = state.students.find((entry) => entry.admissionNumber === admission)!;
     expect(state.enrollments.find((entry) => entry.studentId === student.id)).toMatchObject({
@@ -231,11 +240,11 @@ test('finance and academics show one nested feature at a time with independent U
   await page.getByRole('tab', { name: 'Student Fees', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Student balances', exact: true })).toBeVisible();
   await page.goto('/academics?class=class-8&view=results');
-  await expect(page.getByRole('heading', { name: 'Overall Performance — Grade 8' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Overall Performance — 8th' })).toBeVisible();
   await expect(page.getByLabel('Results month')).toHaveCount(0);
   await page.getByRole('tab', { name: 'Recent Results', exact: true }).click();
   await expect(page.getByLabel('Results month')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Overall Performance — Grade 8' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Overall Performance — 8th' })).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole('tab', { name: 'Recent Results', exact: true })).toHaveAttribute(
     'aria-selected',
@@ -271,9 +280,9 @@ test('new navigation and admission/import pages have accessible controls at desk
           targets: entry.nodes.map((node) => node.target),
         })),
       ).toEqual([]);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-        true,
-      );
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+        .toBe(true);
       if (url === '/students/new') {
         await expect(page.getByLabel('Student class', { exact: true })).toHaveValue('class-5');
         await expect(page.getByLabel('Student section', { exact: true })).toHaveValue('class-5-a');

@@ -43,9 +43,16 @@ describe('test subject assignments', () => {
       const draft = sheetDraft(next, exam, section);
       expect(draft.columns.map((c) => c.name)).toEqual([subject]);
       const grid = sheetTemplate(draft.columns, draft.students);
-      expect(grid[0]).toEqual(['Roll No.', 'Student Name', 'Class', 'Section', subject]);
-      grid[1][4] = '20';
-      grid[2][4] = '18';
+      expect(grid[0]).toEqual([
+        'Roll No.',
+        'Student Name',
+        'Class',
+        'Section',
+        'Admission Number',
+        subject,
+      ]);
+      grid[1][5] = '20';
+      grid[2][5] = '18';
       const imported = previewSheetImport(draft.columns, draft.rows, draft.students, grid);
       expect(imported.columns.map((c) => c.name)).toEqual([subject]);
       const wrong = structuredClone(grid);
@@ -190,4 +197,14 @@ describe('test subject assignments', () => {
       'Mathematics',
     ]);
   });
+});
+
+it('validates a live test against the configured school date at timezone boundaries', () => {
+  vi.setSystemTime(new Date('2026-10-15T12:00:00Z'));
+  const { state, input } = setup();
+  state.school.timezone = 'Pacific/Kiritimati';
+  input.date = '2026-10-16';
+  expect(createTest(state, input).exams[0].date).toBe('2026-10-16');
+  state.school.timezone = 'America/Los_Angeles';
+  expect(() => createTest(state, input)).toThrow('up to today');
 });

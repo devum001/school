@@ -36,6 +36,9 @@ export function ClassFilters({
             onChange={(e) => onSectionChange(e.target.value)}
           >
             {allowAll && <option value="">All sections</option>}
+            {!allowAll && !state.sections.some((s) => s.classId === classId) && (
+              <option value="">Whole class · no sections</option>
+            )}
             {state.sections
               .filter((s) => !classId || s.classId === classId)
               .map((s) => (

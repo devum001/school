@@ -1,3 +1,4 @@
+import StaffContactFields from './StaffContactFields';
 import { useState } from 'react';
 import { ZodError } from 'zod';
 import { useSchool } from '../../app/useSchool';
@@ -217,42 +218,11 @@ export default function StaffDialog({
             />{' '}
             Teaching staff — show in Teachers directory
           </label>
-          <div className="form-grid">
-            <label className="field">
-              Phone
-              <input
-                type="tel"
-                value={draft.phone}
-                onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
-              />
-            </label>
-            <label className="field">
-              Email
-              <input
-                type="email"
-                value={draft.email}
-                onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-              />
-            </label>
-            <label className="field">
-              Joining Date
-              <PickerInput
-                required
-                type="date"
-                max={today}
-                value={draft.joinedOn}
-                onChange={(e) => setDraft({ ...draft, joinedOn: e.target.value })}
-              />
-            </label>
-            <label className="field">
-              Qualification
-              <input
-                maxLength={150}
-                value={draft.qualification ?? ''}
-                onChange={(e) => setDraft({ ...draft, qualification: e.target.value })}
-              />
-            </label>
-          </div>
+          <StaffContactFields
+            value={draft}
+            onChange={(value) => setDraft({ ...draft, ...value })}
+            today={today}
+          />
           <h3 className="management-form-title">Monthly salary</h3>
           <div className="form-grid">
             <label className="field">

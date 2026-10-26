@@ -14,7 +14,7 @@ import { displayDate, money } from './config';
 import { normalizeInstallmentText } from './feeLabels';
 import { roster, installments, allocatedPayments } from './selectors';
 import { staffDirectory, staffDesignation } from './staffStructure';
-import { SAMPLE_SCHOOL_ARTWORK } from '../mocks/schoolArtwork';
+import { demoArtwork } from './demoArtwork';
 import { schoolLogoFor } from './schoolBranding';
 import { defaultStaffPayroll } from './settings';
 
@@ -50,7 +50,7 @@ export const documentTemplatesFor = (state: DemoState): DocumentTemplates => {
   return {
     feeReceipt: normalize(saved.feeReceipt, FEE_COLORS),
     salarySlip: normalize(saved.salarySlip, SALARY_COLORS),
-    branding: { ...SAMPLE_SCHOOL_ARTWORK, ...saved.branding, logo: schoolLogoFor(state) ?? null },
+    branding: { ...demoArtwork, ...saved.branding, logo: schoolLogoFor(state) ?? null },
   };
 };
 export function designChoice(choice: TemplateChoice, id: TemplateId): TemplateChoice {

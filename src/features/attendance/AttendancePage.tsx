@@ -2,6 +2,7 @@ import { useToday } from '../../app/useToday';
 import { useEffect, useState } from 'react';
 import { Link, useBlocker, useSearchParams } from 'react-router-dom';
 import { CircleAlert } from 'lucide-react';
+import StudentRecordLink from '../../components/shared/StudentRecordLink';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
 import {
@@ -17,6 +18,7 @@ import {
 import { ClassFilters } from '../../components/shared/ClassFilters';
 import { attendanceSummary, roster, statusFor } from '../../lib/selectors';
 import { STATUS_LABELS, displayDate } from '../../lib/config';
+import { useSchoolFeature } from '../../app/schoolFeatureContext';
 import { repository } from '../../lib/repository';
 import type { AttendanceStatus } from '../../types/domain';
 import { formatSchoolTime, studentLateCutoff } from '../../lib/studentTimings';
@@ -31,6 +33,10 @@ export default function AttendancePage() {
 }
 function AttendanceRegister() {
   const state = useSchool();
+  const feature = useSchoolFeature(),
+    data = feature ?? repository,
+    canManage = feature?.canManage ?? true;
+  const [saving, setSaving] = useState(false);
   const today = useToday();
   const notify = useFeedback();
   const [params, setParams] = useSearchParams();
@@ -50,7 +56,9 @@ function AttendanceRegister() {
     requestedDate >= state.academicYear.start
       ? requestedDate
       : today;
-  const rows = roster(state).filter((r) => r.enrollment.sectionId === sectionId);
+  const rows = roster(state).filter(
+    (r) => r.enrollment.classId === classId && r.enrollment.sectionId === sectionId,
+  );
   const timing = schoolHoursForDate(state, date);
   const hasAssignedTiming = !!configuredSchoolHours(state);
   const [draft, setDraft] = useState<Record<string, AttendanceStatus>>({});
@@ -76,9 +84,11 @@ function AttendanceRegister() {
     if (key === 'class') next.delete('section');
     setParams(next, { flushSync: true });
   };
-  const save = () => {
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
     try {
-      repository.saveAttendance(
+      await data.saveAttendance(
         date,
         sectionId,
         Object.fromEntries(
@@ -87,12 +97,15 @@ function AttendanceRegister() {
             draft[r.enrollment.id] ?? statusFor(state, r.enrollment.id, date),
           ]),
         ),
+        classId,
       );
       setDraft({});
       setError('');
       notify('Attendance saved. Dashboard and student profiles are up to date.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to save attendance.');
+    } finally {
+      setSaving(false);
     }
   };
   return (
@@ -101,17 +114,25 @@ function AttendanceRegister() {
         title="Attendance register"
         actions={
           <>
-            <Link
-              className="button secondary"
-              to={`/notifications?date=${date}&class=${classId}&section=${sectionId}&event=Student+Absent&focus=pending`}
-            >
-              <AppIcon name="send" size={16} />
-              Review notifications
-            </Link>
+            {!feature && (
+              <Link
+                className="button secondary"
+                to={`/notifications?date=${date}&class=${classId}&section=${sectionId}&event=Student+Absent&focus=pending`}
+              >
+                <AppIcon name="send" size={16} />
+                Review notifications
+              </Link>
+            )}
           </>
         }
       />
       <AttendanceTabs date={date} />
+      {feature && !state.classes.length && (
+        <p className="panel-note">
+          No classes are assigned to you yet. Your school administrator can assign classes and
+          subjects in Teachers → Teaching assignments.
+        </p>
+      )}
       <div id="attendance-register-content">
         <Panel>
           <div className="toolbar attendance-toolbar">
@@ -221,10 +242,10 @@ function AttendanceRegister() {
                     <tr key={r.enrollment.id}>
                       <td className="mono">{r.enrollment.rollNumber}</td>
                       <td>
-                        <Link className="person" to={`/students/${r.student.id}`}>
+                        <StudentRecordLink className="person" to={`/students/${r.student.id}`}>
                           <Avatar name={r.student.name} />
                           <strong>{r.student.name}</strong>
-                        </Link>
+                        </StudentRecordLink>
                       </td>
                       <td className="mono muted">{r.student.admissionNumber}</td>
                       <td>
@@ -236,6 +257,7 @@ function AttendanceRegister() {
                           {statuses.map((s) => (
                             <button
                               key={s}
+                              disabled={!canManage || saving}
                               aria-pressed={status === s}
                               className={status === s ? `selected ${s}` : ''}
                               onClick={() => setDraft({ ...draft, [r.enrollment.id]: s })}
@@ -259,11 +281,14 @@ function AttendanceRegister() {
               <span className={`status-dot ${dirty ? 'pending' : 'active'}`} />
               <strong>{dirty ? 'Unsaved changes' : 'Register up to date'}</strong>
               <small>
-                {summary.attended} attending / {summary.marked} marked · {summary.percentage}%
+                {summary.attended} attending / {summary.total} total · {summary.percentage}%
                 attendance
               </small>
             </div>
-            <Button onClick={save}>
+            <Button
+              disabled={!canManage || saving || !classId || !rows.length}
+              onClick={() => void save()}
+            >
               <AppIcon name="save" size={16} />
               Save attendance
             </Button>

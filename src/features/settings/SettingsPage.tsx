@@ -1,16 +1,9 @@
 import TabRail from '../../components/ui/TabRail';
 import { useSearchParams } from 'react-router-dom';
 import { AppIcon, type IconName, PageHeading } from '../../components/ui/Primitives';
-import SchoolProfile from './SchoolProfile';
-import StaffPayrollSettings from './StaffPayrollSettings';
-import ClassStructureSettings from './ClassStructureSettings';
-import CommunicationSettings from './CommunicationSettings';
-import RolesPermissionsSettings from './RolesPermissionsSettings';
-import TemplatesSettings from './TemplatesSettings';
+import type { ReactNode } from 'react';
 import './settings.css';
 import '../../styles/admin-settings.css';
-import DataSecuritySettings from './DataSecuritySettings';
-import PreferencesSettings from './PreferencesSettings';
 
 const tabs = [
   'General',
@@ -33,11 +26,18 @@ const TAB_ICONS: Record<string, IconName> = {
   'Data & Security': 'security',
   Preferences: 'overview-grid',
 };
-export default function SettingsPage() {
+export default function SettingsPage({
+  renderTab,
+  availableTabs = tabs,
+}: {
+  renderTab: (tab: string) => ReactNode;
+  availableTabs?: string[];
+}) {
+  const tabs = availableTabs;
   const [params, setParams] = useSearchParams();
   const requestedTab =
     params.get('tab') === 'Documents & Templates' ? 'Templates' : params.get('tab');
-  const tab = tabs.find((label) => label === requestedTab) ?? 'General';
+  const tab = tabs.find((label) => label === requestedTab) ?? tabs[0];
   function selectTab(label: string) {
     setParams(
       (previous) => {
@@ -79,7 +79,7 @@ export default function SettingsPage() {
               }}
             >
               <AppIcon name={TAB_ICONS[label] ?? 'settings'} size={18} />
-              <span>{label}</span>
+              <span>{label === 'Classes, Sections & Grades' ? 'Classes & sections' : label}</span>
             </button>
           ))}
         </TabRail>
@@ -90,14 +90,7 @@ export default function SettingsPage() {
         aria-labelledby={`settings-tab-${tabs.indexOf(tab)}`}
         tabIndex={0}
       >
-        {tab === 'General' && <SchoolProfile />}
-        {tab === 'Classes, Sections & Grades' && <ClassStructureSettings />}
-        {tab === 'Staff & Payroll' && <StaffPayrollSettings />}
-        {tab === 'Communication' && <CommunicationSettings />}
-        {tab === 'Preferences' && <PreferencesSettings />}
-        {tab === 'Roles & Permissions' && <RolesPermissionsSettings />}
-        {tab === 'Templates' && <TemplatesSettings />}
-        {tab === 'Data & Security' && <DataSecuritySettings />}
+        {renderTab(tab)}
       </div>
     </div>
   );

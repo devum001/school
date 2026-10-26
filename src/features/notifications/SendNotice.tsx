@@ -1,3 +1,4 @@
+import { displayTimestamp } from '../../lib/displayFormat';
 import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
@@ -399,11 +400,7 @@ export default function SendNotice({
         </div>
         {review?.input.scheduledAt && (
           <p className="communication-note">
-            Scheduled for{' '}
-            {new Date(review.input.scheduledAt).toLocaleString('en-IN', {
-              timeZone: 'Asia/Kolkata',
-            })}
-            .
+            Scheduled for {displayTimestamp(review.input.scheduledAt)}.
           </p>
         )}
         {error && (

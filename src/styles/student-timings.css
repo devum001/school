@@ -292,7 +292,12 @@
 }
 .setup-stack {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 24px;
+}
+.setup-stack > * {
+  min-width: 0;
 }
 .setup-stack > .student-timings {
   margin-top: 0;

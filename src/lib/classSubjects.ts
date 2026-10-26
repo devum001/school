@@ -10,19 +10,185 @@ export const classSubjectSchema = z.object({
 });
 const key = (name: string) => name.trim().toLowerCase();
 
+export type AcademicStream = 'science' | 'commerce' | 'arts';
+
+export function detectClassStream(label: string): AcademicStream | null {
+  const normalized = label.toLowerCase();
+  if (/\b(science|sci|pcm|pcb|pcmb)\b/.test(normalized)) return 'science';
+  if (/\b(commerce|com)\b/.test(normalized)) return 'commerce';
+  if (/\b(arts|art|humanities)\b/.test(normalized)) return 'arts';
+  return null;
+}
+
+export const STREAM_SUBJECTS_11_12: Record<AcademicStream, string[]> = {
+  science: [
+    'Physics',
+    'Chemistry',
+    'Mathematics',
+    'Biology',
+    'English Compulsory',
+    'Hindi Compulsory',
+    'Computer Science',
+    'Informatics Practices',
+    'Physical Education',
+  ],
+  commerce: [
+    'Accountancy',
+    'Business Studies',
+    'Economics',
+    'English Compulsory',
+    'Hindi Compulsory',
+    'Mathematics',
+    'Applied Mathematics',
+    'Informatics Practices',
+    'Entrepreneurship',
+    'Physical Education',
+  ],
+  arts: [
+    'History',
+    'Political Science',
+    'Geography',
+    'Hindi Literature',
+    'English Literature',
+    'English Compulsory',
+    'Hindi Compulsory',
+    'Economics',
+    'Sociology',
+    'Psychology',
+    'Sanskrit Literature',
+    'Home Science',
+    'Drawing & Painting',
+    'Physical Education',
+  ],
+};
+
+export const RBSE_CBSE_SENIOR_STREAM_CLASSES = [
+  { name: 'Class 11 Science', grade: '11 Science' },
+  { name: 'Class 11 Commerce', grade: '11 Commerce' },
+  { name: 'Class 11 Arts', grade: '11 Arts' },
+  { name: 'Class 12 Science', grade: '12 Science' },
+  { name: 'Class 12 Commerce', grade: '12 Commerce' },
+  { name: 'Class 12 Arts', grade: '12 Arts' },
+] as const;
+
+export function boardSubjectCatalogForClass(
+  classLabel: string,
+  streamOverride?: AcademicStream | null,
+  board?: string,
+): string[] {
+  const grade = Number(classLabel.match(/\d+/)?.[0] ?? 0);
+  const stream = streamOverride ?? detectClassStream(classLabel);
+
+  if (stream) {
+    return [...STREAM_SUBJECTS_11_12[stream]];
+  }
+
+  if (grade === 11 || grade === 12) {
+    return [
+      'English Compulsory',
+      'Hindi Compulsory',
+      'Physics',
+      'Chemistry',
+      'Mathematics',
+      'Biology',
+      'Accountancy',
+      'Business Studies',
+      'Economics',
+      'History',
+      'Political Science',
+      'Geography',
+      'Hindi Literature',
+      'English Literature',
+      'Computer Science',
+      'Informatics Practices',
+      'Sociology',
+      'Sanskrit Literature',
+      'Home Science',
+      'Physical Education',
+    ];
+  }
+
+  if (grade >= 1 && grade <= 2) {
+    return [
+      'English',
+      'Hindi',
+      'Mathematics',
+      'Environmental Studies',
+      'Drawing & Art',
+      'General Knowledge',
+      'Physical Education',
+    ];
+  }
+
+  if (grade >= 3 && grade <= 5) {
+    return [
+      'Mathematics',
+      'Hindi',
+      'English',
+      'Environmental Studies',
+      'Computer',
+      'General Knowledge',
+      'Drawing & Art',
+      'Moral Science',
+      'Physical Education',
+    ];
+  }
+
+  if (grade >= 6 && grade <= 8) {
+    return [
+      'Mathematics',
+      'Hindi',
+      'English',
+      'Science',
+      'Social Studies',
+      'Sanskrit',
+      'Computer',
+      'General Knowledge',
+      'Drawing & Art',
+      'Physical Education',
+    ];
+  }
+
+  if (grade >= 9 && grade <= 10) {
+    if (/icse|isc/i.test(board ?? '')) {
+      return [
+        'Mathematics',
+        'Hindi',
+        'English',
+        'Physics',
+        'Chemistry',
+        'Biology',
+        'History & Civics',
+        'Geography',
+        'Computer',
+        'Sanskrit',
+        'Physical Education',
+      ];
+    }
+    return [
+      'Mathematics',
+      'Hindi',
+      'English',
+      'Science',
+      'Social Studies',
+      'Sanskrit',
+      'Computer',
+      'Information Technology',
+      'Rajasthan Adhyayan',
+      'Health & Physical Education',
+      'Art Education',
+    ];
+  }
+
+  return ['Mathematics', 'Hindi', 'English', 'Science', 'Social Studies', 'Computer'];
+}
+
 export function classSubjects(state: DemoState, classId: string): ClassSubject[] {
   const schoolClass = state.classes.find((c) => c.id === classId && c.schoolId === state.school.id);
   if (!schoolClass) return [];
   if (schoolClass.subjects) return schoolClass.subjects;
-  const grade = Number((schoolClass.grade || schoolClass.name).match(/\d+/)?.[0] ?? 0);
-  const names =
-    grade && grade <= 2
-      ? ['English', 'Hindi', 'Mathematics', 'Environmental Studies']
-      : grade && grade <= 5
-        ? ['Mathematics', 'Hindi', 'English', 'Environmental Studies', 'Computer']
-        : ['Mathematics', 'Hindi', 'English', 'Science', 'Social Studies', 'Computer'];
-  if (/icse|isc/i.test(state.school.board ?? '') && grade >= 9)
-    names.splice(3, 2, 'Physics', 'Chemistry', 'Biology', 'History & Civics', 'Geography');
+  const label = `${schoolClass.name} ${schoolClass.grade ?? ''}`.trim();
+  const names = boardSubjectCatalogForClass(label, undefined, state.school.board);
   // Keep subjects from existing records available when opening an older demo.
   for (const exam of state.exams.filter((e) => examIncludes(e, classId)))
     for (const subject of exam.subjects)

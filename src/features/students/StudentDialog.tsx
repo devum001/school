@@ -1,11 +1,18 @@
+import { identifierKey, rollKey } from '../../lib/studentIdentifiers';
+import {
+  focusStudentError,
+  validateStudentForm,
+  type StudentFieldErrors,
+} from './studentFormValidation';
+import StudentFields from './StudentFields';
 import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import { useFeedback } from '../../app/useFeedback';
-import { PickerInput, Button, Modal } from '../../components/ui/Primitives';
+import { Button, Modal } from '../../components/ui/Primitives';
 import { repository } from '../../lib/repository';
 import { studentRecordCounts, type StudentInput } from '../../lib/management';
-import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
+import { orderedClasses } from '../../lib/schoolLabels';
 import { useDraftGuard } from '../academics/useDraftGuard';
 import '../../styles/management.css';
 import { currentFeePlan } from '../../lib/feePlans';
@@ -63,6 +70,7 @@ export default function StudentDialog({
   );
   const [fees, setFees] = useState(initialFees);
   const feesChanged = JSON.stringify(fees) !== JSON.stringify(initialFees);
+  const [errors, setErrors] = useState<StudentFieldErrors>({});
   const [error, setError] = useState('');
   const locked = Boolean(
     student && Object.values(studentRecordCounts(state, student.id)).some(Boolean),
@@ -71,8 +79,6 @@ export default function StudentDialog({
     JSON.stringify(initial) !== JSON.stringify(draft) || feesChanged,
     onClose,
   );
-  const field = (key: keyof StudentInput, value: string | number) =>
-    setDraft({ ...draft, [key]: value });
   return (
     <Modal
       open
@@ -101,6 +107,34 @@ export default function StudentDialog({
         <form
           onSubmit={(event) => {
             event.preventDefault();
+            const issues = validateStudentForm(draft, today, 500, 100);
+            if (
+              state.students.some(
+                (s) =>
+                  s.schoolId === state.school.id &&
+                  s.id !== studentId &&
+                  identifierKey(s.admissionNumber) === identifierKey(draft.admissionNumber),
+              )
+            )
+              issues.admissionNumber =
+                'This admission number numeric part is already used in your school.';
+            if (
+              state.enrollments.some(
+                (e) =>
+                  e.studentId !== studentId &&
+                  e.academicYearId === state.academicYear.id &&
+                  e.classId === draft.classId &&
+                  e.sectionId === draft.sectionId &&
+                  rollKey(e.rollNumber) === rollKey(draft.rollNumber),
+              )
+            )
+              issues.rollNumber =
+                'This roll number numeric part is already used in this class and section.';
+            setErrors(issues);
+            if (Object.keys(issues).length) {
+              focusStudentError(event.currentTarget);
+              return;
+            }
             try {
               repository.saveStudent(
                 {
@@ -116,162 +150,15 @@ export default function StudentDialog({
             }
           }}
         >
-          <h3 className="management-form-title">Student details</h3>
-          <div className="form-grid">
-            <label className="field">
-              Student name
-              <input
-                required
-                maxLength={100}
-                value={draft.name}
-                onChange={(e) => field('name', e.target.value)}
-              />
-            </label>
-            <label className="field">
-              Admission number
-              <input
-                required
-                maxLength={100}
-                value={draft.admissionNumber}
-                onChange={(e) => field('admissionNumber', e.target.value)}
-              />
-            </label>
-            <label className="field">
-              Date of birth
-              <PickerInput
-                required
-                type="date"
-                max={today}
-                value={draft.birthDate}
-                onChange={(e) => field('birthDate', e.target.value)}
-              />
-            </label>
-            <label className="field">
-              Enrollment status
-              <select
-                aria-label="Enrollment status"
-                value={draft.status}
-                onChange={(e) => field('status', e.target.value)}
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </label>
-            <label className="field">
-              Student class
-              <select
-                aria-label="Student class"
-                disabled={locked}
-                value={draft.classId}
-                onChange={(e) => {
-                  const sectionId =
-                    state.sections.find((s) => s.classId === e.target.value)?.id ?? '';
-                  setDraft({
-                    ...draft,
-                    classId: e.target.value,
-                    sectionId,
-                  });
-                }}
-              >
-                {orderedClasses(state.classes).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Student section
-              <select
-                aria-label="Student section"
-                disabled={locked}
-                value={draft.sectionId}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    sectionId: e.target.value,
-                  })
-                }
-              >
-                {!state.sections.some((s) => s.classId === draft.classId) && (
-                  <option value="">Add a section in School Settings first</option>
-                )}
-                {state.sections
-                  .filter((s) => s.classId === draft.classId)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {sectionLabel(s.name)}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="field">
-              Roll number
-              <input
-                required
-                type="number"
-                min={1}
-                step={1}
-                value={draft.rollNumber || ''}
-                onChange={(e) => field('rollNumber', Number(e.target.value))}
-              />
-            </label>
-          </div>
-          {locked && (
-            <p className="panel-note">
-              Class and section are fixed for this enrollment because it has saved records. Name,
-              contact and status can still be updated.
-            </p>
-          )}
-          <h3 className="management-form-title">Parent / guardian</h3>
-          <div className="form-grid">
-            <label className="field">
-              Guardian name
-              <input
-                required
-                maxLength={100}
-                value={draft.guardian.name}
-                onChange={(e) =>
-                  setDraft({ ...draft, guardian: { ...draft.guardian, name: e.target.value } })
-                }
-              />
-            </label>
-            <label className="field">
-              Relationship
-              <input
-                required
-                maxLength={100}
-                value={draft.guardian.relation}
-                onChange={(e) =>
-                  setDraft({ ...draft, guardian: { ...draft.guardian, relation: e.target.value } })
-                }
-              />
-            </label>
-            <label className="field span-two">
-              Parent mobile (optional)
-              <input
-                type="tel"
-                value={draft.guardian.contact ?? ''}
-                placeholder="10-digit mobile or + country code"
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    guardian: { ...draft.guardian, contact: e.target.value.trim() || null },
-                  })
-                }
-              />
-            </label>
-            <label className="field span-two">
-              Address (optional)
-              <textarea
-                aria-label="Address (optional)"
-                rows={2}
-                maxLength={500}
-                value={draft.address}
-                onChange={(e) => field('address', e.target.value)}
-              />
-            </label>
-          </div>
+          <StudentFields
+            errors={errors}
+            draft={draft}
+            setDraft={setDraft}
+            classes={state.classes}
+            sections={state.sections}
+            locked={locked}
+            today={today}
+          />
           <p className="panel-note">
             Inactive students retain their records and leave active attendance and test registers.
           </p>

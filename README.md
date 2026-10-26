@@ -1,6 +1,6 @@
 # Schoolwell — school management prototype
 
-A presentation-ready React/TypeScript school workspace for the fictional **Vidya Niketan Public School**. Runs entirely in the browser: no backend, database, authentication, messaging service, or payment gateway is needed.
+A React/TypeScript school workspace with two explicit modes. **Demo mode** preserves the fictional Vidya Niketan Public School and runs entirely in the browser. **Live mode** connects login, school profiles, bulk academic setup, staff/student imports, annual enrollments, teaching assignments, roles, members, activity, and account sessions to the backend. A separate **Super Admin** dashboard manages school registrations and accounts without automatic access to school operations. See [current demo-to-live product integration](docs/product-integration.md), [bulk school onboarding](docs/bulk-onboarding.md), [live setup](docs/live-management.md) and [Super Admin setup and controls](docs/super-admin.md).
 
 ## Start the application
 
@@ -100,13 +100,13 @@ Attendance rate = `(present + late + half day) / marked × 100`. Half day counts
 
 See [backend architecture and production plan](docs/architecture.md) for inspected backend findings, API contracts, tenant isolation, indexes, roles and phased integration.
 
-## Persistence and limitations
+## Demo persistence and limitations
 
 Students, enrollments, teachers, section assignments, fee obligations, attendance, payments, tests, marks, notifications and activity persist under `schoolwell-demo-v1` in this origin's localStorage. Older saved states receive initial roster fields only when those fields are missing; deliberately empty directories and deleted records remain deleted. Invalid cache shapes fall back to fresh data. Storage write failures display an error and do not commit the change to the shared in-memory snapshot.
 
-This is a single-browser presentation store, not a database: clearing browser storage or changing the origin/port loses access to those changes; simultaneous tabs do not coordinate writes. Do not use real student, parent or payment data. The reset action affects only this demo key. There is no server authentication, tenant isolation, audit integrity, messaging delivery, real payment processing, file storage, or compliance certification. School switching, editing settings, subscriptions and enrollment promotion are outside the prototype scope.
+This is a single-browser presentation store, not a database: clearing browser storage or changing the origin/port loses access to those changes; simultaneous tabs do not coordinate writes. Do not use real student, parent or payment data. The reset action affects only this demo key. Demo mode has no server authentication, tenant isolation, audit integrity, messaging delivery, real payment processing, file storage, or compliance certification. School switching, editing settings, subscriptions and enrollment promotion are outside the prototype scope.
 
-The inspected backend is at `./type-ORM-backend-Node`; the brief's `/home/devendra/type-ORM-backend-Node` path does not exist. Its source files and Git state were preserved. It is not started or required by this app. In particular, the existing TypeORM 0.3.21 peer range for MongoDB does not match the repository's driver 6.x; resolve and integration-test that separately before adding school persistence.
+The current backend is at `/home/devendra/scholl backend/type-ORM-backend-Node` and uses Mongoose/Typegoose. It is required only for live mode. Earlier backend assessments in the prototype documentation are historical; use the [live management guide](docs/live-management.md) and [Super Admin guide](docs/super-admin.md) for the current implemented workflows. The [Phase 3 integration guide](docs/phase3-integration.md) documents the original profile integration.
 
 ## Quality checks
 

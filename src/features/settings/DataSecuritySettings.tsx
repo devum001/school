@@ -2,6 +2,7 @@ import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useSettingsSection } from './useSettingsSection';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
 import { Badge, Button, Modal, Panel } from '../../components/ui/Primitives';
@@ -21,7 +22,12 @@ export default function DataSecuritySettings() {
     notify = useFeedback();
   const [dialog, setDialog] = useState<'password' | 'logout' | null>(null),
     [error, setError] = useState(''),
-    [passwordError, setPasswordError] = useState('');
+    [passwordError, setPasswordError] = useState(''),
+    [showPasswords, setShowPasswords] = useState<{
+      current: boolean;
+      next: boolean;
+      confirm: boolean;
+    }>({ current: false, next: false, confirm: false });
   const save = (patch: Partial<WorkspaceSecurity>, message = 'Settings saved.') => {
     try {
       repository.saveSecurity({ ...settings, ...patch });
@@ -185,32 +191,69 @@ export default function DataSecuritySettings() {
           <div className="form-grid">
             <label className="field">
               Current password
-              <input
-                name="currentPassword"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
+              <span className="password-input-wrap">
+                <input
+                  name="currentPassword"
+                  type={showPasswords.current ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label={
+                    showPasswords.current ? 'Hide current password' : 'Show current password'
+                  }
+                  onClick={() =>
+                    setShowPasswords((prev) => ({ ...prev, current: !prev.current }))
+                  }
+                >
+                  {showPasswords.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </span>
             </label>
             <label className="field">
               New password
-              <input
-                name="newPassword"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-              />
+              <span className="password-input-wrap">
+                <input
+                  name="newPassword"
+                  type={showPasswords.next ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label={showPasswords.next ? 'Hide new password' : 'Show new password'}
+                  onClick={() => setShowPasswords((prev) => ({ ...prev, next: !prev.next }))}
+                >
+                  {showPasswords.next ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </span>
             </label>
             <label className="field">
               Confirm new password
-              <input
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-              />
+              <span className="password-input-wrap">
+                <input
+                  name="confirmPassword"
+                  type={showPasswords.confirm ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label={
+                    showPasswords.confirm
+                      ? 'Hide confirm new password'
+                      : 'Show confirm new password'
+                  }
+                  onClick={() =>
+                    setShowPasswords((prev) => ({ ...prev, confirm: !prev.confirm }))
+                  }
+                >
+                  {showPasswords.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </span>
             </label>
           </div>
           {passwordError && (

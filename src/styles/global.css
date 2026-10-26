@@ -114,7 +114,8 @@ textarea {
   border-radius: var(--radius-control);
   min-height: 37px;
   padding: 8px 11px;
-  color: #334459;
+  color: #0f1f2e;
+  font-weight: 500;
   max-width: 100%;
 }
 select {
@@ -127,7 +128,41 @@ textarea {
 }
 input::placeholder,
 textarea::placeholder {
-  color: #5c636c;
+  color: #94a3b8;
+  font-weight: 300;
+  opacity: 1;
+}
+.password-input-wrap {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+.password-input-wrap input {
+  width: 100%;
+  padding-right: 42px;
+}
+.password-input-wrap > button {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.password-input-wrap > button:hover {
+  background: rgba(15, 31, 46, 0.06);
+  color: #0f1f2e;
 }
 input[type='checkbox'] {
   accent-color: var(--navy);
@@ -789,6 +824,24 @@ footer button {
   font-size: 14px;
   font-weight: 650;
   color: var(--school-forest, #12373b);
+}
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.panel-header-actions .search-input {
+  min-width: 240px;
+}
+@media (max-width: 600px) {
+  .panel-header-actions {
+    width: 100%;
+  }
+  .panel-header-actions .search-input {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
 }
 .dashboard-main {
   display: grid;

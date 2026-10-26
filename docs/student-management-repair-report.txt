@@ -1,0 +1,75 @@
+Student management and import repair — 19 October 2026
+
+Implemented behavior
+- Admission and roll fields accept letters and numbers. Duplicate checks extract all ASCII numeric digits, discard leading zeros, and ignore the surrounding letters/punctuation. SH-12, sh-12, AB-0012 and 12 match. Identifiers without digits compare as normalized, case-insensitive text; they are not all treated as the same blank number. Displayed admission codes and alphanumeric rolls retain their spelling.
+- Admission uniqueness: entire school. Roll uniqueness: school + academic year + class + section. Different sections/classes may reuse a roll. Names and guardian names are not unique identifiers.
+- Manual live add/edit uses a dedicated transactional service instead of import-only rules. Name, admission, birth date, guardian fields, address, class, section, roll and active/inactive status are editable. Edits exclude the current student from duplicate checks and retain record IDs. Person and enrollment revisions protect concurrent edits.
+- Explicit admission/roll errors appear next to their fields with red borders and focus. Only allowlisted student-validation fields are exposed by the client. Other API failures remain sanitized.
+- Delete replaces Withdraw in the shared class roster. Confirmation permanently removes the live identity and all school enrollments across academic years; the audit event remains. Retained import rows are redacted/skipped so an existing queued/retried import cannot recreate the removed record. Admission-number changes also redact old matching import copies. Demo deletion uses its existing local cascading delete.
+- The legacy withdrawal API remains compatible and now synchronizes identity status. An identity is active if ANY enrollment remains active; otherwise it is archived. A single year's withdrawn enrollment can correctly coexist with another year's active enrollment. Existing records are not silently rewritten.
+- Section filters show Whole class plus configured sections; the old No section filter is removed. Sectionless classes are represented by Whole class.
+- Both student import dialogs use File & options -> Review & correct -> Submit. Preview corrections are available before writing; demo preview pages cover all rows in batches of 50. Live jobs retain their recoverable background-processing flow. Processing totals appear after submission rather than cluttering the initial preview. The import report is a separate download, not a Result column required in the workbook.
+- Live import options explain class detection and existing-record handling. Create keeps identical records unchanged and flags differing existing profiles. Update changes matching profile fields and creates new students; blank optional values clear those fields. Importing does not transfer an existing enrollment; use Edit student for that.
+- Live student import history is limited to three jobs. A new import deletes the oldest eligible draft/finished job(s). Validating/queued/processing jobs are never removed; when all three are running, another import is rejected until one finishes. Staff import retention is unchanged. Audit events remain.
+
+Request/performance work
+- Add/import screens no longer request the student roster.
+- Search waits 300 ms after typing instead of requesting on each keystroke; pagination resets for the new search.
+- Import history uses the existing account-scoped, 30-second in-memory GET cache and pending-request coalescing. Mutations invalidate it. Protected data is not written to persistent browser caches.
+- Polling still runs only while a job is validating/queued/processing and stops on teardown.
+- Canonical admissionKey/rollKey fields support indexed duplicate checks. Legacy fallback checks remain safe before backfill, but scan old unkeyed records. Run the maintenance backfill for efficient checks on an established database.
+- No absolute API latency promise: production Atlas latency/load was not benchmarked. Browser coverage verifies no roster GET on Add student and one search request for a short typing burst.
+
+Safety and compatibility
+- Existing staged/unstaged changes in both repositories were preserved; no reset, clean or commit was used.
+- No .env credentials were read or printed; no configured Atlas database was contacted or changed. No production migration was run.
+- Runtime/database tests use owned disposable local MongoDB replica sets.
+- Authentication, school permission checks, tenant scoping, CSRF, revisions, school transaction locks and audit writes remain enforced.
+- New matching rules may uncover pre-existing SH-12 / AB-12 collisions. Imports refuse ambiguous legacy matches rather than choosing a student. The preflight reports conflicts and refuses application without changing records; it never merges/deletes students automatically.
+- Demo retains its existing protection against moving a class/section after linked attendance, marks or fee records exist. Those moves require an explicit historical-transfer design; silently moving them would corrupt the local record context. All other demo profile fields and identifiers remain editable. Live has no such linked academic/fee records yet and supports class/section edits.
+- Demo remains local-only; live never falls back to demo data. Demo imports keep their existing create-only atomic repository behavior; server import history/options are live capabilities.
+
+Manual maintenance (not executed against your database)
+From /home/devendra/scholl backend/type-ORM-backend-Node, stop writers for maintenance and back up the database before applying:
+  ./node_modules/.bin/ts-node commands/migrate-student-identifiers.ts --preflight
+  ./node_modules/.bin/ts-node commands/migrate-student-identifiers.ts --apply
+Preflight is read-only and outputs counts, not credentials/student values. Resolve reported collisions before applying. Apply adds canonical admission/roll keys and their unique indexes and retains the correct class/section numeric-roll index. It does not renumber or delete students. Restart backend/frontend dev processes to load the code changes.
+
+Changed frontend files in this repair
+src/lib/studentIdentifiers.ts; studentIdentifiers.test.ts; management.ts; studentImport.ts; studentImport.test.ts; marksImport.ts; academicSheets.ts; studentTemplate.ts
+src/types/domain.ts
+src/features/students/LiveStudentForm.tsx; LiveStudentImport.tsx; LiveStudents.tsx; StudentDialog.tsx; StudentFields.tsx; StudentRosterTable.tsx; studentFormValidation.ts; student-fields.css
+src/features/settings/ClassStudents.tsx; StudentImportDialog.tsx
+src/features/setup/ImportSteps.tsx; ImportJob.tsx; import.css; RosterWorkspace.tsx; useSetupList.ts
+src/features/academics/TestResult.tsx
+src/services/apiService.ts; apiService.test.ts; productService.ts; onboardingService.ts
+ tests/phase1-repair.e2e.ts; phase1-demo.e2e.ts; student-repair-demo.e2e.ts
+This report. Other working-tree changes predate this repair.
+
+Changed backend files in this repair
+src/api/controllers/people.controller.ts; requests/roster.request.ts
+src/api/middlewares/errorHandler.middleware.ts
+src/api/models/people.models.ts
+src/api/services/studentIdentifiers.ts; studentValidation.ts; studentWrite.service.ts; studentDelete.service.ts; studentImportCopies.ts; importRetention.ts
+src/api/services/productPeople.service.ts; peopleRelations.service.ts; rosterFormat.ts; demoStudentFormat.ts; rosterPeople.ts; rosterWorker.ts; rosterImports.service.ts; setupRules.ts
+src/database/migrations/studentIdentifierKeys.ts
+commands/migrate-student-identifiers.ts
+src/security/studentManagement.integration.test.ts; product.integration.test.ts; multiClassImport.integration.test.ts; rosterRules.integration.test.ts
+The existing request contract is extended with optional status and enrollmentRevision. New endpoint: DELETE /api/v1/schools/:schoolId/academic-years/:yearId/students/:id, JSON {revision}. It requires students.manage and CSRF. No dependency changes were required by this repair.
+
+Verification commands and results
+Frontend: npm run typecheck; npm run lint; npm test; VITE_APP_MODE=demo npm run build; VITE_APP_MODE=live npm run build.
+Backend: tsc --noEmit --incremental false; eslint . --ext .ts; jest --runInBand; yarn build (runs lint and compile).
+Browser: PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome playwright test --config=playwright.repair.config.ts; targeted reruns for student import/manual flows. Demo: playwright test tests/student-repair-demo.e2e.ts tests/phase1-demo.e2e.ts --workers=1.
+Both repositories: git diff --check.
+Earlier tests that assumed prefix-sensitive admission numbers or a one-step import were updated to the requested behavior. An actual NaN roll-validation bug found during testing was fixed.
+
+Verified results
+- Frontend unit tests: 279 passed across 47 files.
+- Backend full regression: 181 passed across 28 suites. After the final ambiguity/redaction hardening, all 16 tests in the three affected integration suites passed again.
+- Live Chrome: six existing repair tests passed; the added manual student/duplicate/delete/request-count test passed. Final targeted import-layout and manual checks passed after the last adjustments. Responsive import coverage includes 1366, 768 and 390 px widths.
+- Demo Chrome: four selected tests passed (shared settings baseline, class setup, mixed-class import, editable stepper/local persistence/delete). The final demo stepper rerun also passed.
+- Both TypeScript checks passed. Backend lint passed. Frontend lint: zero errors; only the two pre-existing Fast Refresh warnings in AppIcon.tsx and Primitives.tsx.
+- Backend production build passed. Frontend demo and live production builds passed.
+- git diff --check passed in both repositories.
+- Full demo browser suite and production Atlas performance were not run; the browser results above are the selected relevant tests, not a claim that every legacy browser test passes.

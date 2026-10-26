@@ -1,0 +1,100 @@
+Classes and sections workspace — 2026-10-19
+
+Scope
+Approved changes to the class settings workspace only. General profile/timing implementation,
+student directory routes, auth and platform administration were retained. Both repositories
+already contained extensive uncommitted work; no reset, clean or commit was performed.
+
+Behavior
+- Visible settings label is Classes & sections. Existing bookmarked tab URLs remain valid.
+- One class selector and summary above Sections / Students / Subjects; structural controls
+  appear only under Sections. A section's student count opens its filtered roster directly.
+- Set up classes creates several classes with their sections in one operation. Paste one class
+  name per line, apply comma-separated section names, and adjust each row before saving.
+  Supports 1–50 classes, 1–20 sections per class, maximum 200 sections per request.
+- Class means the learning level; section means a group within that class. Existing names
+  such as Grade 5 are retained as data. Existing optional grade metadata remains available
+  under Curriculum level in the edit dialog; it is not another required creation step.
+- Excel import stays inside the selected class: existing demo preview dialog, existing live
+  durable import-job workflow. Existing workbook columns, corrections and validation retained.
+  Live import resumes after refresh and updates class counts on return to the roster.
+- Original subject defaults and subject editor retained, with the common class selector above.
+- Demo uses local repository persistence. Live uses authenticated scoped APIs only.
+
+Backend dependency
+POST /api/v1/schools/:schoolId/academic-years/:yearId/classes/setup
+Body: { rows: [{ name, sections: [name, ...] }], includeDefaultSubjects?: boolean }
+Response data: { saved: number }
+Uses existing academic collections, schoolWrite transaction/permission recheck, CSRF,
+unique indexes and audit events (classes.setup). Requires classes.manage + sections.manage;
+subject provisioning additionally requires subjects.manage. Closed years are read-only.
+Class setup is atomic; a later conflict rolls back earlier classes, sections, subjects and audit.
+Student imports retain their existing durable per-row processing semantics, not batch atomicity.
+No migration, new environment variable, dependency or lockfile change required.
+
+Files touched this session — frontend
+src/features/settings/ClassSetupDialog.tsx (new)
+src/features/settings/ClassStructureView.tsx
+src/features/settings/ClassStructureSettings.tsx
+src/features/settings/ClassStructureForm.tsx
+src/features/settings/ClassStudents.tsx
+src/features/settings/LiveClassStructure.tsx
+src/features/settings/SettingsPage.tsx
+src/features/settings/settings.css
+src/features/settings/data/contracts.ts
+src/features/settings/data/demoSettings.ts
+src/features/settings/data/liveClassSettings.ts
+src/features/settings/data/liveClassSettings.test.ts
+src/features/students/LiveStudents.tsx
+src/lib/classSetup.ts (new)
+src/lib/classSetup.test.ts (new)
+src/lib/repository.ts
+tests/phase1-demo.e2e.ts
+tests/phase1-repair.e2e.ts
+tests/navigation-refresh.e2e.ts
+tests/full-timetable.e2e.ts
+tests/student-timings.e2e.ts (class-setup helper only)
+tests/settings.e2e.ts (approved tab label)
+tests/live-api.e2e.ts (approved tab label)
+docs/class-workspace-report.txt (this file)
+
+Files touched this session — backend
+src/api/services/classSetup.service.ts (new)
+src/api/controllers/bulkSetup.controller.ts
+src/api/controllers/requests/bulkSetup.request.ts
+src/security/phase1Repair.integration.test.ts
+
+Cleanup
+Replaced duplicated class controls below the tabs with the shared context above them; removed
+Grade from normal workspace labels. No existing configuration, records or source files deleted.
+Older unreferenced demo wrappers were left intact because they contain pre-existing uncommitted
+work. Existing standalone import/admission routes and bulk services remain available.
+
+Verification
+Frontend: npm run typecheck; npm run lint; npm test; npm run build;
+VITE_APP_MODE=live npm run build. All succeeded: 263 unit tests / 43 files.
+Two pre-existing lint warnings: AppIcon.tsx:3 and Primitives.tsx:7 (Fast Refresh exports).
+Backend: tsc --noEmit --incremental false; eslint . --ext .ts;
+jest --runInBand; yarn build. All succeeded: 170 tests / 25 suites.
+Focused backend suite: 7 passed, including new atomic setup, rollback, input, CSRF,
+permissions, tenant/year isolation, and closed-year checks. An initial test incorrectly used
+PATCH to close a year; corrected to the existing /close endpoint and reran successfully.
+Live browser: playwright.repair.config.ts — 4 checks passed initially. The class/import test
+was extended to upload, preview, refresh, confirm, persist and recount a student; it passed
+on rerun after correcting a test locator from Confirm to the actual Continue button.
+Demo browser commands use playwright.config.ts with tests/phase1-demo.e2e.ts,
+tests/navigation-refresh.e2e.ts and tests/full-timetable.e2e.ts (focused class/import cases).
+Browser runs use PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome. Test servers and MongoDB
+replica sets are temporary local fixtures; the configured Atlas database was never accessed.
+git diff --check passed in both repositories.
+
+Limits / manual steps
+Restart the backend if your process has not picked up the added route, and refresh the frontend.
+A writable academic year and the existing school management permissions are required in live.
+No real-school/production runtime test was performed. The entire historical browser suite was
+not run; older tests outside these focused workflows have known stale workflow assumptions.
+No Phase 2/3 staff or student-profile expansion is included. Existing General code is unchanged.
+
+Final demo browser result: 6 passed (20.1s), including the updated existing class setup /
+enrollment / protected deletion test. Final live extended class/import check: 1 passed (25.9s),
+in addition to the three other live checks from the preceding run.

@@ -49,13 +49,13 @@ describe('consistent school model', () => {
   });
 });
 describe('attendance', () => {
-  it('keeps unmarked separate from absent and uses marked denominator', () => {
+  it('keeps unmarked separate from absent and uses total denominator', () => {
     expect(attendanceSummary(['present', 'absent', 'unmarked', 'late', 'half-day'])).toMatchObject({
       absent: 1,
       unmarked: 1,
       marked: 4,
       attended: 3,
-      percentage: 75,
+      percentage: 60,
     });
   });
   it('has a defined zero-denominator result', () => {
@@ -228,7 +228,7 @@ describe('presentation copy', () => {
     const message = notificationMessage('Willowbrook Academy', 'Ananya Sharma', DEMO_DATE);
     expect(message).toContain('आदरणीय अभिभावक');
     expect(message).toContain('Ananya Sharma');
-    expect(message).toContain('10 अक्टूबर 2026');
+    expect(message).toContain('10-10-2026');
     expect(message).toContain('अनुपस्थित');
     expect(message).toContain('Willowbrook Academy');
   });

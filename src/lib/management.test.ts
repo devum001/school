@@ -26,7 +26,7 @@ const student: StudentInput = {
   address: '',
   classId: 'class-5',
   sectionId: 'class-5-a',
-  rollNumber: 13,
+  rollNumber: 25,
 };
 const teacher: TeacherInput = {
   name: 'Kavya Desai',

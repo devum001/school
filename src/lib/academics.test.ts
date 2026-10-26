@@ -72,7 +72,7 @@ describe('test creation and marks entry', () => {
     const results = state.results.filter((r) => r.examId === exam.id);
     expect(results).toHaveLength(2);
     expect(results[1].absent).toBe(true);
-    expect(resultSummary(results[1])).toMatchObject({ marks: 0, maximum: 20 });
+    expect(resultSummary(results[1])).toMatchObject({ marks: 0, maximum: 0 });
     state = saveTestMarks(state, exam.id, [
       { enrollmentId: 'enr-001', marks: [18.5], absent: false },
     ]);

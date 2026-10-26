@@ -15,33 +15,32 @@ test('one test covers multiple classes and sections, with scoped dropdowns and i
   await dialog.getByLabel('Test name', { exact: true }).fill('Combined Weekly Practice');
   await dialog.getByLabel('Grade 8 Section A', { exact: true }).check();
   await dialog.getByLabel('Grade 8 Section B', { exact: true }).check();
-  await dialog.getByLabel('Select Grade 9', { exact: true }).check();
-  await dialog.getByRole('button', { name: 'Create Test', exact: true }).click();
-  await expect(dialog.getByRole('alert')).toContainText('Grade 9');
-  await dialog.getByLabel('Grade 9 Section B', { exact: true }).check();
+  await dialog.getByLabel('Default maximum marks').fill('20');
+  await dialog.getByLabel('Add assessment class').selectOption('class-9');
+  await dialog.getByLabel('Grade 9 Section A', { exact: true }).uncheck();
+  await dialog.getByLabel('Grade 9 Mathematics maximum marks').fill('100');
   await page.screenshot({ path: info.outputPath('multiple-class-test-form.png') });
   await dialog.getByRole('button', { name: 'Create Test', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   const card = page.locator('.academic-test-card').filter({ hasText: 'Combined Weekly Practice' });
-  await expect(card.locator('.academic-test-scope')).toContainText('Grade 8 · Sections A, B');
-  await expect(card.locator('.academic-test-scope')).toContainText('Grade 9 · Section B');
+  await expect(card.locator('.academic-test-scope')).toContainText('8th · Section A, Section B');
+  await expect(card.locator('.academic-test-scope')).toContainText('9th · Section B');
   await card.getByRole('button', { name: 'Add/Edit Marks for Combined Weekly Practice' }).click();
   await expect(dialog.getByLabel('Marks class').locator('option')).toHaveCount(2);
-  await expect(dialog.getByLabel('Marks section').locator('option')).toHaveCount(2);
-  await dialog.getByLabel('Mathematics maximum marks', { exact: true }).fill('20');
+  await expect(dialog.getByLabel('Marks section').locator('option')).toHaveCount(3);
+  await expect(dialog.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('20');
   await dialog.locator('tbody tr').first().locator('input').first().fill('18');
   await dialog.getByLabel('Marks class').selectOption('class-9');
-  await expect(dialog.getByLabel('Marks section')).toHaveValue('class-9-b');
-  await expect(dialog.getByLabel('Marks section').locator('option')).toHaveCount(1);
-  await expect(dialog.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('');
-  await dialog.getByLabel('Mathematics maximum marks', { exact: true }).fill('100');
+  await expect(dialog.getByLabel('Marks section')).toHaveValue('');
+  await expect(dialog.getByLabel('Marks section').locator('option')).toHaveCount(2);
+  await expect(dialog.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('100');
   await dialog.locator('tbody tr').first().locator('input').first().fill('82');
   await dialog.getByLabel('Marks class').selectOption('class-8');
   await expect(dialog.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('20');
   await expect(dialog.locator('tbody tr').first().locator('input').first()).toHaveValue('18');
   await dialog.getByLabel('Marks section').selectOption('class-8-b');
   await expect(dialog.locator('tbody tr').first().locator('input').first()).toHaveValue('');
-  await dialog.getByLabel('Mathematics maximum marks', { exact: true }).fill('30');
+  await expect(dialog.getByLabel('Mathematics maximum marks', { exact: true })).toHaveValue('20');
   await dialog.locator('tbody tr').first().locator('input').first().fill('15');
   await page.screenshot({ path: info.outputPath('multiple-class-marks-dropdowns.png') });
   await dialog.getByRole('button', { name: 'Save Marks', exact: true }).click();
@@ -65,7 +64,7 @@ test('one test covers multiple classes and sections, with scoped dropdowns and i
     .filter({ hasText: 'Combined Weekly Practice' });
   await expect(result).toContainText('82.0%');
   await result.getByRole('button', { name: 'View Result', exact: true }).click();
-  await expect(dialog).toContainText('82/100');
+  await expect(page.locator('.assessment-result-page')).toContainText('82/100');
 });
 
 test('import preview stays with its selected class and rejects files for a different class', async ({
@@ -81,7 +80,7 @@ test('import preview stays with its selected class and rejects files for a diffe
   const draft = sheetDraft(state, state.exams[0], 'class-8-a');
   draft.columns[0].maximum = '20';
   const grid = sheetTemplate(draft.columns, draft.students);
-  grid[2][4] = '18';
+  grid[2][5] = '18';
   const csv = (rows: ExcelCell[][]) =>
     rows
       .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(','))
@@ -105,7 +104,7 @@ test('import preview stays with its selected class and rejects files for a diffe
     mimeType: 'text/csv',
     buffer: Buffer.from(csv(grid)),
   });
-  await expect(dialog.getByRole('alert')).toContainText('different class or section');
+  await expect(dialog.getByRole('alert')).toContainText('Unknown or ambiguous');
   expect((await savedAcademics(page)).results).toEqual([]);
 });
 
@@ -128,7 +127,11 @@ test('editing a shared test shows its assignments and protects saved students', 
   await expect(dialog.getByLabel('Select Grade 9', { exact: true })).toBeChecked();
   await expect(dialog.getByLabel('Grade 9 Section A', { exact: true })).not.toBeChecked();
   await expect(dialog.getByLabel('Grade 9 Section B', { exact: true })).toBeChecked();
-  await dialog.getByLabel('Select Grade 8', { exact: true }).uncheck();
+  await dialog.getByLabel('Select Grade 8', { exact: true }).click();
+  for (const input of await dialog.locator('.assessment-maximum-field input').all())
+    if (!(await input.inputValue())) await input.fill('100');
+  const confirm = dialog.locator('.assessment-maximum-confirm input');
+  if (await confirm.count()) await confirm.check();
   await dialog.getByRole('button', { name: 'Save test', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('saved marks');
   expect((await savedAcademics(page)).exams[0].classIds).toEqual(['class-8', 'class-9']);

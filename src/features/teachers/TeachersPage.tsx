@@ -93,29 +93,37 @@ export default function TeachersPage() {
           tone="green"
         />
       </div>
-      <Panel className="teacher-directory">
-        <div className="toolbar">
-          <SearchInput
-            value={query}
-            onChange={(v) => {
-              setQuery(v);
-              setPage(1);
-            }}
-            placeholder="Search teacher name or designation…"
-          />
-          <select
-            aria-label="Filter teacher status"
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
+      <Panel
+        className="teacher-directory"
+        title="Teachers"
+        action={
+          <div className="panel-header-actions">
+            <SearchInput
+              value={query}
+              onChange={(v) => {
+                setQuery(v);
+                setPage(1);
+              }}
+              placeholder="Search teacher name or designation…"
+            />
+            <select
+              aria-label="Filter teacher status"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <Link className="button primary" to="/staff?add=teacher">
+              <AppIcon name="teacher" size={16} /> Add teaching staff
+            </Link>
+          </div>
+        }
+      >
         <div className="table-wrap">
           <table>
             <thead>
@@ -135,6 +143,9 @@ export default function TeachersPage() {
                       <Avatar name={t.name} />
                       <span>
                         <strong>{t.name}</strong>
+                        <small>
+                          {[t.staffId, staffDesignation(t, config)].filter(Boolean).join(' · ')}
+                        </small>
                       </span>
                     </Link>
                   </td>

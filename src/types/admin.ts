@@ -1,6 +1,6 @@
 export interface WorkspacePreferences {
   language: 'English' | 'Hindi';
-  dateFormat: 'DD/MM/YYYY' | 'DD MMM YYYY';
+  dateFormat: 'DD-MM-YYYY' | 'DD/MM/YYYY' | 'DD MMM YYYY';
   timeFormat: '12-hour' | '24-hour';
   academicYearId: string;
   weekStartsOn: 'Monday' | 'Sunday';

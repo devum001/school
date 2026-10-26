@@ -1,25 +1,33 @@
+import DeleteDialog from '../../components/shared/DeleteDialog';
+import { repository } from '../../lib/repository';
+import { compareRolls } from '../../lib/studentIdentifiers';
+import StudentRosterTable from '../students/StudentRosterTable';
 import { useState } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import { AppIcon, Button, EmptyState, Panel, SearchInput } from '../../components/ui/Primitives';
 import { roster } from '../../lib/selectors';
+import StudentImportDialog from './StudentImportDialog';
 import StudentDialog from '../students/StudentDialog';
-import { STUDENT_IMPORT_HEADERS } from '../../lib/studentImport';
-import { downloadStudentWorkbook } from '../../lib/xlsx';
+import { downloadClassStudentTemplate } from '../../lib/studentTemplate';
 import { sectionLabel } from '../../lib/schoolLabels';
 
 export default function ClassStudents({ classId }: { classId: string }) {
-  const state = useSchool(),
-    navigate = useNavigate(),
-    location = useLocation();
+  const state = useSchool();
   const [params, setParams] = useSearchParams();
+  const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const schoolClass = state.classes.find((item) => item.id === classId);
   const sections = state.sections.filter(
     (item) => item.schoolId === state.school.id && item.classId === classId,
   );
-  const section = sections.find((item) => item.id === params.get('studentSection'))?.id ?? '';
+  const section =
+    params.get('studentSection') === 'none'
+      ? ''
+      : (sections.find((item) => item.id === params.get('studentSection'))?.id ?? '');
   const query = params.get('studentSearch') ?? '';
   const update = (key: string, value: string) =>
     setParams(
@@ -36,11 +44,12 @@ export default function ClassStudents({ classId }: { classId: string }) {
     .sort(
       (a, b) =>
         a.sectionName.localeCompare(b.sectionName) ||
-        a.enrollment.rollNumber - b.enrollment.rollNumber,
+        compareRolls(a.enrollment.rollNumber, b.enrollment.rollNumber),
     );
   const filtered = students.filter(
     (row) =>
-      (!section || row.enrollment.sectionId === section) &&
+      (!section ||
+        (section === 'none' ? !row.enrollment.sectionId : row.enrollment.sectionId === section)) &&
       `${row.student.name} ${row.student.admissionNumber} ${row.enrollment.rollNumber}`
         .toLowerCase()
         .includes(query.toLowerCase()),
@@ -56,44 +65,20 @@ export default function ClassStudents({ classId }: { classId: string }) {
             <Button
               variant="secondary"
               onClick={() =>
-                downloadStudentWorkbook(
-                  'student-import-sample.xlsx',
-                  [STUDENT_IMPORT_HEADERS],
-                  [
-                    `Import students into ${schoolClass?.name} across all its sections in one file.`,
-                    `Section: ${sections.map((item) => item.name).join(', ')}. Fill the section on every student row.`,
-                    'Required: Student Name, Admission Number, Birth Date, Guardian Name, Roll Number, Section.',
-                    'Admission Number and Roll Number are entered by the school. They are never assigned automatically.',
-                    'Roll numbers must be unique within each section. Admission numbers must be unique across the school.',
-                    'Birth Date: YYYY-MM-DD or Excel date cell. Keep identifiers and phone numbers as text.',
-                    'Relationship defaults to Parent. Parent Mobile and Address are optional. No formulas; up to 1,000 rows.',
-                  ],
+                downloadClassStudentTemplate(
+                  schoolClass?.name ?? '',
+                  sections.map((item) => item.name),
                 )
               }
             >
               <AppIcon name="download" size={16} />
               Download Sample Excel
             </Button>
-            <Button
-              variant="secondary"
-              disabled={!sections.length}
-              onClick={() =>
-                navigate(
-                  `/students/import?${new URLSearchParams({ classId, returnTo: location.pathname + location.search })}`,
-                )
-              }
-            >
+            <Button variant="secondary" onClick={() => setImporting(true)}>
               <AppIcon name="upload" size={16} />
               Import Excel (.xlsx)
             </Button>
-            <Button
-              disabled={!sections.length}
-              onClick={() =>
-                navigate(
-                  `/students/new?${new URLSearchParams({ classId, ...(section ? { sectionId: section } : {}), returnTo: location.pathname + location.search })}`,
-                )
-              }
-            >
+            <Button onClick={() => setAdding(true)}>
               <Plus size={15} />
               Add student
             </Button>
@@ -113,7 +98,7 @@ export default function ClassStudents({ classId }: { classId: string }) {
               value={section}
               onChange={(event) => update('studentSection', event.target.value)}
             >
-              <option value="">All sections</option>
+              <option value="">Whole class · all students</option>
               {sections.map((item) => (
                 <option key={item.id} value={item.id}>
                   {sectionLabel(item.name)}
@@ -124,44 +109,20 @@ export default function ClassStudents({ classId }: { classId: string }) {
           <span>{filtered.length} students</span>
         </div>
         {filtered.length ? (
-          <div className="table-wrap" role="region" aria-label="Class students" tabIndex={0}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Roll no.</th>
-                  <th>Student</th>
-                  <th>Section</th>
-                  <th>Admission no.</th>
-                  <th>Status</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(({ student, enrollment, sectionName }) => (
-                  <tr key={enrollment.id}>
-                    <td>{enrollment.rollNumber}</td>
-                    <td>
-                      <Link className="text-link" to={`/students/${student.id}`}>
-                        {student.name}
-                      </Link>
-                    </td>
-                    <td>{sectionLabel(sectionName)}</td>
-                    <td>{student.admissionNumber}</td>
-                    <td>{student.status === 'active' ? 'Active' : 'Inactive'}</td>
-                    <td>
-                      <Button
-                        variant="ghost"
-                        aria-label={`Edit student ${student.name}`}
-                        onClick={() => setEditing(student.id)}
-                      >
-                        Edit
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <StudentRosterTable
+            rows={filtered.map(({ student, enrollment, sectionName, className }) => ({
+              id: enrollment.id,
+              studentId: student.id,
+              name: student.name,
+              code: student.admissionNumber,
+              className,
+              sectionName,
+              rollNumber: enrollment.rollNumber,
+              status: student.status,
+            }))}
+            onDelete={(id) => setDeleting(filtered.find((r) => r.enrollment.id === id)!.student.id)}
+            onEdit={(id) => setEditing(filtered.find((r) => r.enrollment.id === id)!.student.id)}
+          />
         ) : (
           <EmptyState
             title={students.length ? 'No matching students' : 'No students in this class'}
@@ -169,6 +130,24 @@ export default function ClassStudents({ classId }: { classId: string }) {
           />
         )}
       </Panel>
+      {adding && (
+        <StudentDialog
+          initialClassId={classId}
+          initialSectionId={section && section !== 'none' ? section : undefined}
+          onClose={() => setAdding(false)}
+        />
+      )}
+      {importing && <StudentImportDialog classId={classId} onClose={() => setImporting(false)} />}
+      {deleting && (
+        <DeleteDialog
+          title="Delete student?"
+          description="Permanently delete this student and their related local records."
+          onClose={() => setDeleting(null)}
+          onDelete={() => {
+            repository.deleteStudent(deleting);
+          }}
+        />
+      )}
       {editing && <StudentDialog studentId={editing} onClose={() => setEditing(null)} />}
     </>
   );

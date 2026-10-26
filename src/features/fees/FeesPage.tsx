@@ -78,25 +78,25 @@ export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
           }
         />
       )}
-      <div className="stats-grid three">
+      <div className="stats-grid three finance-summary">
         <StatCard
           label="Annual fee obligations"
           detail={null}
           value={shortMoney(total.total)}
-          icon={<AppIcon name="receipt" size={24} />}
+          icon={<AppIcon name="receipt" size={48} />}
         />
         <StatCard
           label="Total collected"
           value={shortMoney(total.paid)}
           detail={`${total.payments.length} payment records`}
-          icon={<AppIcon name="wallet" size={24} />}
+          icon={<AppIcon name="wallet" size={48} />}
           tone="green"
         />
         <StatCard
           label="Outstanding balance"
           value={shortMoney(total.outstanding)}
           detail="Includes future installments"
-          icon={<AppIcon name="finance-balance" size={24} />}
+          icon={<AppIcon name="finance-balance" size={48} />}
           tone="amber"
         />
       </div>
@@ -110,7 +110,7 @@ export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
         onChange={setTab}
       />
       <Panel>
-        <div className="toolbar">
+        <div className="toolbar student-fees-toolbar">
           {embedded && (
             <Button variant="secondary" onClick={exportBalances}>
               <AppIcon name="download" size={16} />

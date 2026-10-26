@@ -66,7 +66,8 @@ describe('parent report sharing', () => {
     result.subjects.forEach((s) => (s.marks = 0));
     const text = studentReportMessage(state, row, state.exams);
     expect(text).toContain('स्थिति: अनुपस्थित');
-    expect(text).toContain('कुल अंक: 0 / 30');
+    expect(text).toContain('प्रतिशत: — (अनुपस्थित या लंबित)');
+    expect(text).not.toContain('कुल अंक: 0 / 30');
     expect(text).toContain('समग्र परिणाम');
     expect(text).not.toContain('Daily practice');
   });
@@ -87,7 +88,7 @@ it('prepares a test-specific Hindi absence notice only for an explicitly absent 
   expect(message).toContain('Pre-board I');
   expect(message).toContain('प्री-बोर्ड परीक्षा');
   expect(message).toContain('अनुपस्थित');
-  expect(message).toContain('27 सितंबर 2026');
+  expect(message).toContain('27-09-2026');
   expect(
     testAbsenceMessage(
       state,

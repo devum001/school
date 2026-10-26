@@ -1,16 +1,21 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
-import { useSchool } from '../../app/useSchool';
 import { Modal, AppIcon } from '../ui/Primitives';
 import { notificationAttention, notificationReviewUrl } from '../../lib/communicationOverview';
 import { displayDate } from '../../lib/config';
 import './topbar-controls.css';
 
-export default function TopbarControls() {
-  const state = useSchool();
+export default function TopbarControls({
+  academicYear,
+  attention,
+  showNotifications = true,
+}: {
+  showNotifications?: boolean;
+  academicYear?: { name: string; start: string; end: string } | null;
+  attention?: ReturnType<typeof notificationAttention>;
+}) {
   const [dialog, setDialog] = useState<'year' | 'notifications' | null>(null);
-  const attention = notificationAttention(state);
   return (
     <>
       <button
@@ -19,21 +24,25 @@ export default function TopbarControls() {
         onClick={() => setDialog('year')}
       >
         <span />
-        {state.academicYear.name}
+        {academicYear?.name ?? 'Not configured'}
         <ChevronDown size={12} />
       </button>
-      <button
-        className="icon-button notification-bell"
-        aria-label={`Notifications: ${attention.count} need attention`}
-        onClick={() => setDialog('notifications')}
-      >
-        <AppIcon name="notifications" size={20} />
-        {attention.count > 0 && (
-          <span className="notification-count" aria-hidden="true">
-            {attention.count > 99 ? '99+' : attention.count}
-          </span>
-        )}
-      </button>
+      {showNotifications && (
+        <button
+          className="icon-button notification-bell"
+          aria-label={
+            attention ? `Notifications: ${attention.count} need attention` : 'Notifications'
+          }
+          onClick={() => setDialog('notifications')}
+        >
+          <AppIcon name="notifications" size={20} />
+          {attention && attention.count > 0 && (
+            <span className="notification-count" aria-hidden="true">
+              {attention.count > 99 ? '99+' : attention.count}
+            </span>
+          )}
+        </button>
+      )}
       <Modal
         open={dialog === 'year'}
         onClose={() => setDialog(null)}
@@ -43,15 +52,15 @@ export default function TopbarControls() {
         <dl className="topbar-year-details">
           <div>
             <dt>Academic year</dt>
-            <dd>{state.academicYear.name}</dd>
+            <dd>{academicYear?.name ?? 'Not configured'}</dd>
           </div>
           <div>
             <dt>Starts</dt>
-            <dd>{displayDate(state.academicYear.start)}</dd>
+            <dd>{academicYear ? displayDate(academicYear.start) : 'Not configured'}</dd>
           </div>
           <div>
             <dt>Ends</dt>
-            <dd>{displayDate(state.academicYear.end)}</dd>
+            <dd>{academicYear ? displayDate(academicYear.end) : 'Not configured'}</dd>
           </div>
         </dl>
         <div className="modal-actions">
@@ -68,10 +77,17 @@ export default function TopbarControls() {
         open={dialog === 'notifications'}
         onClose={() => setDialog(null)}
         title="Notifications"
-        description={`${attention.count} alerts and failed messages need attention.`}
+        description={
+          attention
+            ? `${attention.count} alerts and failed messages need attention.`
+            : 'School notifications.'
+        }
       >
         <div className="topbar-alert-list">
-          {attention.pending.map((group) => (
+          {!attention && (
+            <p>Notification delivery and attention counts are not connected in Phase 1.</p>
+          )}
+          {attention?.pending.map((group) => (
             <Link
               key={`${group.date}:${group.event}`}
               to={notificationReviewUrl(group.event, group.date, attention.records)}
@@ -84,7 +100,7 @@ export default function TopbarControls() {
               <b>{group.recipients.size}</b>
             </Link>
           ))}
-          {attention.failed > 0 && (
+          {attention && attention.failed > 0 && (
             <Link
               to="/notifications?tab=History&historyStatus=Failed"
               onClick={() => setDialog(null)}
@@ -96,7 +112,7 @@ export default function TopbarControls() {
               <b>{attention.failed}</b>
             </Link>
           )}
-          {attention.count === 0 && <p>No notifications need attention.</p>}
+          {attention && attention.count === 0 && <p>No notifications need attention.</p>}
         </div>
         <div className="modal-actions">
           <Link className="button secondary" to="/notifications" onClick={() => setDialog(null)}>

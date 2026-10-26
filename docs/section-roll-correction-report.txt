@@ -1,0 +1,55 @@
+Section-scoped roll-number correction — 19 October 2026
+
+The current user rule replaces the earlier class-wide restriction:
+- Class 10-A roll 7 and Class 10-B roll 7: allowed.
+- Two Class 10-A students with roll 7 in the same academic year: rejected.
+- Different classes can reuse roll numbers.
+- A class without sections has a single roll-number scope for that academic year.
+- Admission numbers remain unique across the school. Names may repeat.
+
+Implementation
+Frontend saveStudent and workbook validation now compare school, year, class and section. Excel instructions state the same rule. Fresh demo sections again number independently; existing localStorage records were not renumbered. Academic marks tests verify correct matching for equal rolls in different sections. The live browser import fixture now uses roll 42 in both sections A and B of Class 10.
+Backend workbook duplicate checks normalize both class and section labels. Saved-record checks include sectionId (null/missing for sectionless classes). The unique index includes schoolId, academicYearId, classId, sectionId and rollNumber.
+The existing optionalSections maintenance routine now installs that index before dropping the known obsolete class-wide and missing-classId roll indexes. The earlier classRollNumbers helper delegates to this routine so the previously documented command cannot reinstall the superseded rule. Unrelated indexes and student records remain unchanged. Tests cover rejection of same-section duplicates, permitted cross-section repeats, import dates, admission uniqueness, and safe/idempotent index correction.
+
+Configured database
+No connection to the configured database and no migration application were performed. If the earlier class-wide index was installed, use the corrected maintenance flow from the backend repository:
+  ./node_modules/.bin/ts-node commands/migrate-optional-sections.ts --preflight
+During maintenance, if preflight is ready:
+  ./node_modules/.bin/ts-node commands/migrate-optional-sections.ts --apply
+The old migrate-class-roll-numbers.ts command also delegates to the corrected routine. Neither command renumbers or deletes students.
+
+Changed frontend files
+  src/lib/management.ts
+  src/lib/studentTemplate.ts
+  src/lib/studentNumbering.test.ts
+  src/lib/studentImport.test.ts
+  src/lib/marksImport.test.ts
+  src/mocks/seed.ts
+  tests/phase1-repair.e2e.ts
+  docs/student-import-rules-report.txt
+  docs/section-roll-correction-report.txt
+Changed backend files
+  src/api/models/people.models.ts
+  src/api/services/rosterPeople.ts
+  src/api/services/rosterWorker.ts
+  src/database/migrations/optionalSections.ts
+  src/database/migrations/classRollNumbers.ts
+  commands/migrate-class-roll-numbers.ts
+  src/security/multiClassImport.integration.test.ts
+  src/security/rosterRules.integration.test.ts
+
+Verification
+- Frontend npm run typecheck: passed.
+- Frontend npm test: 275 tests across 46 files passed.
+- Frontend npm run lint: no errors; two existing Fast Refresh warnings in AppIcon.tsx and Primitives.tsx.
+- Frontend npm run build and VITE_APP_MODE=live npm run build: passed.
+- Backend tsc --noEmit --incremental false: passed.
+- Backend jest --runInBand: 175 tests across 27 suites passed, using disposable local MongoDB replica sets.
+- Backend yarn build (including full ESLint): passed.
+- Live browser: 1 targeted multi-class import test passed, including equal rolls in different sections of the same class.
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test --config=playwright.repair.config.ts -g 'optional sections and multi-class'
+- Demo browser: all 3 phase1-demo tests passed.
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test tests/phase1-demo.e2e.ts --workers=1
+- git diff --check passed in both repositories.
+- No real database/runtime migration was executed. Existing uncommitted work was preserved.

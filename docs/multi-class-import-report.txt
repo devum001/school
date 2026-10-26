@@ -1,0 +1,115 @@
+Optional sections and mixed-class Excel import — 2026-10-19
+
+Implemented
+- Selected numeric class labels use raised ordinal suffixes: 1st, 2nd, 3rd, 11th, 12th.
+  Stored school class names remain unchanged. Native selector options retain those names.
+- Class setup accepts zero sections. Individual admissions and Excel imports can enroll directly
+  in a class without creating synthetic section records. Sections remain required when the
+  selected class actually has active sections; unknown sections are rejected.
+- The template now has ten columns: Student Name, Admission Number, Birth Date, Guardian Name,
+  Relationship, Parent Mobile, Address, Roll Number, Section, Class.
+- One workbook routes rows to multiple existing classes in the current school/academic year.
+  Class 12, Grade 12, 12 and 12th match the same numeric level. Unknown or ambiguous matches
+  are errors, not automatic class creation. Custom class names still match normalized names.
+- Live Excel import opens in a dialog, with scope/matching controls, a file picker, a visible
+  Preview import button, row validation/correction, and Confirm import. The preview remains
+  available after refresh. Accidental closure of a selected workbook is guarded.
+- Demo uses the existing import dialog with a Class preview column, template download and
+  Import students button. Its older class-scoped workbooks without Class remain supported.
+- Whole class / individual section / No section student filters use the same saved-enrollment
+  scope as their counts. This includes withdrawn enrollments, shown with their status, and
+  inactive students in demo. Archived sections containing enrollments remain visible for review.
+  Class totals include students enrolled directly without a section. Counts refresh after import.
+- Existing live nine-column saved import jobs, row corrections and single-student API contracts
+  remain supported; new multi-class jobs use the explicit school-students-v2 format.
+
+Required maintenance on existing backend databases (NOT executed against your database)
+Run from /home/devendra/scholl backend/type-ORM-backend-Node during a maintenance window:
+  ./node_modules/.bin/ts-node commands/migrate-optional-sections.ts --preflight
+  ./node_modules/.bin/ts-node commands/migrate-optional-sections.ts --apply
+The old unique roll-number index omits classId. For students with no section, that would make
+roll 1 conflict across different classes. This command creates the class-aware unique index
+first, then removes only the known obsolete index. It does not delete or rewrite any records.
+It checks duplicate groups first and is repeatable. Until it is applied, class-only enrollment
+returns a clear prerequisite error; existing section-based enrollment continues working.
+New empty databases initialized from the current models already get the correct index.
+No new environment values, secrets, packages or lockfile changes are needed.
+
+Backend files changed
+src/api/controllers/requests/bulkSetup.request.ts
+src/api/controllers/requests/roster.request.ts
+src/api/models/people.models.ts
+src/api/models/import.models.ts
+src/api/services/classSetup.service.ts
+src/api/services/classNameKey.ts (new)
+src/api/services/demoStudentFormat.ts
+src/api/services/rosterPeople.ts
+src/api/services/rosterFormat.ts
+src/api/services/rosterImports.service.ts
+src/api/services/rosterWorker.ts
+src/api/services/productPeople.service.ts
+src/database/migrations/optionalSections.ts (new)
+commands/migrate-optional-sections.ts (new)
+src/test/productFixture.ts (new shared isolated test fixture)
+src/security/product.integration.test.ts
+src/security/multiClassImport.integration.test.ts (new)
+src/security/phase1Repair.integration.test.ts
+
+Frontend files changed
+src/components/shared/ClassName.tsx (new)
+src/lib/classNames.ts (new)
+src/lib/classSetup.ts
+src/lib/management.ts
+src/lib/schoolLabels.ts
+src/lib/studentImport.ts
+src/lib/studentTemplate.ts
+src/lib/studentImport.test.ts
+src/lib/multiClassImport.test.ts (new)
+src/features/settings/ClassSetupDialog.tsx
+src/features/settings/ClassStructureView.tsx
+src/features/settings/ClassStudents.tsx
+src/features/settings/StudentImportDialog.tsx
+src/features/settings/settings.css
+src/features/settings/data/contracts.ts
+src/features/settings/data/liveClassSettings.ts
+src/features/settings/data/liveClassSettings.test.ts
+src/features/students/StudentFields.tsx
+src/features/students/LiveStudentForm.tsx
+src/features/students/LiveStudents.tsx
+src/features/students/LiveStudentImport.tsx (extracted dialog; old inline implementation removed)
+src/services/productService.ts
+src/services/onboardingService.ts
+tests/phase1-demo.e2e.ts
+tests/phase1-repair.e2e.ts
+tests/navigation-refresh.e2e.ts
+
+Verification
+Frontend: npm run typecheck, npm run lint, npm test, npm run build,
+VITE_APP_MODE=live npm run build. 266 unit tests / 44 files pass. Typecheck and both builds pass.
+Lint has only the two existing Fast Refresh warnings in AppIcon.tsx and Primitives.tsx.
+Backend: tsc --noEmit --incremental false, eslint . --ext .ts, jest --runInBand.
+173 tests / 26 suites pass, including real MongoDB transactions/import processing on temporary
+local replica sets. Migration preservation/repeatability was tested there with existing records.
+Browser: six existing focused demo checks passed, plus the new mixed-class / no-section demo
+check. Four existing live repair checks passed, plus the new mixed-class live check. The latter
+verifies class creation without sections, raised suffix, dialog controls, multi-class import,
+correct MongoDB enrollment, combined counts and section A/B filtering.
+Commands use PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome with playwright.config.ts (demo)
+and playwright.repair.config.ts (live). Several initial failures were outdated test fixtures,
+locators or academic-year revisions; they were corrected and affected tests rerun successfully.
+
+Limits
+No configured Atlas/production database was accessed. The index command still needs applying
+there before class-only admissions. Do not treat isolated test success as production migration.
+General profile/timing code and unrelated uncommitted changes were preserved.
+The phrase 'results combined or section-wise' was implemented for student lists/counts, with a
+clarification question about academic marks. Existing demo academic-result filters remain;
+real exam/results APIs are not connected and were not invented or replaced with demo data.
+The complete historical browser suite was not claimed green; only the listed relevant checks.
+
+Final checks: backend yarn build passed (includes lint and TypeScript compilation).
+The final live mixed-import check also passed after adding an accidental-cancel/keep-reviewing
+assertion. Section names are matched consistently with or without the 'Section' prefix;
+ambiguous section matches are rejected, as with ambiguous class names.
+After the final section-name matching adjustment: 22 focused backend tests / 3 suites passed;
+backend typecheck and yarn build (including lint) passed again. Both git diff --check checks passed.

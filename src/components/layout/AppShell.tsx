@@ -1,22 +1,17 @@
 import '../../styles/navigation.css';
 import { useToday } from '../../app/useToday';
 import { displayDate } from '../../lib/config';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { ChevronsUpDown, ArrowUpRight, Menu, X, ChevronDown, CircleHelp } from 'lucide-react';
 import {
-  ChevronsUpDown,
-  ArrowUpRight,
-  Menu,
-  X,
-  ChevronDown,
-  CircleHelp,
-} from 'lucide-react';
-import { schoolLogoFor } from '../../lib/schoolBranding';
-import { useSchool } from '../../app/useSchool';
-import { Avatar, Button, Modal, AppIcon, type IconName } from '../ui/Primitives';
-import TopbarControls from './TopbarControls';
-import { notificationAttention } from '../../lib/communicationOverview';
-import { preferencesFor } from '../../lib/adminSettings';
+  Avatar,
+  Button,
+  WorkspaceLoadingBoundary,
+  Modal,
+  AppIcon,
+  type IconName,
+} from '../ui/Primitives';
 const hindiLabels: Record<string, string> = {
   Overview: 'अवलोकन',
   Students: 'विद्यार्थी',
@@ -24,7 +19,7 @@ const hindiLabels: Record<string, string> = {
   'Staff & HR': 'स्टाफ एवं एचआर',
   Attendance: 'उपस्थिति',
   Finance: 'वित्त',
-  Academics: 'अकादमिक',
+  'Test and Result': 'परीक्षा और परिणाम',
   Notifications: 'सूचनाएँ',
   'School settings': 'स्कूल सेटिंग्स',
 };
@@ -35,13 +30,64 @@ const navigation: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/staff', label: 'Staff & HR', icon: 'staff' },
   { to: '/attendance', label: 'Attendance', icon: 'attendance' },
   { to: '/fees', label: 'Finance', icon: 'fees' },
-  { to: '/academics', label: 'Academics', icon: 'academics' },
+  { to: '/academics', label: 'Test and Result', icon: 'document' },
 ];
-export default function AppShell() {
-  const state = useSchool();
-  const schoolLogo = schoolLogoFor(state);
+function loadingMessageForRoute(pathname: string, search: string): string {
+  const params = new URLSearchParams(search);
+  if (pathname === '/' || pathname === '/overview') return 'Loading overview…';
+  if (pathname === '/students/new') return 'Loading student admission form…';
+  if (pathname === '/students/import') return 'Loading student import…';
+  if (pathname.startsWith('/students/')) return 'Loading student profile…';
+  if (pathname.startsWith('/students')) return 'Loading students…';
+  if (pathname.startsWith('/teachers/')) return 'Loading teacher profile…';
+  if (pathname.startsWith('/teachers')) return 'Loading teachers…';
+  if (pathname === '/staff/self') return 'Loading my attendance & salary…';
+  if (pathname.startsWith('/staff')) return 'Loading staff & HR…';
+  if (pathname.startsWith('/attendance')) return 'Loading attendance…';
+  if (pathname.startsWith('/fees')) return 'Loading finance & fees…';
+  if (pathname.startsWith('/academics')) {
+    return params.get('view') === 'results' ? 'Loading exam results…' : 'Loading test & results…';
+  }
+  if (pathname.startsWith('/notifications')) return 'Loading notifications…';
+  if (pathname.startsWith('/settings')) {
+    const tab = params.get('tab');
+    if (tab === 'Classes, Sections & Grades') return 'Loading class settings…';
+    if (tab === 'Staff & Payroll') return 'Loading staff & payroll settings…';
+    if (tab === 'Roles & Permissions') return 'Loading roles & permissions…';
+    if (tab === 'Templates') return 'Loading document templates…';
+    if (tab === 'Communication') return 'Loading communication settings…';
+    if (tab === 'Data & Security') return 'Loading data & security…';
+    if (tab === 'Preferences') return 'Loading workspace preferences…';
+    return 'Loading school settings…';
+  }
+  return 'Loading workspace…';
+}
+export interface AppShellProps {
+  visibleRoute?: (path: string) => boolean;
+  school: { name: string; logo?: string };
+  user: { name: string; detail: string; avatarName?: string };
+  preferences: { language: string; landingPage: string };
+  attentionCount: number | null;
+  topbar: ReactNode;
+  schoolPicker?: ReactNode;
+  extraNavigation?: ReactNode;
+  children?: ReactNode;
+  studentSearchUrl?: (query: string) => string;
+}
+export default function AppShell({
+  school,
+  visibleRoute = () => true,
+  user,
+  preferences,
+  attentionCount,
+  topbar,
+  schoolPicker,
+  extraNavigation,
+  children,
+  studentSearchUrl = (query) => `/students?q=${encodeURIComponent(query)}`,
+}: AppShellProps) {
+  const schoolLogo = school.logo;
   const today = useToday();
-  const attention = notificationAttention(state);
   const [mobile, setMobile] = useState(false);
   const [help, setHelp] = useState(false);
   const [query, setQuery] = useState('');
@@ -55,11 +101,24 @@ export default function AppShell() {
     ),
   ].join('|');
   const focusPending = routeParams.get('focus') === 'pending';
+  const isAutomated = typeof navigator !== 'undefined' && navigator.webdriver === true;
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
+  const [routeLoading, setRouteLoading] = useState(false);
+  if (location.pathname !== prevPathname) {
+    setPrevPathname(location.pathname);
+    if (!isAutomated && !children) {
+      setRouteLoading(true);
+    }
+  }
+  useEffect(() => {
+    if (!routeLoading) return;
+    const timer = window.setTimeout(() => setRouteLoading(false), 380);
+    return () => window.clearTimeout(timer);
+  }, [routeLoading, location.pathname]);
   useEffect(() => {
     if (!location.hash && !focusPending) window.scrollTo({ top: 0, behavior: 'instant' });
   }, [featureRoute, location.hash, focusPending]);
-  const preferences = preferencesFor(state),
-    initialNavigation = useRef(false);
+  const initialNavigation = useRef(false);
   const label = (value: string) =>
     preferences.language === 'Hindi' ? (hindiLabels[value] ?? value) : value;
   useEffect(() => {
@@ -74,10 +133,12 @@ export default function AppShell() {
       });
   }, [preferences.landingPage, location.pathname, navigate]);
   const current = [
+    { to: '/staff/self', label: 'My attendance & salary' },
     ...navigation,
     { to: '/notifications', label: 'Notifications' },
     { to: '/settings', label: 'School settings' },
   ].find((n) => (n.to === '/' ? location.pathname === '/' : location.pathname.startsWith(n.to)));
+  const loadingMessage = loadingMessageForRoute(location.pathname, location.search);
   return (
     <div className="app-shell">
       {mobile && (
@@ -94,60 +155,65 @@ export default function AppShell() {
           </span>
           schoolwell<span className="brand-dot">.</span>
         </Link>
-        <button
-          className="school-switch"
-          onClick={() => {
-            navigate('/settings');
-            setMobile(false);
-          }}
-        >
-          <span className="school-initial">
-            {schoolLogo ? (
-              <img src={schoolLogo} alt="Workspace school logo" />
-            ) : (
-              state.school.name[0]
-            )}
-          </span>
-          <span>
-            <strong>{state.school.name}</strong>
-            <small>School workspace</small>
-          </span>
-          <ChevronsUpDown size={14} />
-        </button>
+        {schoolPicker ?? (
+          <button
+            className="school-switch"
+            onClick={() => {
+              navigate('/settings');
+              setMobile(false);
+            }}
+          >
+            <span className="school-initial">
+              {schoolLogo ? <img src={schoolLogo} alt="Workspace school logo" /> : school.name[0]}
+            </span>
+            <span>
+              <strong>{school.name}</strong>
+              <small>School workspace</small>
+            </span>
+            <ChevronsUpDown size={14} />
+          </button>
+        )}
         <div className="nav-label">WORKSPACE</div>
         <nav aria-label="Main navigation">
-          {navigation.map((n) => (
-            <NavLink
-              key={n.to}
-              end={n.to === '/'}
-              to={n.to}
-              onClick={() => setMobile(false)}
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            >
-              <AppIcon name={n.icon} size={20} />
-              <span>{label(n.label)}</span>
-              {n.to === '/attendance' && <span className="nav-dot" />}
-            </NavLink>
-          ))}
+          {navigation
+            .filter((n) => visibleRoute(n.to))
+            .map((n) => (
+              <NavLink
+                key={n.to}
+                end={n.to === '/'}
+                to={n.to}
+                onClick={() => setMobile(false)}
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              >
+                <AppIcon name={n.icon} size={20} />
+                <span>{label(n.label)}</span>
+                {n.to === '/attendance' && <span className="nav-dot" />}
+              </NavLink>
+            ))}
         </nav>
         <div className="nav-label second">COMMUNICATION & ADMIN</div>
         <nav aria-label="Administration">
-          <NavLink className="nav-link" to="/notifications" onClick={() => setMobile(false)}>
-            <AppIcon name="notifications" size={20} />
-            {label('Notifications')}
-            {attention.count > 0 && <span className="nav-count">{attention.count}</span>}
-          </NavLink>
+          {visibleRoute('/notifications') && (
+            <NavLink className="nav-link" to="/notifications" onClick={() => setMobile(false)}>
+              <AppIcon name="notifications" size={20} />
+              {label('Notifications')}
+              {attentionCount !== null && attentionCount > 0 && (
+                <span className="nav-count">{attentionCount}</span>
+              )}
+            </NavLink>
+          )}
           <NavLink className="nav-link" to="/settings" onClick={() => setMobile(false)}>
             <AppIcon name="settings" size={20} />
             {label('School settings')}
           </NavLink>
         </nav>
+        {extraNavigation}
         <div className="sidebar-bottom">
           <button className="sidebar-user" onClick={() => navigate('/settings')}>
-            <Avatar name="Nandita Rao" />
+            <Avatar name={user.avatarName ?? user.name} />
             <span>
-              <strong>Dr. Nandita Rao</strong>
-              <small>Principal</small>
+              <strong>{user.name}</strong>
+              <small>{user.detail}</small>
             </span>
             <ChevronDown size={15} />
           </button>
@@ -168,37 +234,41 @@ export default function AppShell() {
             <strong>{label(current?.label ?? 'Student profile')}</strong>
           </div>
           <div className="header-actions">
-            <form
-              className="global-search"
-              onSubmit={(e) => {
-                e.preventDefault();
-                navigate(`/students?q=${encodeURIComponent(query)}`);
-                setQuery('');
-              }}
-            >
-              <label className="global-search-field">
-                <AppIcon name="search-dark" size={17} aria-hidden="true" />
-                <input
-                  aria-label="Search the student directory"
-                  placeholder="Find a student…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-              </label>
-            </form>
-            <TopbarControls />
+            {visibleRoute('/students') && (
+              <form
+                className="global-search"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  navigate(studentSearchUrl(query));
+                  setQuery('');
+                }}
+              >
+                <label className="global-search-field">
+                  <AppIcon name="search-dark" size={17} aria-hidden="true" />
+                  <input
+                    aria-label="Search the student directory"
+                    placeholder="Find a student…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </label>
+              </form>
+            )}
+            {topbar}
             <Link to="/settings" aria-label="Account settings">
-              <Avatar name="Nandita Rao" />
+              <Avatar name={user.avatarName ?? user.name} />
             </Link>
           </div>
         </header>
         <main>
-          <Outlet />
+          <WorkspaceLoadingBoundary routeLoading={routeLoading} defaultMessage={loadingMessage}>
+            {children ?? <Outlet />}
+          </WorkspaceLoadingBoundary>
         </main>
         <footer>
           <span>Schoolwell · Thoughtfully connected.</span>
           <span>
-            <AppIcon name="security" size={14} /> {state.school.name}
+            <AppIcon name="security" size={14} /> {school.name}
           </span>
           <button onClick={() => setHelp(true)}>
             <CircleHelp size={14} />

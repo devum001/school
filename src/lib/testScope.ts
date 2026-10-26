@@ -4,9 +4,11 @@ import { orderedClasses } from './schoolLabels';
 export function examIncludes(exam: Examination, classId: string, sectionId?: string) {
   return (
     (exam.classIds ? exam.classIds.includes(classId) : !exam.classId || exam.classId === classId) &&
-    (!sectionId ||
+    (sectionId === undefined ||
       (exam.sectionIds
-        ? exam.sectionIds.includes(sectionId)
+        ? sectionId === ''
+          ? Boolean(exam.sectionlessClassIds?.includes(classId))
+          : exam.sectionIds.includes(sectionId)
         : !exam.sectionId || exam.sectionId === sectionId))
   );
 }
@@ -17,15 +19,29 @@ export function examClasses(state: DemoState, exam: Examination) {
       (c) =>
         c.schoolId === state.school.id &&
         examIncludes(exam, c.id) &&
-        state.sections.some(
-          (s) =>
-            s.schoolId === state.school.id && s.classId === c.id && examIncludes(exam, c.id, s.id),
-        ),
+        (examIncludes(exam, c.id, '') ||
+          state.sections.some(
+            (s) =>
+              s.schoolId === state.school.id &&
+              s.classId === c.id &&
+              examIncludes(exam, c.id, s.id),
+          )),
     ),
   );
 }
 
 export function validateTestScope(state: DemoState, exam: Examination, creating: boolean) {
+  const sectionless = exam.sectionlessClassIds ?? [];
+  if (
+    new Set(sectionless).size !== sectionless.length ||
+    sectionless.some(
+      (id) =>
+        !state.classes.some(
+          (c) => c.schoolId === state.school.id && c.id === id && examIncludes(exam, id),
+        ),
+    )
+  )
+    throw new Error('Choose classes from this test for students without a section.');
   if (exam.classIds) {
     if (
       !exam.classIds.length ||
@@ -36,7 +52,7 @@ export function validateTestScope(state: DemoState, exam: Examination, creating:
     )
       throw new Error('Choose at least one class from this school.');
     if (
-      !exam.sectionIds?.length ||
+      !exam.sectionIds ||
       new Set(exam.sectionIds).size !== exam.sectionIds.length ||
       exam.sectionIds.some(
         (id) =>
@@ -49,13 +65,14 @@ export function validateTestScope(state: DemoState, exam: Examination, creating:
       throw new Error('Choose sections belonging to the selected classes.');
     for (const id of exam.classIds) {
       if (
+        !sectionless.includes(id) &&
         !state.sections.some(
           (s) =>
             s.schoolId === state.school.id && s.classId === id && exam.sectionIds!.includes(s.id),
         )
       )
         throw new Error(
-          `Choose at least one section for ${state.classes.find((c) => c.id === id)?.name}.`,
+          `Choose a section or students without a section for ${state.classes.find((c) => c.id === id)?.name}.`,
         );
     }
     return;
@@ -67,7 +84,7 @@ export function validateTestScope(state: DemoState, exam: Examination, creating:
     throw new Error('Choose a class for this test.');
   if (
     exam.sectionIds &&
-    (!exam.sectionIds.length ||
+    ((!exam.sectionIds.length && !sectionless.length) ||
       new Set(exam.sectionIds).size !== exam.sectionIds.length ||
       exam.sectionIds.some(
         (id) =>

@@ -1,0 +1,62 @@
+Product correction investigation — 20 October 2026
+
+Scope and preservation
+Both Git working trees were inspected before editing. Both contain substantial prior
+uncommitted work. No reset, clean, checkout, environment change or real database write
+is authorized by this repair. Backend preparation is isolated in /tmp until reviewed
+changes are copied into the existing working tree.
+
+Punch path and evidence
+HrWorkspace.tsx -> liveHrAdapter.save('/punch') -> HrController.punch ->
+schoolWrite(attendance.self) -> selfOf(schoolId,userId) -> employmentOf/settingsOf/
+schoolClock -> policy, joining/end-date, schedule, approved leave, geofence, payroll
+lock and sequence validation -> staff_attendance + staff_punch_events + audit.
+Server Date supplies punch timestamp; school timezone supplies work date.
+The current HR_PUNCH message combines teaching/policy/employment/schedule/reviewed-day
+and sequence checks. Employment defaults attendanceMode=none and policies=[].
+StaffLoginDialog/createStaffLogin creates user+membership+staff link but no attendance
+policy. Salary setup defaults none, and configuring punch requires a linked login.
+A teacher can therefore have attendance.self and see active punch buttons while no
+policy enables punching. These are confirmed code defects. The precise condition in
+the user's real teacher record is NOT confirmed; private school data was not read.
+
+Reuse
+Existing shared shell; DashboardPage and AttendanceTrend; AcademicsPage, TestDialog,
+MarksDialog, ResultsView/TestResult and actual subject/marks rules; staff forms and
+import jobs; staff/assignment models; hr models, payroll services, leave snapshots;
+role/membership services and transaction-based owner safeguards; existing settings
+labels/sections. Demo repository remains the demo data adapter.
+
+Current gaps
+Live Overview and Academics are placeholders and navigation hides them. No live exam,
+marks/result or student-attendance model/API exists. Teaching assignments exist but
+teacher-scoped class/student access does not. Attendance mode and login onboarding
+are separate, with no readiness response. Leave has request/review but no cancellation.
+Live settings omit original unsupported tabs; original structure must be restored with
+honest unavailable states or real persisted configuration. Demo Overview must not be
+replaced by setup status. Finance/communication operational dependencies are separate
+from HR salary records and may not be represented as fake counts.
+
+Order / expected files
+1. HR punch eligibility/readiness and actionable conflicts, onboarding configuration,
+   identity/sequence/tenant tests: hrAttendance/hrRules/hrRead/hrSettings/staffLogin,
+   HR controller/DTOs; HrWorkspace, EmploymentDialog, StaffLoginDialog, hrService.
+2. Tenant-scoped assigned-class data and student attendance, revocation tests:
+   people models/services, new school operations controller/services/requests/models;
+   original AttendancePage/Class pages through a typed adapter.
+3. Original Overview/Academics with real snapshot and writes: shared feature data
+   context, typed live adapter, original feature components and routes; corresponding
+   backend persistence, validation, authorization and audit.
+4. Leave lifecycle, focused self-service sections, HR summary, role editing and
+   settings fidelity. Reuse existing UI and APIs wherever possible.
+
+Security / migration risks
+No email-based cross-school linking, permission fallback or demo data fallback.
+Assignment revocation must be checked server-side for each relevant request. Read/write
+permissions are separate. Salary data never belongs in general dashboard/teacher-class
+payloads. Existing salary policies must not be silently changed. New collections/indexes
+need explicit installation in deployment; tests install them only into isolated local
+replica sets. No existing collection/index may be dropped by startup. History/payroll
+locks and optimistic revision checks must remain effective. Existing owners need an
+explicit, audited grant for genuinely new capabilities; custom roles must not gain them
+automatically. Platform privileges remain separate from school permissions.

@@ -1,4 +1,5 @@
-import { useSyncExternalStore } from 'react';
+import { useContext, useSyncExternalStore } from 'react';
+import { SchoolFeatureContext } from './schoolFeatureContext';
 import { getSchoolDate } from '../lib/dates';
 
 function subscribe(listener: () => void) {
@@ -12,4 +13,8 @@ function subscribe(listener: () => void) {
   };
 }
 
-export const useToday = () => useSyncExternalStore(subscribe, getSchoolDate);
+export const useToday = () => {
+  const feature = useContext(SchoolFeatureContext);
+  const date = useSyncExternalStore(subscribe, getSchoolDate);
+  return feature?.today ?? date;
+};

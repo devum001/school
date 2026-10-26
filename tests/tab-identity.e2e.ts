@@ -49,7 +49,7 @@ test('shared selected style covers every primary navigation shape including rout
 }) => {
   for (const [url, group, first, next] of [
     ['/fees', 'Finance', 'Overview', 'Student Fees'],
-    ['/academics', 'Academics', 'Recent Tests / Exams', 'Results'],
+    ['/academics', 'Test and Result', 'Recent Tests / Exams', 'Results'],
     ['/notifications', 'Notifications', 'Overview', 'History'],
     ['/settings', 'Settings', 'General', 'Preferences'],
     ['/students/stu-001', 'Student profile tabs', 'Overview', 'Fees'],

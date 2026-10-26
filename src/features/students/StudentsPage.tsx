@@ -100,27 +100,35 @@ export default function StudentsPage() {
         <Badge tone="blue">Academic year {state.academicYear.name}</Badge>
       </div>
       <Panel>
-        <div className="toolbar">
-          <SearchInput
-            value={query}
-            onChange={(v) => update('q', v)}
-            placeholder="Search name or admission number…"
-          />
-          <ClassFilters
-            classId={classId}
-            sectionId={section}
-            onClassChange={(v) => update('class', v)}
-            onSectionChange={(v) => update('section', v)}
-          />
-          <select
-            aria-label="Student status"
-            value={status}
-            onChange={(e) => update('status', e.target.value)}
-          >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+        <div className="toolbar live-students-toolbar">
+          <div className="students-search-group">
+            <span>Search</span>
+            <SearchInput
+              value={query}
+              onChange={(v) => update('q', v)}
+              placeholder="Search name or admission number…"
+            />
+          </div>
+          <div className="students-filters-group">
+            <ClassFilters
+              classId={classId}
+              sectionId={section}
+              onClassChange={(v) => update('class', v)}
+              onSectionChange={(v) => update('section', v)}
+            />
+            <label className="filter-label">
+              <span>Status</span>
+              <select
+                aria-label="Student status"
+                value={status}
+                onChange={(e) => update('status', e.target.value)}
+              >
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </label>
+          </div>
         </div>
         <div className="table-wrap">
           <table>

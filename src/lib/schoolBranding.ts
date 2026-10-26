@@ -1,5 +1,5 @@
 import type { DemoState } from '../types/domain';
-import { SAMPLE_SCHOOL_ARTWORK } from '../mocks/schoolArtwork';
+import { demoArtwork } from './demoArtwork';
 export function schoolLogoFor(
   state: Pick<DemoState, 'school' | 'documentTemplates'>,
 ): string | undefined {
@@ -7,5 +7,5 @@ export function schoolLogoFor(
     state.school.logoDataUrl !== undefined
       ? state.school.logoDataUrl
       : state.documentTemplates?.branding?.logo;
-  return logo === null ? undefined : (logo ?? SAMPLE_SCHOOL_ARTWORK.logo);
+  return logo === null ? undefined : (logo ?? demoArtwork.logo ?? undefined);
 }

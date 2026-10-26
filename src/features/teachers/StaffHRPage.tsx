@@ -14,7 +14,7 @@ import {
   Panel,
   SearchInput,
 } from '../../components/ui/Primitives';
-import { staffDirectory, staffLabel } from '../../lib/staffStructure';
+import { staffDirectory, staffDesignation, staffLabel } from '../../lib/staffStructure';
 import { defaultStaffPayroll } from '../../lib/settings';
 import { currentPayrollMonth, payrollCycle } from '../../lib/staffPayroll';
 import { salaryMonthSchema } from '../../lib/staffSalary';
@@ -106,22 +106,15 @@ export default function StaffHRPage() {
             title="All Staff"
             subtitle={`${filtered.length} staff records`}
             action={
-              <Link className="text-link" to="/settings?tab=Staff+%26+Payroll">
-                Manage departments & work rules
-              </Link>
-            }
-          >
-            <div className="toolbar">
-              <SearchInput
-                value={query}
-                onChange={(value) => {
-                  setQuery(value);
-                  setPage(1);
-                }}
-                placeholder="Search staff name or designation…"
-              />
-              <label className="field">
-                Department filter
+              <div className="panel-header-actions">
+                <SearchInput
+                  value={query}
+                  onChange={(value) => {
+                    setQuery(value);
+                    setPage(1);
+                  }}
+                  placeholder="Search staff name or designation…"
+                />
                 <select
                   aria-label="Department filter"
                   value={department}
@@ -134,8 +127,13 @@ export default function StaffHRPage() {
                     </option>
                   ))}
                 </select>
-              </label>
-            </div>
+                <Button onClick={() => setAdding(true)}>Add Staff</Button>
+                <Link className="text-link" to="/settings?tab=Staff+%26+Payroll">
+                  Manage departments & work rules
+                </Link>
+              </div>
+            }
+          >
             {filtered.length ? (
               <div className="table-wrap" role="region" aria-label="All Staff" tabIndex={0}>
                 <table>
@@ -152,15 +150,22 @@ export default function StaffHRPage() {
                     {filtered.slice((currentPage - 1) * 20, currentPage * 20).map((member) => (
                       <tr key={member.id}>
                         <th scope="row">
-                          <div className="person-cell">
+                          <div className="person">
                             <Avatar name={member.name} />
-                            {member.teacherId ? (
-                              <Link className="text-link" to={`/teachers/${member.id}`}>
-                                {staffLabel(member, config)}
-                              </Link>
-                            ) : (
-                              staffLabel(member, config)
-                            )}
+                            <div>
+                              {member.teacherId ? (
+                                <Link className="text-link" to={`/teachers/${member.id}`}>
+                                  <strong>{member.name}</strong>
+                                </Link>
+                              ) : (
+                                <strong>{member.name}</strong>
+                              )}
+                              <small>
+                                {[member.staffId, staffDesignation(member, config)]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </small>
+                            </div>
                           </div>
                         </th>
                         <td>
