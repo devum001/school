@@ -1,0 +1,99 @@
+School-wide fee onboarding — implementation and verification
+Date: 26-10-2026
+
+Implemented in both repositories
+Frontend: /home/devendra/schooool
+Backend: /home/devendra/scholl backend/type-ORM-backend-Node
+
+Where to use it
+Sign in as a school owner or a role with fees.view + fees.manage.
+Open Finance -> School fee setup. Choose the academic year using the existing year control.
+Concessions/scholarships additionally require fees.approve at activation.
+
+Flow
+1. Prepare a saved school draft from active students in that academic year.
+2. Common fees: select classes (naturally ordered 1, 2, 10, 12), set the standard yearly fee and optionally a payment arrangement. No selected classes means all students matching the current filters. Applying a group change fills the draft, not real fee accounts.
+3. Review students: a 50-row paginated editable table. Change concessions, scholarships, already-paid amounts and additional old dues. Individual changes autosave after one second; Save now is available. Unsaved edits block navigation/school switching. Up to 500 individually selected students can receive group changes; class/filter-based changes cover the whole matching set.
+4. Optional: download one prefilled Fees worksheet, edit exceptions, then upload it; or paste tab-separated rows including headers. No spreadsheet is mandatory. Admission Number matches existing students using the application's numeric identifier rules. Names/class/section are reference columns. Blank preserves draft values; explicit zero clears a numeric amount. Dates display as DD-MM-YYYY. Uploads allow 10,000 rows and 8 MiB, sent in 500-row chunks. A failed chunk remains unapplied; earlier chunks remain saved and can safely be reuploaded. Unmatched/duplicate/already-configured students produce explicit upload issues and prevent validation until corrected or explicitly discarded.
+5. Review totals and balance dates; validate all rows. Correct highlighted problems, then activate. The backend processes bounded batches without holding an HTTP request open. Progress is saved in MongoDB and survives closing the page, restarting the worker and retrying. Pause/resume is available. Existing accounts are never overwritten, and committed rows are never repeated.
+6. Continue using Student Fees for collections and receipts; existing dashboards and student ledgers read the same real accounts.
+
+Balances and payment arrangements
+- New students default to a single balance. Installments are optional, 2–60 equal installments with monthly/quarterly/six-monthly/yearly spacing; paise rounding preserves the exact total.
+- Student-specific dates/counts are edited inline under Payment details. Existing advanced ledger controls remain available for custom unequal installment amounts after activation.
+- Already paid means current-year collections made before this application. It is opening credit, not a new receipt or today's income.
+- Old dues means additional unpaid debt for the historical period in Review & activate. Existing historical accounts remain separate; overlapping old debts are rejected instead of counted twice. For several separately tracked previous years, use the existing opening-balance ledger controls for those individual periods.
+- Notes/reasons are optional. Earlier accounts, receipts and payment allocations stay protected. Already-configured students are read-only in this onboarding draft; edit them through the existing ledger.
+
+Safety and implementation
+- Authenticated, tenant-scoped API controller; CSRF protection on mutations.
+- Fresh school authorization and year-state checks inside transactions, including background work. Revoked access pauses processing.
+- Optimistic draft/row revisions, one active draft per school/year, worker leases and atomic account/audit/progress transactions.
+- Revalidate at activation: accounts created after preview cause row errors and remain unchanged; other valid rows can commit.
+- Progress polling runs only during active work. Reads are paginated, search debounced, background writes invalidate cached fee reads, and imports use bounded bulk writes.
+- Demo fee/student-profile flows remain local and unchanged. No live-to-demo fallback. No dependencies, lockfiles or environment values changed.
+- Fixed refresh returning a multi-school user to the first school: sessionStorage remembers only their selected school ID, scoped to the user and validated against fresh memberships.
+- Preserved pre-existing uncommitted changes. Backend copies were guarded by original-file hashes and backed up to /tmp/fee-onboarding-backend-before before application.
+
+Manual database configuration (NOT executed against your database)
+From the backend repository, with its normal configuration available:
+  ./node_modules/.bin/ts-node commands/initialize-fee-onboarding.ts --preflight
+  ./node_modules/.bin/ts-node commands/initialize-fee-onboarding.ts --apply
+Run apply only after preflight succeeds. This creates fee_onboarding_jobs and fee_onboarding_rows plus indexes. It does not rewrite students, existing fee accounts or receipts. Existing fee collections must already have been initialized by the earlier fee implementation. Restart the backend, then refresh/restart the frontend and use live mode.
+No real MongoDB/Atlas database or records were accessed during this implementation. Database and browser tests use disposable local MongoDB replica sets.
+
+Verification commands and results
+Frontend:
+  npm run typecheck — passed.
+  npm run lint — zero errors; five existing warnings (AppIcon, LoadingOverlay, Primitives twice, LiveLearning dependency).
+  VITE_APP_MODE=demo npm test — 315 tests / 56 files passed.
+  VITE_APP_MODE=demo npm run build — passed.
+  VITE_APP_MODE=live npm run build — passed; existing large liveRouter chunk warning (~701 kB).
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test --config playwright.fees.config.ts — all three live journeys passed against the applied backend.
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome VITE_APP_MODE=demo ./node_modules/.bin/playwright test tests/student-profile.e2e.ts tests/fee-progress.e2e.ts --workers=1 — both demo journeys passed.
+  Desktop/mobile screenshots inspected; mobile document does not overflow horizontally; the wide editable table has its own horizontal scroll. No stacked dialogs in the new flow.
+Backend:
+  ./node_modules/.bin/tsc --noEmit — passed against the applied repository.
+  ./node_modules/.bin/eslint src — passed against the applied repository.
+  ./node_modules/.bin/jest --runInBand — 224 tests / 35 suites passed (249.499 seconds) against the applied backend.
+  New integration coverage: draft persistence, exact installment/opening totals, replay safety, validation, worksheet matching/errors, tenant isolation, CSRF, stale revisions, permission revocation, 10,000 students with pagination/pause/resume, and accounts created concurrently after preview.
+  Both repositories: git diff --check passed.
+
+Performance measurements and limits
+The final isolated 10,000-student test took 48,303 ms including fixture creation, preparation, validation and activation. It directly invokes worker batches without production timer delays. The existing 25-student import test measured 338 ms validation + commit/replay on isolated local MongoDB. These are measured test results, not Atlas or production latency guarantees. Network distance, database tier, indexing, contention and the worker's scheduling interval affect real elapsed time. No production load test was run.
+Full broad demo browser coverage was not rerun; the two relevant demo workflows were run. Prior unrelated template-gallery browser failure is outside this change.
+During development, browser tests caught and fixed a draft HTTP status/envelope mismatch and school selection persistence. An initial staged full backend run had 223 passing tests and one missing .env.example fixture; the example was restored and its 17-test suite passed before verifying the actual repository. A sandbox cache-write attempt failed before tests executed and was rerun with a writable cache directory. None of these failures were reported as passing.
+
+Files changed in this iteration (earlier dirty work preserved)
+Frontend:
+  src/features/fees/LiveFinanceWorkspace.tsx
+  src/features/fees/onboarding/FeeOnboardingWorkspace.tsx
+  src/features/fees/onboarding/FeeDraftRules.tsx
+  src/features/fees/onboarding/FeeDraftTable.tsx
+  src/features/fees/onboarding/FeeDraftTransfer.tsx
+  src/features/fees/onboarding/FeeDraftSettings.tsx
+  src/features/fees/onboarding/FeeDraftReview.tsx
+  src/features/fees/onboarding/fee-onboarding.css
+  src/services/feeOnboardingService.ts
+  src/services/apiService.ts
+  src/lib/feeOnboardingSheet.ts
+  src/lib/feeOnboardingSheet.test.ts
+  src/lib/xlsx.ts
+  src/features/auth/sessionStore.ts
+  src/features/auth/sessionStore.test.ts
+  tests/fees-live.e2e.ts
+  docs/FEE_BULK_ONBOARDING_2026-10-26.txt
+Backend:
+  src/loaders/rosterWorkerLoader.ts
+  src/security/feeOnboarding.integration.test.ts
+  src/test/prepareFoundation.ts
+  src/test/phase3BrowserRuntime.ts
+  src/api/models/feeOnboarding.models.ts
+  src/api/controllers/registeredControllers.ts
+  src/api/controllers/feeOnboarding.controller.ts
+  src/api/services/feeOnboardingRules.ts
+  src/api/services/feeOnboardingWorker.ts
+  src/api/services/setupRules.ts
+  src/api/services/feeOnboarding.service.ts
+  src/api/controllers/requests/feeOnboarding.request.ts
+  commands/initialize-fee-onboarding.ts

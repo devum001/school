@@ -1,0 +1,203 @@
+FEE MANAGEMENT AND IMPORT PERFORMANCE — 26 OCTOBER 2026
+
+Follow-up fee simplification and student profile integration are documented in
+FEE_PROFILE_REPAIR_2026-10-26.txt. That report supersedes the original UI steps below.
+
+Implemented in both repositories. No real MongoDB/Atlas data, environment files,
+credentials, dependencies or lockfiles were changed. No deployment or commit made.
+Backend changes were prepared in an isolated copy, verified and applied with hash
+checks; original modified files are backed up in /tmp/school-fees-backend-before.
+
+HOW TO ENABLE AND REVIEW
+1. In the backend repository, stop the existing development server, then run:
+   ./node_modules/.bin/ts-node commands/initialize-school-fees.ts --preflight
+   ./node_modules/.bin/ts-node commands/initialize-school-fees.ts --apply
+   yarn dev
+   These commands have NOT been run against your configured database. They add
+   four fee collections and indexes and grant the five fee permissions to protected
+   owner roles in active schools. They preserve existing records/indexes and leave
+   custom roles unchanged. A MongoDB replica set is required for transactions.
+2. Start the frontend in live mode with your existing API URL:
+   VITE_APP_MODE=live npm run dev
+   PowerShell equivalent: $env:VITE_APP_MODE="live"; npm run dev
+3. Sign out/in as the school owner. Open Finance > Student Fees.
+4. Select the academic year, class and optional section; choose Fee setup pending.
+   Select students (including all matching pages) > Set up fees. Enter common fees,
+   concessions/scholarships and a due date. Single balance is the default; choose
+   Split into installments only when needed. Review individual amounts and save. Saves progress in batches of 25.
+5. Select students > Previous-year dues. Enter one previous period and outstanding
+   balances. Historical opening paid belongs inside current-year fee setup, while
+   old outstanding debt belongs here. Neither is counted as today's cash collection.
+6. Manage Fees opens the student's ledger across years. Collect payment supports
+   partial payments, oldest-due allocation or custom installment allocation. Confirm
+   to issue a downloadable/printable receipt. Transactions lists recorded payments.
+7. Authorized users can reverse an incorrect payment with an optional note or correct old
+   opening debt. Original receipts/history remain. Paid allocations cannot be
+   silently deleted or reduced. Students with fee accounts cannot be hard-deleted.
+8. Test the existing Students Excel import: preview > confirm once > progress >
+   View Enrolled Students. Lost confirmation responses are reconciled with job state.
+   No extra Excel workbook is required for fees.
+
+FUNCTIONAL SCOPE
+- Existing Finance shell/navigation/styles and shared document renderer are reused.
+  Demo retains its local repository and original Finance screens. Live uses APIs.
+- Dashboard: net current-year fees, concessions, setup-pending count, outstanding,
+  overdue, current-calendar-month collections and class balances. Filters constrain
+  the student population; status narrows the directory, not the summary cards.
+- Per-student integer-paise agreements, exact installment totals, discounts and
+  scholarships with optional notes, opening paid balances, prior-period debts and history.
+- Current-year paid includes historical opening paid; Transactions contains actual
+  recorded payments only. Transaction year selection filters by payment date.
+- Former/no-active-enrollment students can carry and pay old dues without inventing
+  a new enrollment. Existing accounts prevent overlapping opening balances.
+- Server pagination (50), debounced search, bounded writes (25), individual schedule editor,
+  paginated bulk review, CSV export of the displayed page and mobile ledger layout.
+- Fee permissions: fees.view, fees.manage, fees.approve, fees.collect, fees.reverse.
+  Approval is required for concessions/scholarships and reductions of existing dues.
+  Tenant checks, fresh authorization, CSRF and audited transactions remain enforced.
+- Fee payments and setup use idempotency keys. After a lost save response, the client
+  checks operation status; uncertain retries retain the same key. Amounts and names
+  are not stored in the retry-key storage. Stale edits and overpayments are rejected.
+
+API DEPENDENCIES (under /api/v1/schools/:schoolId/fees)
+GET /context; GET /; GET /students/:id; GET /payments; GET /operations/:key
+POST /agreements; POST /opening; POST /payments; POST /payments/:id/reverse;
+POST /accounts/:id/correct-opening
+New collections: student_fee_accounts, student_fee_payments, student_fee_operations,
+student_fee_counters. The initialization command adds storage and permissions without rewriting existing student data.
+Fee routes return a clear initialization-required response until storage is ready.
+
+PERFORMANCE WORK
+- Import validation and commit operate in bounded transactions with transaction-local
+  class/section/student/enrollment maps. Duplicate roll checks use a linear scan.
+- Progress writes touch only processed rows instead of validating/saving the whole
+  embedded import repeatedly. Successful profiles, enrollments and progress commit
+  together. Row conflicts are isolated; cancellation/revocation remain checked.
+- Repeated confirmation of the same import returns its saved status, not a conflict.
+- Completed polling invalidates cached lists; uncertain mutations invalidate reads.
+  No generic automatic POST retry was introduced.
+- Independent school access reads run concurrently outside transactions. Transaction
+  operations remain sequential and authorization is not cached across requests.
+- Finance is lazy-loaded; the measured live-router chunk fell from about 958 kB to 663 kB
+  after splitting this work. The existing >500kB chunk warning remains.
+
+MEASURED RESULTS (disposable local MongoDB; NOT Atlas guarantees)
+- Original 25-row worker: validation 915 ms + commit/replay857ms =1771ms.
+- Final 25-row worker: validation 124 ms + commit/replay185ms =308ms.
+- Final 1000-row worker: validation 4,674 ms; total 13,893 ms including commit.
+- 25 fee agreements:112–130ms; fee directory34–40ms in the focused fixture.
+- Concurrent full-suite/build/browser load produced slower timings (up to40s for
+ 1000 rows before the last map optimization). The tests are correctness tests, not
+ hard response-time SLAs. Existing1000-row/1MiB student-import limits remain.
+- Other application endpoints were not comprehensively load-tested. Atlas latency,
+ school size, indexes and server resources still need deployment profiling.
+
+VERIFICATION
+- Backend full Jest suite: 33 suites, 215 tests passed on isolated MongoDB.
+- After final import map/projection optimization: 17 focused import tests passed.
+- Frontend Vitest in demo mode: 53 files, 307 tests passed. The suite includes live
+ service/permission/cache tests as well as demo tests.
+- Initial npm test under local live defaults had 2 demo-fixture failures; the proper
+ VITE_APP_MODE=demo run passed. No .env was changed to obtain that result.
+- Backend TypeScript and lint passed; frontend TypeScript and live/demo builds passed.
+- Frontend lint: 0 errors; 5 existing warnings in AppIcon, LoadingOverlay, Primitives
+ and LiveLearning. Vite reports third-party pure-annotation and bundle-size warnings.
+- New live browser journeys cover fee setup, old debt, partial payment, lost response
+ recovery, actual PDF download, mobile layout and a25-row real Excel import whose
+ confirmation response is deliberately lost. Final run results recorded below.
+- Older demo browser suite: 4 passed, 6 failed. Four failures reproduced against HEAD
+ (missing legacy template controls, changed branding selector, demo-send selector).
+ Salary/receipt test passed when rerun alone (9.3s); its parallel run timed out.
+ The remaining mobile template journey waits for the same absent legacy template
+ selector; it was not independently rerun against HEAD. No claim that the entire
+ older demo E2E suite passes. Its test expectations need separate maintenance.
+- Baseline comparison used a temporary HEAD checkout with the same Node-only Vite
+ env guard; application source otherwise unchanged. RuntimeConfig now tolerates
+ absent import.meta.env in Node fixture runners; browser live validation is unchanged.
+- Initial backend test failure from missing .env.example in the temporary checkout
+ was corrected by copying the public example; the full suite then passed.
+
+COMMANDS RUN (principal checks; outputs in /tmp/fees-*.log)
+Frontend:
+  VITE_APP_MODE=demo npm test
+  npm run lint
+  ./node_modules/.bin/tsc -b
+  VITE_APP_MODE=live npm run build
+  VITE_APP_MODE=demo npm run build
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test --config playwright.fees.config.ts
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test tests/fee-progress.e2e.ts tests/finance-branding.e2e.ts tests/connected-ledgers.e2e.ts
+  PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test tests/connected-ledgers.e2e.ts --workers=1 --grep 'attendance leaves'
+Backend (isolated staging first; typecheck/lint repeated in actual repository):
+  ./node_modules/.bin/tsc --noEmit
+  ./node_modules/.bin/eslint src
+  ./node_modules/.bin/jest --runInBand --cacheDirectory /tmp/school-fee-jest
+  ./node_modules/.bin/jest src/security/importPerformance.integration.test.ts src/security/roster.integration.test.ts src/security/multiClassImport.integration.test.ts --runInBand --cacheDirectory /tmp/school-fee-jest
+Additional focused fee/security tests, formatting of changed files and git diff
+checks were run. No migrations, seeds or database cleanup against your real database.
+
+REMAINING LIMITS / MANUAL ACTIONS
+- Run the additive fee initializer, then sign in again. Grant custom fee roles only
+ the permissions they need. Existing suspended-school owner roles are not updated.
+- Current receipts use the shared Classic renderer and live school logo/accent;
+ live template/letterhead customization is not introduced by this change.
+- Fee setup is an overall per-student agreement; separate transport/tuition fee-head
+ accounting, online payment gateway, bank reconciliation and refunds are not added.
+ A reversal corrects a recorded payment; it does not transfer money back to a bank.
+- Bulk setup targets unconfigured students; existing agreements are edited separately
+ to protect paid installment allocations. Export is explicitly the displayed page.
+- Last 20 agreement changes are shown in the ledger; complete operation/audit records
+ remain in MongoDB. Receipt listing is cursor-paginated. No destructive history trim.
+- Initialization-script behavior was reviewed; real-database preflight/apply is a
+ manual deployment step and has not been claimed as tested on Atlas.
+
+CHANGED FRONTEND FILES
+playwright.config.ts
+src/app/liveRouter.tsx
+src/components/shared/GeneratedDocumentPreview.tsx
+src/features/live/portalAccess.ts
+src/features/live/useRemote.ts
+src/features/setup/ImportJob.tsx
+src/services/apiService.ts
+src/services/runtimeConfig.ts
+src/services/schoolAccessService.ts
+playwright.fees.config.ts
+src/features/fees/FeeOpeningDialog.tsx
+src/features/fees/FeePayments.tsx
+src/features/fees/FeeSetupDialog.tsx
+src/features/fees/FeeStudentLedger.tsx
+src/features/fees/LiveFinanceWorkspace.tsx
+src/features/fees/fees-live.css
+src/services/feeService.test.ts
+src/services/feeService.ts
+tests/fees-live.e2e.ts
+
+CHANGED BACKEND FILES
+src/api/controllers/fees.controller.ts
+src/api/controllers/registeredControllers.ts
+src/api/controllers/requests/fees.request.ts
+src/api/models/fees.models.ts
+src/api/repositories/school.repository.ts
+src/api/services/feeQuery.ts
+src/api/services/feeRead.service.ts
+src/api/services/feeRules.ts
+src/api/services/feeWrite.service.ts
+src/api/services/rosterImports.service.ts
+src/api/services/rosterPeople.ts
+src/api/services/rosterWorker.ts
+src/api/services/setupRules.ts
+src/api/services/studentDelete.service.ts
+src/security/fees.integration.test.ts
+src/security/importPerformance.integration.test.ts
+src/security/permissions.ts
+src/security/roster.integration.test.ts
+src/test/prepareFoundation.ts
+commands/initialize-school-fees.ts
+
+FINAL CHECKS
+The final live browser run against the applied backend source passed both journeys
+(2/2, 36.1 seconds including server setup). It used disposable local MongoDB, not
+configured Atlas. Actual-repository backend typecheck and lint returned no errors.
+Final frontend TypeScript/live build passed; lint retained only the five listed
+pre-existing warnings. Both repositories passed git diff --check. The 20 applied
+backend file hashes match the tested staging source.
+This report itself is also a new frontend documentation file.

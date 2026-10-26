@@ -1,0 +1,153 @@
+FEE FLOW AND STUDENT PROFILE REPAIR — 26 OCTOBER 2026
+
+SCOPE
+Implemented in frontend and backend. Existing uncommitted changes were preserved.
+No real database was connected to or changed. No secrets, environment files,
+dependencies or lockfiles were changed. No commit or deployment was made.
+Backend changes were tested in /tmp/school-profile-repair and copied into the
+backend after verifying the original file hashes. Backups of affected existing
+files are in /tmp/school-profile-repair-before.
+
+FEE FLOW
+1. Finance > Student Fees > select year/class/section > select students > Set up fees.
+2. Enter the common fee, optional concession/scholarship and optional note.
+   Single balance is the default. Split into installments reveals count/interval.
+3. Review students, adjust individual amounts and Payment details, then Save fee setup.
+   Previously received money can be entered as Already paid, with its recorded-on date.
+4. Open a student ledger as a page. Collect payment opens one dialog with the amount,
+   payment method/date and the allocation visible together. There is no stacked ledger
+   dialog and no additional payment-review dialog.
+5. Payments apply to the earliest unpaid balance across years, even before its due date.
+   Example: 3,000 due 30 October and 5,000 due 30 November; receive 4,000 on 28 October:
+   3,000 clears October and 1,000 goes toward November. Older unpaid debt is cleared first.
+   Choose specific installments remains available for an agreed alternative allocation.
+6. A single-balance agreement still accepts partial payments. Overpayments are rejected.
+   Schedule totals must equal the final fee: this financial consistency check remains.
+7. Notes are optional for concessions, changes, corrections and payment reversals.
+   Permission checks, audit records, revision checks and paid-allocation protection remain.
+8. Fee forms use the shared loader; form errors appear beside the bottom actions.
+   Class filters use the shared natural class order (1, 2, ... 10, 11, 12), including
+   Class/Grade prefixes and ordinal suffixes. Section selection resets when class changes.
+
+STUDENT PROFILE
+The original demo StudentProfilePage, StudentAttendance, StudentAcademics and
+EntityDocuments presentation is reused in live mode. Overview, Attendance, Fees,
+Progress Report and Documents use real student-specific backend records.
+- Student identity, guardian, academic year and enrollment come from MongoDB.
+- Attendance calendar and overview percentages agree; unmarked days are counted
+  separately and are not treated as recorded absences. Other attendance screens and
+  their existing calculation rules were not changed.
+- Academic results use existing exams and marks with assignment/subject filtering.
+- Fees reuse the same live ledger and receipts as Finance. Changes refresh profile totals.
+- Edit uses the existing full live student form. Delete uses the existing protected API;
+  students with financial history remain protected from hard deletion.
+- Document metadata loads only when Documents is opened. File content loads only when
+  viewed/downloaded. PDF/PNG/JPEG/WebP uploads retain the demo's 2 MiB limit, with byte
+  signature/size checks, tenant checks, CSRF, audits and duplicate-upload protection.
+- Users without attendance/academic/fee access do not receive those protected records.
+  Unlinked teaching permissions do not prevent basic student-profile viewing.
+- Demo still uses the existing local repository. Live never substitutes demo records.
+- The obsolete reduced live profile was removed in favor of the original profile UI.
+- Parent messaging is not connected by this task. The profile identifies it as unavailable
+  instead of sending a live user into an unsupported notification workflow.
+
+NEW API DEPENDENCIES (under /api/v1)
+GET /schools/:schoolId/academic-years/:yearId/students/:id/profile
+GET /schools/:schoolId/students/:id/documents
+GET /schools/:schoolId/students/:id/documents/:documentId
+POST /schools/:schoolId/students/:id/documents
+DELETE /schools/:schoolId/students/:id/documents/:documentId
+Existing fee, student edit/delete, attendance and marks APIs remain in use.
+
+MANUAL DATABASE SETUP
+Run once in the backend repository before uploading student documents:
+  ./node_modules/.bin/ts-node commands/initialize-student-documents.ts --preflight
+  ./node_modules/.bin/ts-node commands/initialize-student-documents.ts --apply
+Then restart the backend and frontend.
+This is additive: it creates student_documents and its indexes; it does not rewrite
+or delete existing school/student/fee records. These commands have NOT been run
+against your configured database. Transactions require the existing replica-set setup.
+If fees were never initialized, the existing initialize-school-fees.ts preflight/apply
+from the preceding fee implementation is still needed; it was not changed here.
+
+BACKEND FILES CHANGED IN THIS FOLLOW-UP
+- src/security/studentProfile.integration.test.ts
+- src/security/fees.integration.test.ts
+- src/test/prepareFoundation.ts
+- src/api/models/studentDocument.models.ts
+- src/api/controllers/studentProfile.controller.ts
+- src/api/controllers/registeredControllers.ts
+- src/api/services/studentDocuments.service.ts
+- src/api/services/studentProfile.service.ts
+- src/api/services/feeRules.ts
+- src/api/services/setupRules.ts
+- src/api/services/feeWrite.service.ts
+- src/api/services/studentDelete.service.ts
+- src/api/controllers/requests/fees.request.ts
+- commands/initialize-student-documents.ts
+
+FRONTEND FILES CHANGED IN THIS FOLLOW-UP
+- src/features/fees/{FeeSetupDialog,FeeOpeningDialog,FeeStudentLedger,FeePayments,LiveFinanceWorkspace}.tsx
+- src/features/fees/fees-live.css
+- src/features/students/{LiveStudentProfile,StudentProfilePage,StudentAttendance,LiveStudents}.tsx
+- src/features/students/{studentProfileBridge.ts,profileAttendance.test.ts}
+- src/features/academics/StudentAcademics.tsx
+- src/components/shared/EntityDocuments.tsx
+- src/features/live/{LiveRouteContent,LiveSettings}.tsx
+- src/lib/{schoolLabels.ts,schoolLabels.test.ts,selectors.ts}
+- src/services/{feeService.ts,feeService.test.ts,productService.ts,learningService.ts,studentProfileService.ts,apiService.ts}
+- tests/fees-live.e2e.ts
+- docs/FEE_MANAGEMENT_IMPLEMENTATION_2026-10-26.txt and this report
+Other existing modified/untracked files belong to prior work and were preserved.
+- tests/student-profile.e2e.ts (new demo regression journey)
+
+VERIFICATION ACTUALLY RUN
+Backend (isolated copy; all 14 applied files verified byte-for-byte against it):
+- ./node_modules/.bin/jest --runInBand: 34 suites, 219 tests passed.
+- After the final restricted-profile permission refinement:
+  ./node_modules/.bin/jest --runInBand src/security/studentProfile.integration.test.ts
+  3 tests passed, including unlinked teaching permissions, tenant isolation, CSRF,
+  protected fields, metadata-only reads, deduplication and the full 2 MiB upload limit.
+- Actual backend: ./node_modules/.bin/tsc --noEmit and ./node_modules/.bin/eslint src
+  both passed. git diff --check passed.
+Frontend:
+- VITE_APP_MODE=demo npm test: 55 files, 310 tests passed.
+- npm run lint: 0 errors, 5 existing warnings in AppIcon, LoadingOverlay, Primitives
+  (2 export warnings), and LiveLearning (owner dependency).
+- VITE_APP_MODE=demo npm run build: passed.
+- VITE_APP_MODE=live npm run build: passed; existing large-chunk warning remains
+  (liveRouter approximately 710 kB minified).
+- PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test
+  --config playwright.fees.config.ts: 2 passed against the actual updated backend
+  source and a disposable local replica set. Exercises fee setup with an optional
+  blank concession note, installment selection, payment-response loss recovery,
+  receipt PDF download, mobile ledger, profile attendance, fee receipts, document
+  upload/download/reload, full student edit and 25-row Excel import response recovery.
+- PLAYWRIGHT_CHROME_PATH=/usr/bin/google-chrome ./node_modules/.bin/playwright test
+  --config playwright.config.ts tests/student-profile.e2e.ts tests/fee-progress.e2e.ts:
+  2 passed. Demo profile retains original tabs, local document persistence and matching
+  attendance rates without calling any backend API. Demo fee receipt flow passed.
+- Earlier focused demo connected-ledgers run: teacher profile/document upload passed;
+  broader gallery/mobile test failed on its existing template-option img expectation
+  (expected 6, found 0). Template-gallery implementation and test were not changed here.
+  The complete historical demo browser suite is therefore NOT claimed to pass.
+- git diff --check: passed. Desktop/mobile profile and fee ledger screenshots inspected.
+
+OBSERVED LOCAL PERFORMANCE (NOT AN ATLAS OR PRODUCTION GUARANTEE)
+The full backend regression reported: 25 fee agreements 128 ms, fee directory 36 ms;
+25-student validation/commit/replay 301 ms; 1,000-student import 14,064 ms including
+validation and commit. Real network latency, database load and indexes affect timings.
+Existing request deduplication/caching and mutation invalidation remain in use. Profile
+reads are scoped to one student/year; document bytes are excluded from list responses.
+
+LIMITS / REMAINING ITEMS
+- Real Atlas data, real school accounts, production network latency and real document
+  initialization were not tested or modified. All database tests used disposable local data.
+- Student documents are stored in MongoDB with a 2 MiB per-file limit. Object-storage
+  offloading/virus scanning is not included in this change; signature checks are not a
+  malware scan. Existing demo file formats and limits were preserved.
+- Parent notification workspace remains a separate integration dependency. Existing
+  manual report preview/download and WhatsApp handoff are retained where applicable.
+- Academic marks edits continue through the existing class results workflow.
+- Optional notes do not bypass concession approval, audit recording, exact fee totals,
+  stale-edit protection or fee-history retention.

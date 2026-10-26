@@ -1,6 +1,7 @@
 import { examIncludes } from '../../lib/academicSheets';
 import { resolvedResult } from '../../lib/classSubjects';
-import { useEffect, useState } from 'react';
+import { StudentProfileBridge } from '../students/studentProfileBridge';
+import { useContext, useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { CalendarDays, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
@@ -24,6 +25,7 @@ function classResultsPath(value: string | null) {
 
 export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
   const state = useSchool();
+  const bridge = useContext(StudentProfileBridge);
   const location = useLocation();
   const [params, setParams] = useSearchParams();
   const requestedExamId = params.get('exam');
@@ -55,6 +57,7 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
   }, [params, selected, setParams]);
   if (!row) return null;
   const scopedParams = new URLSearchParams({
+    ...(bridge ? { year: state.academicYear.id } : {}),
     class: row.enrollment.classId,
     section: row.enrollment.sectionId,
   });
@@ -170,9 +173,11 @@ export function StudentAcademics({ enrollmentId }: { enrollmentId: string }) {
             <h2>Selected Test Result</h2>
             <p>Results below belong to this test.</p>
           </div>
-          <Link className="button secondary" to={managePath}>
-            <AppIcon name="edit" size={16} /> Manage marks
-          </Link>
+          {(!bridge || bridge.manageMarks) && (
+            <Link className="button secondary" to={managePath}>
+              <AppIcon name="edit" size={16} /> Manage marks
+            </Link>
+          )}
         </div>
         <div className="student-test-context-body">
           <label className="student-test-selector">

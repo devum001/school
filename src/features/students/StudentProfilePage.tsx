@@ -1,5 +1,6 @@
 import TabRail from '../../components/ui/TabRail';
-import { useState } from 'react';
+import { StudentProfileBridge } from './studentProfileBridge';
+import { useContext, useState } from 'react';
 import StudentDialog from './StudentDialog';
 import DeleteStudentDialog from './DeleteStudentDialog';
 import { useToday } from '../../app/useToday';
@@ -16,7 +17,7 @@ import {
   AppIcon,
   type IconName,
 } from '../../components/ui/Primitives';
-import { attendanceSummary, feeSummary, resultSummary, roster } from '../../lib/selectors';
+import { recordedAttendanceSummary, feeSummary, resultSummary, roster } from '../../lib/selectors';
 import { displayDate, money } from '../../lib/config';
 import { StudentFees } from '../fees/StudentFees';
 import { StudentAcademics } from '../academics/StudentAcademics';
@@ -33,6 +34,7 @@ const tabIcons: Record<(typeof tabs)[number], IconName> = {
 };
 export default function StudentProfilePage() {
   const state = useSchool();
+  const bridge = useContext(StudentProfileBridge);
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -41,7 +43,14 @@ export default function StudentProfilePage() {
   const { studentId } = useParams();
   const [params, setParams] = useSearchParams();
   const requestedTab = params.get('tab') as (typeof tabs)[number] | null;
-  const tab = requestedTab && tabs.includes(requestedTab) ? requestedTab : 'overview';
+  const tab =
+    requestedTab &&
+    tabs.includes(requestedTab) &&
+    (!bridge ||
+      !['attendance', 'academics', 'fees'].includes(requestedTab) ||
+      bridge[requestedTab as 'attendance' | 'academics' | 'fees'])
+      ? requestedTab
+      : 'overview';
   const row = roster(state, true).find((r) => r.student.id === studentId);
   if (!row)
     return (
@@ -56,12 +65,18 @@ export default function StudentProfilePage() {
       />
     );
   const { student, enrollment } = row;
-  const attendance = attendanceSummary(
+  const attendance = recordedAttendanceSummary(
     state.attendance
       .filter((r) => r.enrollmentId === enrollment.id && r.date.startsWith(today.slice(0, 7)))
       .map((r) => r.status),
   );
-  const fees = feeSummary(state, enrollment.id);
+  const fees = bridge
+    ? {
+        outstanding: bridge.feeSummary?.outstanding ?? 0,
+        paid: bridge.feeSummary?.paid ?? 0,
+        payments: [],
+      }
+    : feeSummary(state, enrollment.id);
   const latestExam = state.exams
     .filter(
       (e) =>
@@ -98,7 +113,8 @@ export default function StudentProfilePage() {
           <p>
             {student.admissionNumber}
             <span>·</span>
-            {row.className}, Section {row.sectionName}
+            {row.className}
+            {row.sectionName ? `, Section ${row.sectionName}` : ''}
             <span>·</span>Roll no. {enrollment.rollNumber}
           </p>
           <small>
@@ -106,24 +122,32 @@ export default function StudentProfilePage() {
             Academic year {state.academicYear.name}
           </small>
         </div>
-        <Link
-          className="button secondary"
-          to={`/attendance?class=${enrollment.classId}&section=${enrollment.sectionId}`}
-        >
-          <AppIcon name="attendance" size={16} />
-          Class register
-        </Link>
+        {(!bridge || bridge.attendance) && (
+          <Link
+            className="button secondary"
+            to={`/attendance?class=${enrollment.classId}&section=${enrollment.sectionId}&year=${state.academicYear.id}`}
+          >
+            <AppIcon name="attendance" size={16} />
+            Class register
+          </Link>
+        )}
       </div>
-      <div className="student-profile-actions">
-        <Button variant="secondary" onClick={() => setEditing(true)}>
-          <AppIcon name="edit" size={15} />
-          Edit student
-        </Button>
-        <Button variant="ghost" className="delete-action" onClick={() => setDeleting(true)}>
-          <AppIcon name="delete" size={15} />
-          Delete student
-        </Button>
-      </div>
+      {(!bridge || bridge.manage) && (
+        <div className="student-profile-actions">
+          <Button variant="secondary" onClick={() => (bridge ? bridge.edit() : setEditing(true))}>
+            <AppIcon name="edit" size={15} />
+            Edit student
+          </Button>
+          <Button
+            variant="ghost"
+            className="delete-action"
+            onClick={() => (bridge ? bridge.remove() : setDeleting(true))}
+          >
+            <AppIcon name="delete" size={15} />
+            Delete student
+          </Button>
+        </div>
+      )}
       {editing && <StudentDialog studentId={student.id} onClose={() => setEditing(false)} />}
       {deleting && (
         <DeleteStudentDialog
@@ -133,58 +157,77 @@ export default function StudentProfilePage() {
         />
       )}
       <TabRail className="tabs profile-tabs" role="tablist" aria-label="Student profile tabs">
-        {tabs.map((t) => (
-          <button
-            role="tab"
-            aria-selected={tab === t}
-            id={`tab-${t}`}
-            aria-controls={`panel-${t}`}
-            key={t}
-            className={tab === t ? 'active' : ''}
-            onClick={() =>
-              setParams((previous) => {
-                const next = new URLSearchParams(previous);
-                next.set('tab', t);
-                return next;
-              })
-            }
-          >
-            <AppIcon name={tabIcons[t]} size={16} />
-            {t === 'academics' ? 'Progress Report' : t[0].toUpperCase() + t.slice(1)}
-          </button>
-        ))}
+        {tabs
+          .filter(
+            (t) =>
+              !bridge ||
+              !['attendance', 'academics', 'fees'].includes(t) ||
+              bridge[t as 'attendance' | 'academics' | 'fees'],
+          )
+          .map((t) => (
+            <button
+              role="tab"
+              aria-selected={tab === t}
+              id={`tab-${t}`}
+              aria-controls={`panel-${t}`}
+              key={t}
+              className={tab === t ? 'active' : ''}
+              onClick={() =>
+                setParams((previous) => {
+                  const next = new URLSearchParams(previous);
+                  next.set('tab', t);
+                  return next;
+                })
+              }
+            >
+              <AppIcon name={tabIcons[t]} size={16} />
+              {t === 'academics' ? 'Progress Report' : t[0].toUpperCase() + t.slice(1)}
+            </button>
+          ))}
       </TabRail>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === 'overview' && (
           <>
             <div className="stats-grid three">
-              <StatCard
-                label={`${monthName} attendance`}
-                value={`${attendance.percentage}%`}
-                detail={`${attendance.attended} attending / ${attendance.marked} marked days`}
-                icon={<AppIcon name="attendance" size={24} />}
-                tone="green"
-                href={`/students/${student.id}?tab=attendance`}
-              />
-              <StatCard
-                label="Outstanding fees"
-                value={money(fees.outstanding)}
-                detail="Current academic year · Includes future dues"
-                icon={<AppIcon name="finance-balance" size={24} />}
-                tone="amber"
-                href={`/students/${student.id}?tab=fees`}
-              />
-              <StatCard
-                label="Latest examination"
-                value={academic ? `${academic.percentage}%` : '—'}
-                detail={
-                  academic
-                    ? `${latestExam.name} · ${result?.absent ? 'Absent' : `Grade ${academic.grade}`}`
-                    : 'No results recorded yet'
-                }
-                icon={<AppIcon name="trophy" size={24} />}
-                href={`/students/${student.id}?tab=academics`}
-              />
+              {(!bridge || bridge.attendance) && (
+                <StatCard
+                  label={`${monthName} attendance`}
+                  value={`${attendance.percentage}%`}
+                  detail={`${attendance.attended} attending / ${attendance.marked} marked days`}
+                  icon={<AppIcon name="attendance" size={24} />}
+                  tone="green"
+                  href={`/students/${student.id}?year=${state.academicYear.id}&tab=attendance`}
+                />
+              )}
+              {(!bridge || bridge.fees) && (
+                <StatCard
+                  label="Outstanding fees"
+                  value={
+                    bridge && !bridge.feeSummary?.configured ? 'Not set' : money(fees.outstanding)
+                  }
+                  detail={
+                    bridge
+                      ? 'All academic years · Includes future dues'
+                      : 'Current academic year · Includes future dues'
+                  }
+                  icon={<AppIcon name="finance-balance" size={24} />}
+                  tone="amber"
+                  href={`/students/${student.id}?year=${state.academicYear.id}&tab=fees`}
+                />
+              )}
+              {(!bridge || bridge.academics) && (
+                <StatCard
+                  label="Latest examination"
+                  value={academic ? `${academic.percentage}%` : '—'}
+                  detail={
+                    academic
+                      ? `${latestExam.name} · ${result?.absent ? 'Absent' : `Grade ${academic.grade}`}`
+                      : 'No results recorded yet'
+                  }
+                  icon={<AppIcon name="trophy" size={24} />}
+                  href={`/students/${student.id}?year=${state.academicYear.id}&tab=academics`}
+                />
+              )}
             </div>
             <div className="profile-overview-grid">
               <Panel title="Student information" subtitle="A connected view of the learner">
@@ -204,7 +247,8 @@ export default function StudentProfilePage() {
                   <div>
                     <dt>Class & section</dt>
                     <dd>
-                      {row.className} · {row.sectionName}
+                      {row.className}
+                      {row.sectionName ? ` · ${row.sectionName}` : ''}
                     </dd>
                   </div>
                   <div>
@@ -231,9 +275,13 @@ export default function StudentProfilePage() {
                     {student.guardian.contact ? 'Contact on file' : 'Contact not available'}
                   </Badge>
                 </div>
-                <Link className="panel-bottom-link" to="/notifications">
-                  Open notification workspace <ArrowUpRight size={15} />
-                </Link>
+                {bridge ? (
+                  <p className="panel-bottom-link">Parent messaging is not available yet.</p>
+                ) : (
+                  <Link className="panel-bottom-link" to="/notifications">
+                    Open notification workspace <ArrowUpRight size={15} />
+                  </Link>
+                )}
               </Panel>
             </div>
             <Panel
@@ -241,46 +289,63 @@ export default function StudentProfilePage() {
               subtitle="Records from the same school workspace"
             >
               <div className="student-activity">
-                <div>
-                  <span className="activity-icon blue">
-                    <AppIcon name="attendance" size={20} />
-                  </span>
-                  <span>
-                    <strong>{monthName} attendance summary</strong>
-                    <small>
-                      {attendance.marked} marked records · {attendance.absent} absent days
-                    </small>
-                  </span>
-                </div>
-                <div>
-                  <span className="activity-icon green">
-                    <AppIcon name="wallet" size={20} />
-                  </span>
-                  <span>
-                    <strong>{fees.payments.length} payments recorded</strong>
-                    <small>{money(fees.paid)} paid toward annual fees</small>
-                  </span>
-                </div>
-                <div>
-                  <span className="activity-icon blue">
-                    <AppIcon name="trophy" size={20} />
-                  </span>
-                  <span>
-                    <strong>{latestExam?.name ?? 'No results recorded yet'}</strong>
-                    <small>
-                      {academic && `${academic.marks}/${academic.maximum}`}{' '}
-                      {latestExam && ` · ${displayDate(latestExam.date)}`}
-                    </small>
-                  </span>
-                </div>
+                {(!bridge || bridge.attendance) && (
+                  <div>
+                    <span className="activity-icon blue">
+                      <AppIcon name="attendance" size={20} />
+                    </span>
+                    <span>
+                      <strong>{monthName} attendance summary</strong>
+                      <small>
+                        {attendance.marked} marked records · {attendance.absent} absent days
+                      </small>
+                    </span>
+                  </div>
+                )}
+                {(!bridge || bridge.fees) && (
+                  <div>
+                    <span className="activity-icon green">
+                      <AppIcon name="wallet" size={20} />
+                    </span>
+                    <span>
+                      <strong>
+                        {bridge ? (bridge.feeSummary?.paymentCount ?? 0) : fees.payments.length}{' '}
+                        payments recorded
+                      </strong>
+                      <small>
+                        {money(fees.paid)} paid toward {bridge ? 'recorded fees' : 'annual fees'}
+                      </small>
+                    </span>
+                  </div>
+                )}
+                {(!bridge || bridge.academics) && (
+                  <div>
+                    <span className="activity-icon blue">
+                      <AppIcon name="trophy" size={20} />
+                    </span>
+                    <span>
+                      <strong>{latestExam?.name ?? 'No results recorded yet'}</strong>
+                      <small>
+                        {academic && `${academic.marks}/${academic.maximum}`}{' '}
+                        {latestExam && ` · ${displayDate(latestExam.date)}`}
+                      </small>
+                    </span>
+                  </div>
+                )}
               </div>
             </Panel>
           </>
         )}
         {tab === 'attendance' && <StudentAttendance enrollmentId={enrollment.id} />}{' '}
-        {tab === 'fees' && <StudentFees enrollmentId={enrollment.id} />}{' '}
+        {tab === 'fees' &&
+          (bridge ? bridge.feeContent : <StudentFees enrollmentId={enrollment.id} />)}{' '}
         {tab === 'academics' && <StudentAcademics enrollmentId={enrollment.id} />}{' '}
-        {tab === 'documents' && <EntityDocuments ownerKind="student" ownerId={student.id} />}
+        {tab === 'documents' &&
+          (bridge ? (
+            bridge.documentContent
+          ) : (
+            <EntityDocuments ownerKind="student" ownerId={student.id} />
+          ))}
       </div>
     </>
   );

@@ -4,7 +4,13 @@ import { accessError } from '../../services/schoolAccessService';
 // Callers memoize load; each school/tab gets a separate mounted instance.
 export function useRemote<T>(load: (signal: AbortSignal) => Promise<T>) {
   const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<{ data?: T; error?: string; loading: boolean }>({
+  const [state, setState] = useState<{
+    data?: T;
+    error?: string;
+    loading: boolean;
+    source?: typeof load;
+    attempt?: number;
+  }>({
     loading: true,
   });
   useEffect(() => {
@@ -12,10 +18,11 @@ export function useRemote<T>(load: (signal: AbortSignal) => Promise<T>) {
     let active = true;
     load(controller.signal).then(
       (data) => {
-        if (active) setState({ data, loading: false });
+        if (active) setState({ data, loading: false, source: load, attempt });
       },
       (error) => {
-        if (active && !isCancelled(error)) setState({ error: accessError(error), loading: false });
+        if (active && !isCancelled(error))
+          setState({ error: accessError(error), loading: false, source: load, attempt });
       },
     );
     return () => {
@@ -24,7 +31,9 @@ export function useRemote<T>(load: (signal: AbortSignal) => Promise<T>) {
     };
   }, [load, attempt]);
   return {
-    ...state,
+    data: state.source === load && state.attempt === attempt ? state.data : undefined,
+    error: state.source === load && state.attempt === attempt ? state.error : undefined,
+    loading: state.loading || state.source !== load || state.attempt !== attempt,
     reload: () => {
       apiService.invalidateReads();
       setState({ loading: true });

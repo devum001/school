@@ -16,7 +16,7 @@ import {
 import { Button, LoadingOverlay, Modal, Panel } from '../../components/ui/Primitives';
 import { onboardingApi, type ImportDetail } from '../../services/onboardingService';
 import { accessError } from '../../services/schoolAccessService';
-import { isCancelled } from '../../services/apiService';
+import { ApiError, apiService, isCancelled } from '../../services/apiService';
 import { downloadText } from '../../lib/liveRosterImport';
 import { useDraftGuard } from '../academics/useDraftGuard';
 import './import.css';
@@ -59,13 +59,21 @@ export default function ImportJob({
         const data = await onboardingApi.job(schoolId, jobId, offset, controller.signal);
         if (controller.signal.aborted) return;
         setJob(data);
+        if (data.status === 'completed') apiService.invalidateReads();
         setError('');
         if (['validating', 'queued', 'processing'].includes(data.status))
           timer = setTimeout(() => {
             void poll();
           }, 1500);
       } catch (cause) {
-        if (!isCancelled(cause) && !controller.signal.aborted) setError(accessError(cause));
+        if (!isCancelled(cause) && !controller.signal.aborted) {
+          setError(
+            'Import status could not be loaded. Saved rows are safe; checking again automatically.',
+          );
+          timer = setTimeout(() => {
+            void poll();
+          }, 5000);
+        }
       }
     }
     void poll();
@@ -84,7 +92,13 @@ export default function ImportJob({
       setConfirm(null);
       reload();
     } catch (cause) {
-      setError(accessError(cause));
+      if (cause instanceof ApiError && (cause.status === 0 || cause.status >= 500)) {
+        setConfirm(null);
+        setError(
+          'The response was interrupted. Checking the saved import before offering another action.',
+        );
+        reload();
+      } else setError(accessError(cause));
     } finally {
       setBusy(false);
     }
@@ -182,20 +196,14 @@ export default function ImportJob({
                       gap: 10,
                     }}
                   >
-                    <span
-                      className="import-file-chip"
-                      data-pill={isStep3 ? 'round' : undefined}
-                    >
+                    <span className="import-file-chip" data-pill={isStep3 ? 'round' : undefined}>
                       <FileSpreadsheet size={13} aria-hidden="true" />
                       <span>
                         {fileName || `${job.kind}-import.xlsx`}
                         {isStep3 ? ` • ${job.total} rows` : ''}
                       </span>
                     </span>
-                    <p
-                      role="status"
-                      className="sr-only"
-                    >
+                    <p role="status" className="sr-only">
                       {job.status === 'validating'
                         ? `${job.checked} of ${job.total} rows validated`
                         : job.status === 'draft'
@@ -587,7 +595,7 @@ export default function ImportJob({
               <div className="live-content">
                 <p>
                   {confirm === 'confirm'
-                    ? 'Each successful row will be saved independently. You can track successes and failures here.'
+                    ? 'Validated rows save in small batches; conflicts are isolated to individual rows. You can track successes and failures here.'
                     : confirm === 'retry'
                       ? 'Pending and failed rows return to validation. Correct any errors and confirm again.'
                       : 'This stops work that has not yet committed. It does not undo saved records.'}

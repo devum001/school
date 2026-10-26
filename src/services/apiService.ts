@@ -29,6 +29,28 @@ const messages: Record<number, string> = {
   429: 'Too many attempts. Please wait before trying again.',
 };
 const setupMessages: Record<string, string> = {
+  FEE_DRAFT_STORAGE:
+    'Fee onboarding storage needs initialization. Run initialize-fee-onboarding preflight and apply.',
+  FEE_DRAFT_STATE: 'This fee draft is busy or changed. Refresh its progress before continuing.',
+  FEE_NOT_READY:
+    'Fee storage needs initialization. Run the fee initialization preflight and apply command.',
+  FEE_SCHEDULE:
+    'Installment amounts must equal the agreed fee. Check dates, discounts and opening paid amounts.',
+  FEE_REASON: 'Enter a reason for the concession, scholarship or adjustment.',
+  FEE_PAID_LOCK:
+    'Preserve paid installments and opening balances. Reverse an incorrect payment before changing its allocation.',
+  FEE_OVERLAP:
+    'Fees already exist for this student and period. Open Manage Fees instead of adding them again.',
+  FEE_PAYMENT:
+    'Payment exceeds the remaining balance, has an invalid date, or repeats an installment. Refresh the student ledger.',
+  FEE_REQUEST:
+    'This save reference was already used with different details. Refresh and start a new action.',
+  DOCUMENT_NOT_READY:
+    'Student document storage needs initialization. Ask the platform operator to run initialize-student-documents.',
+  FEE_STUDENT: 'Student enrollment changed. Refresh the selection before setting up fees.',
+  RECORD_IN_USE:
+    'This student has linked records, including fees. Keep the student to preserve financial history.',
+
   EXAM_SAVED_MARKS:
     'Keep classes, sections and subjects with saved marks selected. Clear those marks in the marks sheet before removing them.',
   HR_PREVIOUS_PUNCH:
@@ -375,12 +397,15 @@ export class ApiService {
       if (isCancelled(error)) throw error;
       if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
       if (error instanceof ApiError) throw error;
+      if (method !== 'GET') this.invalidateReads();
       throw new ApiError(
         0,
         timeout.aborted ? 'TIMEOUT' : 'NETWORK',
-        timeout.aborted
-          ? 'The backend took too long to respond. Please retry.'
-          : 'Unable to reach the backend. Check your connection and retry.',
+        method !== 'GET'
+          ? 'The save response was interrupted. It may already be saved. Check the latest records before creating it again.'
+          : timeout.aborted
+            ? 'The backend took too long to respond. Please retry.'
+            : 'Unable to reach the backend. Check your connection and retry.',
       );
     }
   }

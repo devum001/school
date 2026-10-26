@@ -80,13 +80,7 @@ function SchoolWorkspace({ schoolId }: { schoolId: string }) {
         access={access}
         yearId={year}
         mode={
-          path === '/students/new'
-            ? 'new'
-            : path === '/students/import'
-              ? 'import'
-              : path === '/students'
-                ? 'directory'
-                : 'profile'
+          path === '/students/new' ? 'new' : path === '/students/import' ? 'import' : 'directory'
         }
       />
     ) : (

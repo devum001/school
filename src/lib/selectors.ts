@@ -46,6 +46,14 @@ export function attendanceSummary(statuses: AttendanceStatus[]) {
     percentage: total ? Math.round((attended / total) * 1000) / 10 : 0,
   };
 }
+/** Profile rates describe recorded attendance; unmarked days are shown separately. */
+export function recordedAttendanceSummary(statuses: AttendanceStatus[]) {
+  const summary = attendanceSummary(statuses);
+  return {
+    ...summary,
+    percentage: summary.marked ? Math.round((summary.attended / summary.marked) * 1000) / 10 : 0,
+  };
+}
 export function feeSummary(state: DemoState, enrollmentId?: string) {
   const obligations = state.obligations.filter(
     (o) => o.schoolId === state.school.id && (!enrollmentId || o.enrollmentId === enrollmentId),
