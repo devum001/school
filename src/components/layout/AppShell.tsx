@@ -41,6 +41,7 @@ function loadingMessageForRoute(pathname: string, search: string): string {
   if (pathname.startsWith('/students')) return 'Loading students…';
   if (pathname.startsWith('/teachers/')) return 'Loading teacher profile…';
   if (pathname.startsWith('/teachers')) return 'Loading teachers…';
+  if (pathname === '/staff/punch') return 'Loading punch in & out…';
   if (pathname === '/staff/self') return 'Loading my attendance & salary…';
   if (pathname.startsWith('/staff')) return 'Loading staff & HR…';
   if (pathname.startsWith('/attendance')) return 'Loading attendance…';
@@ -63,6 +64,7 @@ function loadingMessageForRoute(pathname: string, search: string): string {
   return 'Loading workspace…';
 }
 export interface AppShellProps {
+  overviewUrl?: string;
   visibleRoute?: (path: string) => boolean;
   school: { name: string; logo?: string };
   user: { name: string; detail: string; avatarName?: string };
@@ -75,6 +77,7 @@ export interface AppShellProps {
   studentSearchUrl?: (query: string) => string;
 }
 export default function AppShell({
+  overviewUrl = '/',
   school,
   visibleRoute = () => true,
   user,
@@ -133,6 +136,7 @@ export default function AppShell({
       });
   }, [preferences.landingPage, location.pathname, navigate]);
   const current = [
+    { to: '/staff/punch', label: 'Punch in & out' },
     { to: '/staff/self', label: 'My attendance & salary' },
     ...navigation,
     { to: '/notifications', label: 'Notifications' },
@@ -181,7 +185,7 @@ export default function AppShell({
               <NavLink
                 key={n.to}
                 end={n.to === '/'}
-                to={n.to}
+                to={n.to === '/' ? overviewUrl : n.to}
                 onClick={() => setMobile(false)}
                 className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               >

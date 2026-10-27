@@ -2,10 +2,11 @@ import { SetupSection, Rule } from '../settings/StaffPolicySection';
 import { Link } from 'react-router-dom';
 import '../../styles/staff-structure.css';
 import { formatCalendarDate, parseCalendarDate, titleCase } from '../../lib/displayFormat';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Button, Panel, EmptyState } from '../../components/ui/Primitives';
 import type { HrAdapter, HrSettings, HrStaff } from '../../services/hrService';
 import { HrForm, TextField, SelectField } from './HrForms';
+const CampusLocationPicker = lazy(() => import('./CampusLocationPicker'));
 export default function HrSettingsPanel({
   settings,
   staff = [],
@@ -169,6 +170,7 @@ export default function HrSettingsPanel({
                   {settings.workingDays.map((d) => days[d]).join(', ')}
                 </Rule>
                 <Rule label="Late after">{settings.lateAfter}</Rule>
+                <Rule label="Half day after">{settings.halfDayAfter || 'Not enabled'}</Rule>
                 <Rule label="Full-day minimum">{settings.halfDayMinutes} minutes</Rule>
               </dl>
             </div>
@@ -376,6 +378,13 @@ function SettingsEditor({
                 onChange={(v) => setDraft({ ...draft, [k]: v })}
               />
             ))}
+            <TextField
+              label="Half day after (optional)"
+              type="time"
+              required={false}
+              value={draft.halfDayAfter ?? ''}
+              onChange={(halfDayAfter) => setDraft({ ...draft, halfDayAfter })}
+            />
             {(['halfDayMinutes', 'paidLeaveDays', 'maxAccuracy'] as const).map((k) => (
               <label className="field" key={k}>
                 {
@@ -395,6 +404,10 @@ function SettingsEditor({
               </label>
             ))}
           </div>
+          <p>
+            Arriving after the half-day cutoff counts as half-day, even when minimum working hours
+            are met. Leave it empty to use working hours only. Changes apply to new punches.
+          </p>
           <fieldset className="hr-workdays">
             <legend>Working days</legend>
             <div className="toolbar">
@@ -436,25 +449,19 @@ function SettingsEditor({
                   })
                 }
               />
-              {(['latitude', 'longitude', 'radius'] as const).map((k) => (
-                <label className="field" key={k}>
-                  {k === 'radius' ? 'Radius (metres)' : k}
-                  <input
-                    required
-                    type="number"
-                    step="any"
-                    value={location[k]}
-                    onChange={(e) =>
-                      setDraft({
-                        ...draft,
-                        locations: draft.locations.map((l, j) =>
-                          j === i ? { ...l, [k]: Number(e.target.value) } : l,
-                        ),
-                      })
-                    }
-                  />
-                </label>
-              ))}
+              <Suspense fallback={<p role="status">Loading campus map…</p>}>
+                <CampusLocationPicker
+                  value={location}
+                  onChange={(next) =>
+                    setDraft((previous) => ({
+                      ...previous,
+                      locations: previous.locations.map((item, index) =>
+                        index === i ? next : item,
+                      ),
+                    }))
+                  }
+                />
+              </Suspense>
               <Button
                 type="button"
                 variant="secondary"
@@ -483,7 +490,7 @@ function SettingsEditor({
             Add school location
           </Button>
           <p>
-            Enter the campus centre from your map. Radius must be 25–1,000 metres; the device’s
+            Choose the campus centre on the map. Radius must be 25–1,000 metres; the device’s
             uncertainty must fit inside it.
           </p>
         </>

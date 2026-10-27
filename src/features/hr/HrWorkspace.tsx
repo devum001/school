@@ -1,7 +1,12 @@
+import CancelLeaveDialog from './CancelLeaveDialog';
+import AttendanceTimeDialog from './AttendanceTimeDialog';
+import AttendanceRequests from './AttendanceRequests';
+import StaffAttendancePanel from './StaffAttendancePanel';
+import { wasLate } from './attendanceDisplay';
 import StaffLoginDialog from './StaffLoginDialog';
 import AttendanceCalendar from './AttendanceCalendar';
-import { useSearchParams } from 'react-router-dom';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Badge,
   Button,
@@ -43,13 +48,15 @@ export default function LiveHrWorkspace({
   hideNavigation?: boolean;
   teachersOnly?: boolean;
 }) {
-  const { schoolId, access } = useLiveSchool();
+  const { schoolId, access, status } = useLiveSchool();
   const adapter = useMemo(() => liveHrAdapter(schoolId), [schoolId]);
   return (
     <HrWorkspace
       key={`${schoolId}:${settings}`}
       adapter={adapter}
+      liveSchoolId={schoolId}
       permissions={access.permissions}
+      punchSchoolId={status.selfTeaching ? schoolId : undefined}
       section={section}
       settings={settings}
       hideNavigation={hideNavigation}
@@ -64,7 +71,11 @@ export function HrWorkspace({
   settings = false,
   hideNavigation = false,
   teachersOnly = false,
+  punchSchoolId,
+  liveSchoolId,
 }: {
+  liveSchoolId?: string;
+  punchSchoolId?: string;
   adapter: HrAdapter;
   permissions: readonly string[];
   section?: string;
@@ -102,6 +113,15 @@ export function HrWorkspace({
     [adapter, month, self, allowed],
   );
   const state = useRemote(load);
+  const { reload } = state;
+  useEffect(() => {
+    if (!punchSchoolId) return;
+    const refresh = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === punchSchoolId) reload();
+    };
+    window.addEventListener('schoolwell:punch-change', refresh);
+    return () => window.removeEventListener('schoolwell:punch-change', refresh);
+  }, [punchSchoolId, reload]);
   const items = [
     ...(can('payroll.view') ? [{ id: 'salary', label: 'Salary Expenses' }] : []),
     ...(can('attendance.manage')
@@ -154,14 +174,12 @@ export function HrWorkspace({
     }),
     [today],
   );
-  const activeWorkspace = isReady
-    ? state.data!.value
-    : (state.data?.value ?? fallbackWorkspace);
+  const activeWorkspace = isReady ? state.data!.value : (state.data?.value ?? fallbackWorkspace);
   return (
     <div className="ledger-stack hr-workspace">
       {!settings && (
         <div className="hr-top-bar">
-          {!hideNavigation && items.length > 1 && (
+          {!hideNavigation && section !== 'self' && items.length > 1 && (
             <SectionNavigation label="Staff & HR" items={items} value={tab} onChange={setTab} />
           )}
           <label className="hr-month-corner">
@@ -232,6 +250,8 @@ export function HrWorkspace({
             permissions={permissions}
             reload={state.reload}
             changeMonth={setMonth}
+            dedicatedPunchPage={Boolean(punchSchoolId)}
+            liveSchoolId={liveSchoolId}
           />
         </LoadingOverlay>
       )}
@@ -256,7 +276,11 @@ function HrContent({
   permissions,
   reload,
   changeMonth,
+  dedicatedPunchPage,
+  liveSchoolId,
 }: {
+  liveSchoolId?: string;
+  dedicatedPunchPage: boolean;
   adapter: HrAdapter;
   data: Workspace;
   tab: string;
@@ -268,7 +292,9 @@ function HrContent({
 }) {
   const [params, setParams] = useSearchParams();
   const initialStaff = data.staff.find((p) => p.id === params.get('setupSalary'));
-  const selfView = ['attendance', 'leave', 'salary', 'profile'].includes(params.get('view') || '')
+  const selfView = ['attendance', 'requests', 'leave', 'salary', 'profile'].includes(
+    params.get('view') || '',
+  )
     ? params.get('view')!
     : 'attendance';
   const [selectedStaff, setSelectedStaff] = useState('');
@@ -345,6 +371,9 @@ function HrContent({
           label="My workspace"
           items={[
             { id: 'attendance', label: 'Attendance' },
+            ...(liveSchoolId && data.staff.some((p) => p.teaching)
+              ? [{ id: 'requests', label: 'ARS' }]
+              : []),
             { id: 'leave', label: 'Leave' },
             { id: 'salary', label: 'Salary' },
             { id: 'profile', label: 'My profile' },
@@ -373,13 +402,11 @@ function HrContent({
             [
               'Late',
               staff.filter((p) =>
-                data.attendance.some(
-                  (d) => d.staffId === p.id && d.date === date && d.status === 'late',
-                ),
+                data.attendance.some((d) => d.staffId === p.id && d.date === date && wasLate(d)),
               ).length,
             ],
             [
-              'Absent · reviewed',
+              'Absent',
               staff.filter((p) =>
                 data.attendance.some(
                   (d) => d.staffId === p.id && d.date === date && d.status === 'absent',
@@ -390,15 +417,22 @@ function HrContent({
               'Currently punched in',
               staff.filter((p) =>
                 data.attendance.some(
-                  (d) => d.staffId === p.id && d.date === date && d.punchIn && !d.punchOut,
+                  (d) =>
+                    d.staffId === p.id &&
+                    d.date === date &&
+                    (d.inProgress ??
+                      (d.date === data.today && !!d.punchIn && !d.punchOut && !d.attendanceClosed)),
                 ),
               ).length,
             ],
             [
-              'Needs review',
+              'Invalid / missed punch',
               staff.filter((p) =>
                 data.attendance.some(
-                  (d) => d.staffId === p.id && d.date === date && d.status === 'review',
+                  (d) =>
+                    d.staffId === p.id &&
+                    d.date === date &&
+                    ['review', 'invalid'].includes(d.status),
                 ),
               ).length,
             ],
@@ -450,7 +484,7 @@ function HrContent({
             : tab === 'salary'
               ? 'Set up salary → prepare a draft → review and approve → record payment.'
               : tab === 'attendance'
-                ? 'Review daily attendance and decide any salary impact.'
+                ? 'Punches update attendance automatically. Review correction requests and choose any salary impact.'
                 : 'Review requests and decide whether approved leave is paid or unpaid.'
         }
         title={
@@ -520,27 +554,36 @@ function HrContent({
                 {data.punchState.reason}
               </p>
             )}
+            {dedicatedPunchPage && (
+              <p className="panel-note">
+                <Link to="/staff/punch">Open Punch in & out</Link> to record your school day.
+              </p>
+            )}
             <div className="toolbar">
-              <Button
-                disabled={
-                  busy ||
-                  (data.punchState &&
-                    (!data.punchState.allowed || data.punchState.nextKind !== 'in'))
-                }
-                onClick={() => void punch('in')}
-              >
-                Punch in
-              </Button>
-              <Button
-                disabled={
-                  busy ||
-                  (data.punchState &&
-                    (!data.punchState.allowed || data.punchState.nextKind !== 'out'))
-                }
-                onClick={() => void punch('out')}
-              >
-                Punch out
-              </Button>
+              {!dedicatedPunchPage && (
+                <>
+                  <Button
+                    disabled={
+                      busy ||
+                      (data.punchState &&
+                        (!data.punchState.allowed || data.punchState.nextKind !== 'in'))
+                    }
+                    onClick={() => void punch('in')}
+                  >
+                    Punch in
+                  </Button>
+                  <Button
+                    disabled={
+                      busy ||
+                      (data.punchState &&
+                        (!data.punchState.allowed || data.punchState.nextKind !== 'out'))
+                    }
+                    onClick={() => void punch('out')}
+                  >
+                    Punch out
+                  </Button>
+                </>
+              )}
               <Button variant="secondary" onClick={() => setAction({ kind: 'leave' })}>
                 Request leave
               </Button>
@@ -548,7 +591,15 @@ function HrContent({
           </>
         )}
         {tab === 'self' && selfView === 'attendance' && (
-          <AttendanceCalendar data={data} month={month} />
+          <AttendanceCalendar
+            data={data}
+            month={month}
+            ars={
+              liveSchoolId && data.staff.some((p) => p.teaching)
+                ? { adapter, saved: reload }
+                : undefined
+            }
+          />
         )}
         {tab === 'self' && selfView === 'profile' && (
           <section className="hr-personal-salary">
@@ -758,49 +809,26 @@ function HrContent({
           </div>
         ) : null}
         {tab === 'attendance' && (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Staff</th>
-                  <th>Status</th>
-                  <th>Punch in / out</th>
-                  <th>Salary decision</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staff.map((p) => {
-                  const day = data.attendance.find((d) => d.staffId === p.id && d.date === date);
-                  return (
-                    <tr key={p.id}>
-                      <td>{titleCase(p.name)}</td>
-                      <td>{titleCase(day?.status ?? 'Unmarked')}</td>
-                      <td>
-                        {day?.punchIn ? new Date(day.punchIn).toLocaleTimeString() : '—'} /{' '}
-                        {day?.punchOut ? new Date(day.punchOut).toLocaleTimeString() : '—'}
-                      </td>
-                      <td>{titleCase(day?.decision ?? 'Needs review')}</td>
-                      <td>
-                        <Button
-                          variant="ghost"
-                          onClick={() => setAction({ kind: 'attendance', staff: p })}
-                        >
-                          Review / correct
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          onClick={() => setAction({ kind: 'calendar', staff: p })}
-                        >
-                          Calendar
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <StaffAttendancePanel
+            data={data}
+            staff={staff}
+            date={date}
+            adapter={adapter}
+            saved={reload}
+            live={Boolean(liveSchoolId)}
+            canViewProfile={can('staff.view')}
+            correct={(staff) => setAction({ kind: 'attendance', staff })}
+            calendar={(staff) => setAction({ kind: 'calendar', staff })}
+          />
+        )}
+        {tab === 'self' && selfView === 'requests' && liveSchoolId && (
+          <AttendanceRequests
+            requests={data.attendanceRequests ?? []}
+            self
+            adapter={adapter}
+            saved={reload}
+            today={data.today}
+          />
         )}
         {(tab === 'leave' || (tab === 'self' && selfView === 'leave')) && (
           <>
@@ -908,22 +936,7 @@ function HrContent({
         </Modal>
       )}
       {action?.kind === 'cancelLeave' && action.leave && (
-        <HrForm
-          description="Cancel a pending request before its first day."
-          title="Cancel leave request?"
-          close={close}
-          submitLabel="Cancel request"
-          submit={async () => {
-            await adapter.save(`/leave/${action.leave!.id}/cancel`, {
-              revision: action.leave!.revision,
-            });
-            reload();
-          }}
-        >
-          <p>
-            The pending request will be marked cancelled. You can submit a new request if needed.
-          </p>
-        </HrForm>
+        <CancelLeaveDialog leave={action.leave} adapter={adapter} close={close} saved={reload} />
       )}
       {action?.kind === 'login' && (
         <StaffLoginDialog
@@ -949,9 +962,12 @@ function HrContent({
       {(action?.kind === 'payment' || action?.kind === 'advance') && (
         <PaymentDialog {...shared} staff={action.staff} item={action.item} />
       )}
-      {action?.kind === 'attendance' && (
-        <AttendanceDialog {...shared} staff={action.staff} date={date} />
-      )}
+      {action?.kind === 'attendance' &&
+        (liveSchoolId ? (
+          <AttendanceTimeDialog {...shared} staff={action.staff} date={date} />
+        ) : (
+          <AttendanceDialog {...shared} staff={action.staff} date={date} />
+        ))}
       {action?.kind === 'leave' && (
         <LeaveDialog
           {...shared}

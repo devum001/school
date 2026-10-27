@@ -1,4 +1,6 @@
+import { attendanceRequestSchema } from './attendanceTypes';
 import { titleCase } from '../lib/displayFormat';
+import { announcePunch } from './teacherPunchService';
 import { z } from 'zod';
 import { ApiError, apiService } from './apiService';
 const id = z.string();
@@ -9,6 +11,7 @@ export const hrSettingsSchema = z.object({
   start: z.string(),
   end: z.string(),
   lateAfter: z.string(),
+  halfDayAfter: z.string().optional(),
   halfDayMinutes: z.number(),
   workingDays: z.array(z.number()),
   holidays: z.array(z.string()),
@@ -63,6 +66,15 @@ const day = z.object({
   decision: z.string(),
   unpaidUnits: z.number(),
   reason: z.string(),
+  late: z.boolean().optional(),
+  lateMinutes: z.number().optional(),
+  workingMinutes: z.number().nullable().optional(),
+  attendanceSource: z.enum(['ars', 'admin']).optional(),
+  actualPunchIn: z.string().optional(),
+  actualPunchOut: z.string().optional(),
+  inProgress: z.boolean().optional(),
+  missedPunchOut: z.boolean().optional(),
+  attendanceClosed: z.boolean().optional(),
   punchIn: z.string().optional(),
   punchOut: z.string().optional(),
 });
@@ -127,6 +139,7 @@ const workspace = z.object({
   staff: z.array(staff),
   employment: z.array(employment),
   attendance: z.array(day),
+  attendanceRequests: z.array(attendanceRequestSchema).optional(),
   leaves: z.array(leave),
   payroll: z.array(payroll),
   payments: z.array(payment),
@@ -175,7 +188,11 @@ export function liveHrAdapter(schoolId: string): HrAdapter {
         throw new ApiError(0, 'INVALID_RESPONSE', 'Wrong school response.');
       return data;
     },
-    save: (path, body, method = 'POST') => apiService.request(root + path, { method, body }),
+    save: async (path, body, method = 'POST') => {
+      const result = await apiService.request(root + path, { method, body });
+      if (path === '/punch' || path.startsWith('/attendance-requests')) announcePunch(schoolId);
+      return result;
+    },
   };
 }
 export const payrollPaid = (item: HrPayroll, data: HrWorkspace) =>
@@ -194,3 +211,38 @@ export function payrollStatus(item: HrPayroll, data: HrWorkspace) {
 }
 export const rupees = (paise: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(paise / 100);
+
+const staffProfileSchema = z.object({
+  staff,
+  attendance: workspace
+    .pick({
+      today: true,
+      timezone: true,
+      settings: true,
+      attendance: true,
+      leaves: true,
+      attendanceRequests: true,
+    })
+    .nullable(),
+});
+export type StaffAttendanceProfile = z.infer<typeof staffProfileSchema>;
+export async function loadStaffAttendanceProfile(
+  schoolId: string,
+  staffId: string,
+  month: string,
+  signal?: AbortSignal,
+) {
+  const result = staffProfileSchema.safeParse(
+    await apiService.request(
+      `/schools/${schoolId}/hr/staff/${encodeURIComponent(staffId)}/attendance-profile?month=${encodeURIComponent(month)}`,
+      { signal },
+    ),
+  );
+  if (
+    !result.success ||
+    result.data.staff.schoolId !== schoolId ||
+    result.data.staff.id !== staffId
+  )
+    throw new ApiError(0, 'INVALID_RESPONSE', 'Unable to read this staff profile.');
+  return result.data;
+}

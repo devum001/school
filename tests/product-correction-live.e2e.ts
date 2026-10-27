@@ -244,7 +244,7 @@ test('original overview, attendance and academic screens save real school record
   await page.getByRole('dialog').getByLabel('Review reason').fill('Approved paid leave');
   await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await teacher.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await teacher.reload();
   await expect(
     teacher.getByRole('row').filter({ hasText: 'Personal appointment today' }),
   ).toContainText('approved');

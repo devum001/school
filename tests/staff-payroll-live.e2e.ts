@@ -18,10 +18,9 @@ test('staff salary setup, approval and partial payments persist through the live
   await staff.getByLabel('Designation', { exact: true }).fill('Teacher');
   await staff.getByLabel('Joining Date', { exact: false }).fill('01-01-2025');
   await staff.getByRole('button', { name: 'Save staff', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Salary & attendance');
-  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(staff).toHaveCount(0);
-  await page.goto('/fees');
+  await page.goto('/fees?tab=Salary+Expenses');
   await page.getByLabel('Salary / attendance month').fill('2025-09');
   await page
     .getByRole('row')
@@ -97,11 +96,12 @@ test('teacher self-service checks the configured campus and records a punch', as
   await page.setViewportSize({ width: 1440, height: 1050 });
   await page.getByRole('button', { name: 'Edit Work & Leave Rules', exact: true }).click();
   const settings = page.getByRole('dialog');
+  await settings.getByLabel('Half day after (optional)', { exact: true }).fill('11:00');
   for (const name of ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'])
     await settings.getByLabel(name, { exact: true }).check();
   await settings.getByRole('button', { name: 'Add school location', exact: true }).click();
-  await settings.getByLabel('latitude', { exact: true }).fill('28.6');
-  await settings.getByLabel('longitude', { exact: true }).fill('77.2');
+  await settings.getByRole('button', { name: 'Use current location', exact: true }).click();
+  await expect(settings.getByText(/Device accuracy:/)).toBeVisible();
   await settings.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(settings).toHaveCount(0);
   await page.goto('/staff');
@@ -111,10 +111,9 @@ test('teacher self-service checks the configured campus and records a punch', as
   await editor.getByLabel('Staff code', { exact: true }).fill('HR-PUNCH');
   await editor.getByLabel('Teaching staff — show in Teachers directory').check();
   await editor.getByRole('button', { name: 'Save staff', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Salary & attendance');
-  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(editor).toHaveCount(0);
-  await page.goto('/fees');
+  await page.goto('/fees?tab=Salary+Expenses');
   await page
     .getByRole('row')
     .filter({ hasText: 'Punch Fixture' })
@@ -134,18 +133,23 @@ test('teacher self-service checks the configured campus and records a punch', as
     .click();
   await salary.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(salary).toHaveCount(0);
-  await page.goto('/staff/self');
+  await page.goto('/staff/punch');
   await page.getByRole('button', { name: 'Punch in', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Punch out', exact: true })).toBeEnabled();
+  await page.goto('/staff/self');
   await expect(
     page
       .getByRole('region', { name: 'My attendance calendar' })
-      .getByRole('button', { name: /Review/ }),
+      .getByRole('button', { name: /Present|Late|Half-Day/ }),
   ).toBeVisible();
+  await page.goto('/staff/punch');
   await context.setGeolocation({ latitude: 29, longitude: 77.2, accuracy: 5 });
   await page.getByRole('button', { name: 'Punch out', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('inside an allowed school area');
+  await expect(page.getByRole('alert')).toContainText('allowed radius');
   await context.setGeolocation({ latitude: 28.6, longitude: 77.2, accuracy: 5 });
   await page.getByRole('button', { name: 'Punch out', exact: true }).click();
+  await expect(page.getByText('School day completed', { exact: true })).toBeVisible();
+  await page.goto('/staff/self');
   await expect(
     page
       .getByRole('region', { name: 'My attendance calendar' })
@@ -191,8 +195,7 @@ test('school owner manages departments and creates teacher login', async ({ page
   await page.getByLabel('Staff code', { exact: true }).fill('HR-LOGIN');
   await page.getByLabel('Teaching staff — show in Teachers directory').check();
   await page.getByRole('button', { name: 'Save staff', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Salary & attendance');
-  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('row').filter({ hasText: 'Payroll Fixture' })).toHaveCount(0);
   await page.getByRole('tab', { name: 'Teachers', exact: true }).click();
   const row = page.getByRole('row').filter({ hasText: 'HR-LOGIN' });

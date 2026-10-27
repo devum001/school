@@ -3,7 +3,7 @@ import { titleCase } from '../../lib/displayFormat';
 import StaffDepartmentOptions from '../hr/StaffDepartmentOptions';
 import LiveHrWorkspace from '../hr/HrWorkspace';
 import { useCallback, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Avatar,
   Badge,
@@ -162,7 +162,9 @@ export default function LiveStaff({
                                 <Avatar name={p.name} />
                               )}
                               <div>
-                                <strong>{titleCase(p.name)}</strong>
+                                <Link to={`/${p.teaching ? 'teachers' : 'staff'}/${p.id}`}>
+                                  <strong>{titleCase(p.name)}</strong>
+                                </Link>
                                 <small>
                                   {[
                                     p.code,

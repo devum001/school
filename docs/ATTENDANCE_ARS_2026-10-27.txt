@@ -1,0 +1,176 @@
+Automatic teacher attendance and correction requests — 27 October 2026
+
+Behavior
+- Punch-in is attendance, separate from signing into the application. Signing out
+  does not create a punch-out. Location verification still applies to both punches.
+- A normal school day does not need administrative review. Arrival after the
+  school's Late after time is immediately Late. Working time below Full-day minimum
+  produces Half day at punch-out; otherwise the day is Present/Late. Late remains
+  visible independently of the full/half-day outcome, including after a correction.
+- Example: 08:00–15:00, late after 08:15, minimum 210 minutes. A noon arrival is
+  Late immediately. Leaving at 15:00 gives 180 minutes: Half day + Late. Staying
+  until 15:30 meets 210 minutes: Late/full day. Neither automatically deducts pay.
+- Punch-in snapshots that day's timing rules and school timezone. Later edits to
+  Work & Leave Rules apply to subsequent punches; they do not rewrite that shift.
+- Admin reviewing an open day no longer prevents the teacher's real punch-out.
+  Actual timestamps are recorded while the explicit attendance/pay decision stays.
+- Missing a previous day's punch-out blocks a new punch-in until an ARS is submitted.
+  ARS means Attendance Regularization Request. Submission allows the next working
+  day's punch-in immediately; the old day stays Invalid until approval.
+- An ARS asks for Full day or Half day and a reason. Teachers can request a past
+  employed working day, or today after school hours. No future dates. They cannot
+  approve their own request even if their role otherwise manages attendance.
+- The admin approves/rejects in Attendance > Staff Attendance > Attendance requests.
+  Approval chooses full/half day and paid/no deduction or an explicit half-day
+  deduction. Rejection keeps Invalid and allows resubmission. Pending requests
+  cannot be bypassed by manual attendance correction. Approved payroll is locked.
+- No punch-out time is invented by an ARS. Raw arrival/departure and request history
+  remain preserved. Corrections are audited and guarded by school tenancy, current
+  permissions, CSRF and revision checks. Retried request keys do not duplicate ARS.
+- In attendance-based payroll, unresolved missing punches/ARS block approval until
+  resolved and recalculated. Salary-only staff retain their existing workflow.
+
+Screens / how to test
+1. As school admin: School settings > Staff & Payroll > Work & Leave Rules.
+   Confirm school timings, cutoff, full-day minimum, working days and campus radius.
+2. As a linked teacher with Own attendance and salary: open Punch in & out.
+   Punch in at school. Check immediate On duty/Late status and the live local clock.
+3. Admin: Attendance > Staff Attendance. Check in/out chips, Late badge, filters,
+   and On duty count. Open the staff name for profile and monthly attendance history.
+4. Review today's attendance while it remains open. Teacher can still punch out
+   from an allowed school location; the counter stops after a successful punch-out.
+5. For a missed old punch: teacher opens Punch in & out > Request correction.
+   Submit the affected date and full/half day. Confirm Invalid while pending, then
+   verify that today's punch-in is allowed without waiting for admin approval.
+6. Admin reviews the request in the attendance inbox. Teacher refreshes requests or
+   opens My attendance & salary to see the accepted day and calendar color. Profile
+   late counts continue to show actual late arrivals. Pending requests from older
+   months stay in the inbox. Monthly history is available through self-service.
+
+Deployment / data
+- Restart/redeploy both backend and frontend together. No new database script,
+  collection, index, credential or environment variable is required by this change.
+- New optional attendance fields and embedded request history use the existing
+  staff/day collection. No real database records have been rewritten or deleted.
+- Existing missed punches are identified on read. Existing explicit admin decisions
+  are preserved. Historical Review rows are not guessed into new attendance outcomes;
+  use an explicit correction when needed.
+- Work-rule calendar history is not versioned globally; new punch timings are
+  snapshotted per day. Leave/holiday edits retain the existing app's behavior.
+- Verification uses disposable local MongoDB replica sets, not Atlas. Device GPS
+  accuracy in a real campus must still be checked with your device and saved radius.
+
+Files changed for this task (earlier unrelated/uncommitted work preserved)
+Frontend:
+  src/features/hr/AttendanceRequests.tsx (new ARS request/review UI)
+  src/features/hr/StaffAttendancePanel.tsx (new register and inbox)
+  src/features/hr/attendanceDisplay.ts (late flag helper)
+  src/features/hr/staff-attendance.css (register, request cards, profile)
+  src/features/hr/TeacherPunchPage.tsx
+  src/features/hr/HrWorkspace.tsx
+  src/features/hr/AttendanceCalendar.tsx
+  src/features/hr/attendanceCalendarModel.test.ts
+  src/features/hr/hr-personal-calendar.css
+  src/features/teachers/LiveStaffProfile.tsx (new scoped profile)
+  src/features/teachers/LiveStaff.tsx
+  src/services/attendanceTypes.ts (shared validated ARS response)
+  src/services/hrService.ts
+  src/services/teacherPunchService.ts
+  src/services/apiService.ts
+  src/services/learningService.ts
+  src/app/liveRouter.tsx
+  src/app/schoolFeatureContext.ts
+  src/features/live/LiveRouteContent.tsx
+  src/features/live/portalAccess.ts
+  src/features/live/LiveLearning.tsx
+  src/features/dashboard/DashboardPage.tsx
+  tests/teacher-workspace-live.e2e.ts
+  tests/staff-payroll-live.e2e.ts
+  playwright.live.config.ts (supports disposable backend test directory)
+  docs/ATTENDANCE_ARS_2026-10-27.txt
+Backend:
+  src/api/controllers/hr.controller.ts
+  src/api/controllers/requests/hr.request.ts
+  src/api/models/hr.models.ts
+  src/api/services/attendanceAdjustment.service.ts
+  src/api/services/attendanceDayView.ts
+  src/api/services/attendanceRequestRead.ts
+  src/api/services/automaticStaffAttendance.test.ts
+  src/api/services/automaticStaffAttendance.ts
+  src/api/services/hrAttendance.service.ts
+  src/api/services/hrCommon.ts
+  src/api/services/hrPayroll.service.ts
+  src/api/services/hrRead.service.ts
+  src/api/services/hrRules.ts
+  src/api/services/learningRead.service.ts
+  src/api/services/punchEligibility.ts
+  src/api/services/staffAttendanceProfile.service.ts
+  src/api/services/studentAttendance.service.ts
+  src/test/attendanceAdjustments.integration.test.ts
+  src/test/hr.integration.test.ts
+
+API additions
+  POST /schools/:schoolId/hr/attendance-requests (own staff account only)
+  PUT /schools/:schoolId/hr/attendance-requests/:dayId (attendance.manage)
+  GET /schools/:schoolId/hr/staff/:staffId/attendance-profile?month=YYYY-MM
+    Basic profile requires staff.view; attendance detail also needs attendance.manage.
+Existing punch-status, HR workspace and learning overview include attendance metadata.
+The removed daily Review default and HR_DAY_REVIEWED punch block are replaced by
+school-rule classification and the explicit correction workflow; manual correction,
+leave approval, pay approval and all existing audit/security protections remain.
+
+Validation commands
+Frontend repository:
+  npm run typecheck
+  npm run lint
+  VITE_APP_MODE=demo npm test
+  VITE_APP_MODE=live npm run build
+  VITE_APP_MODE=demo npm run build
+  PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome npx playwright test \
+    --config=playwright.config.ts tests/hr-demo-preservation.e2e.ts \
+    tests/monthly-attendance.e2e.ts --workers=1
+  SCHOOL_BACKEND_TEST_DIR=/tmp/attendance-ars-backend \
+    PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome npx playwright test \
+    --config=playwright.teacher.config.ts
+  SCHOOL_BACKEND_TEST_DIR=/tmp/attendance-ars-backend \
+    PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome npx playwright test \
+    --config=playwright.hr.config.ts
+Backend source-equivalent staging copy (without .env, disposable Mongo fixtures):
+  npm run lint
+  npm run typecheck
+  npm test -- --runTestsByPath src/api/services/automaticStaffAttendance.test.ts \
+    src/test/attendanceAdjustments.integration.test.ts src/test/hr.integration.test.ts \
+    src/test/punchLifecycle.integration.test.ts
+  npm test
+Actual backend repository, compilation only:
+  ./node_modules/.bin/tsc --project tsconfig.build.json --outDir /tmp/ars-backend-dist
+Both repositories: git diff --check
+
+Validation results
+- Frontend: 319 tests / 57 files passed. Typecheck, demo build and live build passed.
+- Frontend lint: no errors; four existing Fast Refresh warnings. Live build still
+  reports its existing >500 kB chunk warning. No dependencies changed in this task.
+- Backend: typecheck, production compilation and lint passed. Focused attendance
+  suites passed (26 tests before the additional payroll integration case); the
+  complete ARS integration suite then passed all 5 cases including payroll approval.
+- Chrome: teacher/ARS/admin/profile/mobile journey passed; all 3 existing HR browser
+  journeys passed; 2 demo attendance/payroll preservation checks passed.
+- The first HR browser invocation was blocked by approval review because of the
+  hardcoded backend checkout path. Config now honors SCHOOL_BACKEND_TEST_DIR;
+  the approved retry used the disposable staging fixture and all 3 tests passed.
+- Screenshots inspected: /tmp/ars-daily-register.png, /tmp/ars-admin-inbox.png,
+  /tmp/ars-teacher-mobile.png and /tmp/ars-staff-profile.png.
+
+Full backend test run details
+- First complete run: 233/234 passed; the newly added ARS/payroll test incorrectly
+  attempted approval in an unfinished month. The fixture was corrected to use a
+  completed month; all 5 ARS integration tests then passed.
+- Final complete run: 233/234 passed, all attendance/ARS/payroll tests passed.
+  The separate feeOnboarding integration test's 10,000-student case failed with
+  a loopback fetch ECONNRESET. That same fee suite had passed the earlier full run.
+  Only the failing fee suite was rerun to check whether the failure was transient.
+- Isolated rerun of feeOnboarding.integration.test.ts: all 5 tests passed, including
+  the 10,000-student case (28.2s for setup/validation/activation). The complete suite
+  had one transient failure; it is not being reported as an uninterrupted green run.
+- No task-blocking failures remain. Real-campus GPS and existing historical records
+  still require the school's normal manual verification; no real DB test was run.

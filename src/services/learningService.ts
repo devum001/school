@@ -118,6 +118,16 @@ const stateSchema = z.object({
   activities: z.array(z.never()),
 });
 export const snapshotSchema = z.object({
+  teacherScoped: z.boolean().optional(),
+  staffAttendanceSummary: z
+    .object({
+      onDuty: z.number(),
+      late: z.number(),
+      invalid: z.number(),
+      pendingRequests: z.number(),
+    })
+    .optional(),
+  attendanceGate: z.object({ required: z.boolean(), active: z.boolean() }).optional(),
   state: stateSchema,
   today: z.string(),
   timezone: z.string(),

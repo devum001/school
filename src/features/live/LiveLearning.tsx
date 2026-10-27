@@ -1,6 +1,6 @@
 import { portalAccess } from './portalAccess';
 import type { DemoState } from '../../types/domain';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SchoolFeatureContext, type SchoolFeatureData } from '../../app/schoolFeatureContext';
 import { Button, LoadingOverlay, Panel } from '../../components/ui/Primitives';
@@ -160,6 +160,14 @@ export default function LiveLearning({ area }: { area: LearningArea }) {
     [schoolId, yearId, area, requestedDate, targetKey],
   );
   const remote = useRemote(load);
+  const reload = remote.reload;
+  useEffect(() => {
+    const changed = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === schoolId) reload();
+    };
+    window.addEventListener('schoolwell:punch-change', changed);
+    return () => window.removeEventListener('schoolwell:punch-change', changed);
+  }, [schoolId, reload]);
   const loadingMessage = learningAreaMessage(area);
   const fallbackSnapshot = useMemo(
     () =>
@@ -229,7 +237,7 @@ function LearningContent({
   setDate: (date: string) => void;
 }) {
   const [data, setSaved] = useState(initial),
-     latest = useRef(initial);
+    latest = useRef(initial);
   const refresh = useCallback(async () => {
     const next = await loadLearning(schoolId, yearId, area, date);
     latest.current = next;
@@ -316,15 +324,19 @@ function LearningContent({
     };
     return {
       mode: 'live',
+      teacherScoped: effective.teacherScoped,
+      staffAttendanceSummary: effective.staffAttendanceSummary,
+      attendanceGate: effective.attendanceGate,
       selectedDate: date,
       state: effective.state,
       today: effective.today,
       canManage: effective.canManage,
       canCreateTest: !isTeacherScoped && permissions.includes('academics.manage'),
-      routeAllowed: portalAccess(permissions).allowed,
+      routeAllowed: portalAccess(permissions, { teacherScoped: effective.teacherScoped }).allowed,
       canMarkAttendance:
-        permissions.includes('student-attendance.manage') ||
-        permissions.includes('student-attendance.assigned'),
+        (!effective.attendanceGate?.required || effective.attendanceGate.active) &&
+        (permissions.includes('student-attendance.manage') ||
+          permissions.includes('student-attendance.assigned')),
       canViewStudentProfiles: permissions.includes('students.view'),
       canEditTest: (id) =>
         !isTeacherScoped &&
@@ -398,7 +410,7 @@ function LearningContent({
         await refresh();
       },
     };
-  }, [effective, root, refresh, setDate, date, permissions]);
+  }, [effective, root, refresh, setDate, date, permissions, owner]);
   function revision(id: string) {
     return latest.current.state.exams.find((e) => e.id === id)?.revision ?? 0;
   }

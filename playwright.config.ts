@@ -6,6 +6,8 @@ export default defineConfig({
   testIgnore: [
     'live-api.e2e.ts',
     'fees-live.e2e.ts',
+    'teacher-workspace-live.e2e.ts',
+    'attendance-ars-live.e2e.ts',
     'phase1-repair.e2e.ts',
     'staff-payroll-live.e2e.ts',
     'product-correction-live.e2e.ts',

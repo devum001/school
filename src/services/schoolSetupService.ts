@@ -25,6 +25,7 @@ export const childSchema = classSchema
   .extend({ classId: id, optional: z.boolean().optional(), teacherId: id.nullable().optional() });
 const statusSchema = z.object({
   selfLinked: z.boolean().optional(),
+  selfTeaching: z.boolean().optional(),
   schoolId: id,
   ready: z.boolean(),
   currentAcademicYearId: id.nullable(),
