@@ -2,17 +2,28 @@ import { displayTimestamp } from '../../lib/displayFormat';
 import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Button, EmptyState, Modal, Panel, AppIcon } from '../ui/Primitives';
+import { Button, EmptyState, Modal, Panel, AppIcon, LoadingOverlay } from '../ui/Primitives';
 import { STAFF_DOCUMENT_CATEGORIES, STUDENT_DOCUMENT_CATEGORIES } from '../../lib/entityDocuments';
 import { downloadStoredDocument, readDocumentFile } from '../../lib/fileUploads';
 import { communicationError } from '../../lib/communication';
 import { repository } from '../../lib/repository';
 import type { StoredDocument } from '../../types/ledger';
 
+export interface DocumentAdapter {
+  documents: StoredDocument[];
+  canManage: boolean;
+  load: (id: string) => Promise<StoredDocument>;
+  save: (
+    input: Pick<StoredDocument, 'category' | 'fileName' | 'mimeType' | 'size' | 'dataUrl'>,
+  ) => Promise<unknown>;
+  remove: (id: string) => Promise<unknown>;
+}
 export default function EntityDocuments({
   ownerKind,
   ownerId,
+  adapter,
 }: {
+  adapter?: DocumentAdapter;
   ownerKind: StoredDocument['ownerKind'];
   ownerId: string;
 }) {
@@ -25,67 +36,84 @@ export default function EntityDocuments({
     [error, setError] = useState(''),
     [removing, setRemoving] = useState<StoredDocument | null>(null),
     [viewing, setViewing] = useState<StoredDocument | null>(null);
-  const documents = (state.documents ?? []).filter(
-    (entry) =>
-      entry.schoolId === state.school.id &&
-      entry.ownerKind === ownerKind &&
-      entry.ownerId === ownerId,
-  );
+  const documents =
+    adapter?.documents ??
+    (state.documents ?? []).filter(
+      (entry) =>
+        entry.schoolId === state.school.id &&
+        entry.ownerKind === ownerKind &&
+        entry.ownerId === ownerId,
+    );
+  const openDocument = async (entry: StoredDocument, download = false) => {
+    setBusy(true);
+    setError('');
+    try {
+      const file = adapter ? await adapter.load(entry.id) : entry;
+      if (download) downloadStoredDocument(file.dataUrl, file.fileName);
+      else setViewing(file);
+    } catch (cause) {
+      setError(communicationError(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <Panel
       title="Documents"
       subtitle="ID proofs, certificates and other files belonging to this record."
     >
+      <LoadingOverlay loading={busy} label="Updating student documents…">
+        <div />
+      </LoadingOverlay>
       <div className="panel-padding">
-        <div className="document-upload-toolbar">
-          <label className="field">
-            Document category
-            <select
-              aria-label="Document category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {categories.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-          <label className="button secondary document-upload-control">
-            <AppIcon name="upload" size={16} /> {busy ? 'Saving…' : 'Upload document'}
-            <input
-              aria-label="Upload document"
-              type="file"
-              accept="application/pdf,image/png,image/jpeg,image/webp"
-              disabled={busy}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (!file) return;
-                setBusy(true);
-                setError('');
-                try {
-                  repository.saveEntityDocument({
-                    ownerKind,
-                    ownerId,
-                    category,
-                    ...(await readDocumentFile(file)),
-                  });
-                  notify('Document saved.');
-                } catch (cause) {
-                  setError(communicationError(cause));
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            />
-          </label>
-        </div>
-        <p className="panel-note">PDF, PNG, JPEG or WebP · Up to 2 MB per file.</p>
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
+        {(!adapter || adapter.canManage) && (
+          <div className="document-upload-toolbar">
+            <label className="field">
+              Document category
+              <select
+                aria-label="Document category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
+                {categories.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+            <label className="button secondary document-upload-control">
+              <AppIcon name="upload" size={16} /> {busy ? 'Saving…' : 'Upload document'}
+              <input
+                aria-label="Upload document"
+                type="file"
+                accept="application/pdf,image/png,image/jpeg,image/webp"
+                disabled={busy}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setBusy(true);
+                  setError('');
+                  try {
+                    const upload = {
+                      ownerKind,
+                      ownerId,
+                      category,
+                      ...(await readDocumentFile(file)),
+                    };
+                    if (adapter) await adapter.save(upload);
+                    else repository.saveEntityDocument(upload);
+                    notify('Document saved.');
+                  } catch (cause) {
+                    setError(communicationError(cause));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
+            </label>
+          </div>
         )}
+        <p className="panel-note">PDF, PNG, JPEG or WebP · Up to 2 MB per file.</p>
         {documents.length ? (
           <div className="table-wrap" role="region" aria-label="Uploaded documents" tabIndex={0}>
             <table>
@@ -101,7 +129,7 @@ export default function EntityDocuments({
                 {documents.map((entry) => (
                   <tr key={entry.id}>
                     <th scope="row">
-                      <button className="text-link" onClick={() => setViewing(entry)}>
+                      <button className="text-link" onClick={() => void openDocument(entry)}>
                         {entry.fileName}
                       </button>
                     </th>
@@ -112,17 +140,19 @@ export default function EntityDocuments({
                         <Button
                           variant="ghost"
                           aria-label={`Download ${entry.fileName}`}
-                          onClick={() => downloadStoredDocument(entry.dataUrl, entry.fileName)}
+                          onClick={() => void openDocument(entry, true)}
                         >
                           <AppIcon name="download" size={15} /> Download
                         </Button>
-                        <Button
-                          variant="ghost"
-                          aria-label={`Delete ${entry.fileName}`}
-                          onClick={() => setRemoving(entry)}
-                        >
-                          <AppIcon name="delete" size={15} />
-                        </Button>
+                        {(!adapter || adapter.canManage) && (
+                          <Button
+                            variant="ghost"
+                            aria-label={`Delete ${entry.fileName}`}
+                            onClick={() => setRemoving(entry)}
+                          >
+                            <AppIcon name="delete" size={15} />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -136,6 +166,11 @@ export default function EntityDocuments({
             description="Upload an existing ID proof, certificate or other document."
             icon={<AppIcon name="document" size={36} />}
           />
+        )}
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
         )}
       </div>
       <Modal
@@ -172,14 +207,20 @@ export default function EntityDocuments({
           </Button>
           <Button
             variant="danger"
-            onClick={() => {
+            onClick={async () => {
+              setBusy(true);
               try {
-                if (removing) repository.deleteEntityDocument(removing.id);
+                if (removing) {
+                  if (adapter) await adapter.remove(removing.id);
+                  else repository.deleteEntityDocument(removing.id);
+                }
                 setRemoving(null);
                 notify('Document deleted.');
               } catch (cause) {
                 setError(communicationError(cause));
                 setRemoving(null);
+              } finally {
+                setBusy(false);
               }
             }}
           >

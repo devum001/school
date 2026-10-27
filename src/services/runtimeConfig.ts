@@ -21,9 +21,10 @@ export function parseRuntimeConfig(source: { mode?: string; baseUrl?: string }) 
   }
   return { mode: mode as 'demo' | 'live', baseUrl };
 }
+// Node-based fixture runners have no Vite import.meta.env. Browser builds always do.
 const config = parseRuntimeConfig({
-  mode: import.meta.env.VITE_APP_MODE,
-  baseUrl: import.meta.env.VITE_API_BASE_URL,
+  mode: import.meta.env?.VITE_APP_MODE,
+  baseUrl: import.meta.env?.VITE_API_BASE_URL,
 });
 export const appMode = config.mode;
 export const apiBaseUrl = config.baseUrl;

@@ -207,12 +207,18 @@ export function excelBirthDate(serial: number, date1904 = false): string {
     .toISOString()
     .slice(0, 10);
 }
-export async function readStudentWorkbook(file: File): Promise<ExcelCell[][]> {
+export async function readStudentWorkbook(
+  file: File,
+  options: { maxRows?: number; sheetName?: string } = {},
+): Promise<ExcelCell[][]> {
+  const maxRows = Math.min(10000, Math.max(1, options.maxRows ?? 1000));
   if (!/\.xlsx$/i.test(file.name)) throw new Error('Choose an Excel .xlsx file.');
   const files = await unzip(file),
     workbook = documentXml(files.get('xl/workbook.xml'));
   const sheets = tags(workbook, 'sheet');
-  const selected = sheets.find((entry) => entry.getAttribute('name') === 'Students') ?? sheets[0];
+  const selected =
+    sheets.find((entry) => entry.getAttribute('name') === (options.sheetName ?? 'Students')) ??
+    sheets[0];
   if (!selected) throw new Error('The workbook has no student worksheet.');
   const id = selected.getAttributeNS(
     'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
@@ -240,8 +246,10 @@ export async function readStudentWorkbook(file: File): Promise<ExcelCell[][]> {
   const rows: ExcelCell[][] = [];
   for (const row of tags(source, 'row')) {
     const index = Number(row.getAttribute('r')) - 1;
-    if (!Number.isInteger(index) || index < 0 || index > 1000)
-      throw new Error('Import up to 1,000 students per file, starting below the header row.');
+    if (!Number.isInteger(index) || index < 0 || index > maxRows)
+      throw new Error(
+        `Import up to ${maxRows.toLocaleString('en-IN')} students per file, starting below the header row.`,
+      );
     const values: ExcelCell[] = [];
     for (const cell of tags(row, 'c')) {
       const ref = cell.getAttribute('r') ?? '';
@@ -274,7 +282,7 @@ export async function readStudentWorkbook(file: File): Promise<ExcelCell[][]> {
   const date1904 = ['1', 'true'].includes(
     tags(workbook, 'workbookPr')[0]?.getAttribute('date1904') ?? '',
   );
-  for (const header of ['birth date', 'joined on']) {
+  for (const header of ['birth date', 'joined on', 'first due date']) {
     const column = rows[0]?.findIndex((cell) => String(cell).trim().toLowerCase() === header) ?? -1;
     if (column >= 0)
       for (const row of rows)

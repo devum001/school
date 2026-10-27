@@ -1,9 +1,10 @@
+import { orderedClasses } from '../lib/schoolLabels';
 import { z } from 'zod';
 import { apiService, ApiError } from './apiService';
 import { scoped, yearSchema, classSchema, childSchema } from './schoolSetupService';
 import { personSchema, type Person } from './onboardingService';
 const id = z.string().regex(/^[a-f\d]{24}$/i);
-const studentRow = z.object({
+export const studentRow = z.object({
   id,
   schoolId: id,
   academicYearId: id,
@@ -39,6 +40,7 @@ export const productApi = {
     );
     scoped(data.year, schoolId);
     if (data.year.id !== yearId) throw new ApiError(0, 'INVALID_RESPONSE', 'Wrong academic year.');
+    data.classes = orderedClasses(data.classes);
     data.classes.forEach((c) => scoped(c, schoolId, yearId));
     data.children.forEach((c) => scoped(c, schoolId, yearId));
     return data;

@@ -13,7 +13,7 @@ export function portalAccess(
     if (path === '/staff/self') return own('attendance.self');
     if (path.startsWith('/students')) return can('students.view');
     if (path.startsWith('/teachers') || path === '/staff') return can('staff.view');
-    if (path === '/fees') return can('payroll.view');
+    if (path === '/fees') return can('fees.view') || can('payroll.view');
     if (path === '/attendance/staff') return can('attendance.manage');
     return path === '/settings';
   };
@@ -28,7 +28,7 @@ export function portalAccess(
             ? '/students'
             : can('staff.view')
               ? '/staff'
-              : can('payroll.view')
+              : can('fees.view') || can('payroll.view')
                 ? '/fees'
                 : can('attendance.manage')
                   ? '/attendance/staff'

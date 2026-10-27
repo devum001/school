@@ -2,7 +2,7 @@ import { useToday } from '../../app/useToday';
 import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { AppIcon, PickerInput, Panel, StatCard } from '../../components/ui/Primitives';
-import { attendanceSummary } from '../../lib/selectors';
+import { recordedAttendanceSummary } from '../../lib/selectors';
 import { STATUS_LABELS } from '../../lib/config';
 export function StudentAttendance({ enrollmentId }: { enrollmentId: string }) {
   const state = useSchool();
@@ -20,7 +20,7 @@ export function StudentAttendance({ enrollmentId }: { enrollmentId: string }) {
     const date = `${month}-${String(index + 1).padStart(2, '0')}`;
     return { date, status: records.find((record) => record.date === date)?.status ?? 'unmarked' };
   });
-  const summary = attendanceSummary(
+  const summary = recordedAttendanceSummary(
     days.filter((day) => day.date <= today).map((day) => day.status),
   );
   return (
