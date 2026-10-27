@@ -282,12 +282,37 @@ export async function readStudentWorkbook(
   const date1904 = ['1', 'true'].includes(
     tags(workbook, 'workbookPr')[0]?.getAttribute('date1904') ?? '',
   );
-  for (const header of ['birth date', 'joined on', 'first due date']) {
-    const column = rows[0]?.findIndex((cell) => String(cell).trim().toLowerCase() === header) ?? -1;
-    if (column >= 0)
-      for (const row of rows)
-        if (typeof row?.[column] === 'number')
-          row[column] = excelBirthDate(row[column] as number, date1904);
+  const dateHeaderAliases = [
+    'birth date', 'dob', 'date of birth', 'birth_date',
+    'joined on', 'date of joining', 'joining date', 'joined_on',
+    'first due date'
+  ];
+  const dateColumns = (rows[0] ?? [])
+    .map((cell, idx) => ({
+      idx,
+      clean: String(cell).normalize('NFKC').trim().toLowerCase().replace(/[_\s]+/g, ' ')
+    }))
+    .filter(item => dateHeaderAliases.includes(item.clean))
+    .map(item => item.idx);
+
+  for (const col of dateColumns) {
+    for (const row of rows) {
+      if (!row) continue;
+      if (typeof row[col] === 'number') {
+        row[col] = excelBirthDate(row[col] as number, date1904);
+      } else if (typeof row[col] === 'string') {
+        const raw = String(row[col]).trim();
+        const isoMatch = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/.exec(raw);
+        if (isoMatch) {
+          row[col] = `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+        } else {
+          const dmyMatch = /^(\d{2})[-/](\d{2})[-/](\d{4})$/.exec(raw);
+          if (dmyMatch) {
+            row[col] = `${dmyMatch[1]}-${dmyMatch[2]}-${dmyMatch[3]}`;
+          }
+        }
+      }
+    }
   }
   return Array.from({ length: rows.length }, (_, index) => rows[index] ?? []);
 }
