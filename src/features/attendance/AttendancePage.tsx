@@ -63,6 +63,64 @@ function AttendanceRegister() {
   const hasAssignedTiming = !!configuredSchoolHours(state);
   const [draft, setDraft] = useState<Record<string, AttendanceStatus>>({});
   const [error, setError] = useState('');
+  const handleAttendanceKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    rowIndex: number,
+    statusIndex: number,
+    enrollmentId: string,
+  ) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const table = e.currentTarget.closest('table');
+    if (!table) return;
+    const tableRows = Array.from(table.querySelectorAll('tbody tr'));
+
+    const focusButton = (rIdx: number, sIdx: number) => {
+      const targetRow = tableRows[rIdx];
+      if (!targetRow) return;
+      const buttons = targetRow.querySelectorAll<HTMLButtonElement>('.status-options button');
+      const targetBtn = buttons[sIdx];
+      if (targetBtn) {
+        targetBtn.focus();
+        targetBtn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    };
+
+    const key = e.key.toLowerCase();
+    if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      e.preventDefault();
+      focusButton(rowIndex + 1, statusIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusButton(rowIndex - 1, statusIndex);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      focusButton(rowIndex, Math.max(0, statusIndex - 1));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      focusButton(rowIndex, Math.min(statuses.length - 1, statusIndex + 1));
+    } else if (key === 'p') {
+      e.preventDefault();
+      setDraft((prev) => ({ ...prev, [enrollmentId]: 'present' }));
+      focusButton(rowIndex + 1, statuses.indexOf('present'));
+    } else if (key === 'a') {
+      e.preventDefault();
+      setDraft((prev) => ({ ...prev, [enrollmentId]: 'absent' }));
+      focusButton(rowIndex + 1, statuses.indexOf('absent'));
+    } else if (key === 'l') {
+      e.preventDefault();
+      setDraft((prev) => ({ ...prev, [enrollmentId]: 'late' }));
+      focusButton(rowIndex + 1, statuses.indexOf('late'));
+    } else if (key === 'h') {
+      e.preventDefault();
+      setDraft((prev) => ({ ...prev, [enrollmentId]: 'half-day' }));
+      focusButton(rowIndex + 1, statuses.indexOf('half-day'));
+    } else if (key === 'u') {
+      e.preventDefault();
+      setDraft((prev) => ({ ...prev, [enrollmentId]: 'unmarked' }));
+      focusButton(rowIndex + 1, statuses.indexOf('unmarked'));
+    }
+  };
+
   const dirty = Object.entries(draft).some(([id, status]) => statusFor(state, id, date) !== status);
   const summary = attendanceSummary(
     rows.map((r) => draft[r.enrollment.id] ?? statusFor(state, r.enrollment.id, date)),
@@ -236,7 +294,7 @@ function AttendanceRegister() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => {
+                {rows.map((r, rowIndex) => {
                   const status = draft[r.enrollment.id] ?? statusFor(state, r.enrollment.id, date);
                   return (
                     <tr key={r.enrollment.id}>
@@ -254,13 +312,15 @@ function AttendanceRegister() {
                           role="group"
                           aria-label={`${r.student.name} attendance`}
                         >
-                          {statuses.map((s) => (
+                          {statuses.map((s, statusIndex) => (
                             <button
                               key={s}
+                              type="button"
                               disabled={!canManage || saving}
                               aria-pressed={status === s}
                               className={status === s ? `selected ${s}` : ''}
-                              onClick={() => setDraft({ ...draft, [r.enrollment.id]: s })}
+                              onClick={() => setDraft((prev) => ({ ...prev, [r.enrollment.id]: s }))}
+                              onKeyDown={(e) => handleAttendanceKeyDown(e, rowIndex, statusIndex, r.enrollment.id)}
                             >
                               {STATUS_LABELS[s]}
                             </button>

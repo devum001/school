@@ -45,7 +45,7 @@ export default function StudentReceiptsDialog({
               <tr>
                 <th>Date</th>
                 <th>Installment</th>
-                <th>Amount paid</th>
+                <th className="currency-cell">Amount paid</th>
                 <th>Mode / Reference</th>
                 <th>Receipt</th>
               </tr>
@@ -66,7 +66,7 @@ export default function StudentReceiptsDialog({
                   <tr key={payment.id}>
                     <td>{displayDate(payment.date)}</td>
                     <td>{labels.join(', ') || 'School fees'}</td>
-                    <td>
+                    <td className="currency-cell">
                       <strong>{money(payment.amount)}</strong>
                     </td>
                     <td>

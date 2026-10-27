@@ -10,6 +10,7 @@ import {
   Panel,
   StatCard,
   Avatar,
+  PickerInput,
 } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
 import SectionNavigation from '../../components/shared/SectionNavigation';
@@ -175,7 +176,7 @@ export function HrWorkspace({
             <span className="sr-only">
               {self ? 'Calendar / salary month' : 'Salary / attendance month'}
             </span>
-            <input
+            <PickerInput
               type="month"
               required
               aria-label={self ? 'Calendar / salary month' : 'Salary / attendance month'}

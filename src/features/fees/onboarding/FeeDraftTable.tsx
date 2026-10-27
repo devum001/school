@@ -79,13 +79,13 @@ export default function FeeDraftTable({
               />
             </th>
             <th>Student / class</th>
-            <th>Base fee ₹</th>
-            <th>Concession ₹</th>
-            <th>Scholarship ₹</th>
-            <th>Already paid ₹</th>
-            <th>Old dues ₹</th>
-            <th>Final fee</th>
-            <th>Remaining</th>
+            <th className="currency-cell">Base fee ₹</th>
+            <th className="currency-cell">Concession ₹</th>
+            <th className="currency-cell">Scholarship ₹</th>
+            <th className="currency-cell">Already paid ₹</th>
+            <th className="currency-cell">Old dues ₹</th>
+            <th className="currency-cell">Final fee</th>
+            <th className="currency-cell">Remaining</th>
             <th>Payment details</th>
           </tr>
         </thead>
@@ -132,12 +132,12 @@ export default function FeeDraftTable({
                             : row.error || 'Draft'}
                       </small>
                     </th>
-                    <td>{cell(row, 'baseFee', 'Base fee')}</td>
-                    <td>{cell(row, 'concession', 'Concession')}</td>
-                    <td>{cell(row, 'scholarship', 'Scholarship')}</td>
-                    <td>{cell(row, 'openingPaid', 'Already paid')}</td>
-                    <td>{cell(row, 'oldDues', 'Old dues')}</td>
-                    <td>{values.baseFee < 0 ? 'Not set' : money(net)}</td>
+                    <td className="currency-cell">{cell(row, 'baseFee', 'Base fee')}</td>
+                    <td className="currency-cell">{cell(row, 'concession', 'Concession')}</td>
+                    <td className="currency-cell">{cell(row, 'scholarship', 'Scholarship')}</td>
+                    <td className="currency-cell">{cell(row, 'openingPaid', 'Already paid')}</td>
+                    <td className="currency-cell">{cell(row, 'oldDues', 'Old dues')}</td>
+                    <td className="currency-cell">{values.baseFee < 0 ? 'Not set' : money(net)}</td>
                     <td>
                       {row.configured
                         ? 'See ledger'

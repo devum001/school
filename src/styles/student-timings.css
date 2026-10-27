@@ -598,3 +598,35 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* Attendance keyboard navigation hint */
+.attendance-keyboard-hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px;
+  margin: 10px 0 16px;
+  background: var(--surface-toolbar, #f1f4f3);
+  border: 1px solid var(--border-subtle, #e7eeeb);
+  border-radius: var(--radius-control, 10px);
+  font-size: 11px;
+  color: var(--muted, #566967);
+}
+
+.attendance-keyboard-hint .hint-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--surface-panel, #fcfdfc);
+  border: 1px solid var(--border, #d3ddda);
+  border-radius: 4px;
+  font-weight: 700;
+  color: var(--school-forest, #12373b);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.status-options button:focus-visible {
+  outline: 3px solid var(--focus-ring, #78a8c6) !important;
+  outline-offset: 2px !important;
+  z-index: 2;
+}

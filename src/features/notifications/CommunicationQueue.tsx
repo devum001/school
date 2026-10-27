@@ -65,7 +65,7 @@ export default function CommunicationQueue({
                 {feeScope && (
                   <>
                     <th scope="col">Installment</th>
-                    <th scope="col">Amount</th>
+                    <th scope="col" className="currency-cell">Amount</th>
                     <th scope="col">Due Date</th>
                     <th scope="col">Status</th>
                   </>

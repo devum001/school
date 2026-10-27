@@ -66,15 +66,15 @@
   width: 30px;
   height: 30px;
   flex-shrink: 0;
-  background: #edf2f1;
+  background: var(--surface-toolbar, #f1f4f3);
 }
 .fee-steps li[data-active='true'] {
   font-weight: 700;
-  color: #174e51;
+  color: var(--school-forest, #12373b);
 }
 .fee-steps li[data-active='true'] span,
 .fee-steps li[data-complete='true'] span {
-  background: #174e51;
+  background: var(--school-forest, #12373b);
   color: #fff;
 }
 .fee-callout {
@@ -82,7 +82,7 @@
   align-items: start;
   gap: 14px;
   background: #eef6f2;
-  border: 1px solid #d0e5d9;
+  border: 1px solid var(--border, #d3ddda);
   padding: 18px;
   border-radius: 12px;
 }
@@ -146,12 +146,12 @@
 }
 .fee-confirm progress {
   width: 100%;
-  accent-color: #174e51;
+  accent-color: var(--school-forest, #12373b);
 }
 .fee-success {
   padding: 30px;
   text-align: center;
-  color: #174e51;
+  color: var(--school-forest, #12373b);
 }
 .fee-stat-button {
   padding: 0;
@@ -243,7 +243,7 @@
 }
 .fee-ledger-heading strong {
   font-size: 32px;
-  color: #174e51;
+  color: var(--school-forest, #12373b);
 }
 .fee-account-summary {
   padding: 20px;
@@ -277,7 +277,7 @@
 }
 .fee-receipt-amount {
   font-size: 32px;
-  color: #174e51;
+  color: var(--school-forest, #12373b);
 }
 .fee-dialog .table-wrap {
   max-width: 100%;

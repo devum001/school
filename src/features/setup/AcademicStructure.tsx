@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Badge, Button, Panel } from '../../components/ui/Primitives';
+import { Badge, Button, Panel, EmptyState } from '../../components/ui/Primitives';
 import {
   setupApi,
   type AcademicClass,
@@ -152,7 +152,17 @@ function ClassList({
                 ))}
               </div>
               {state.data && !state.data.items.length && !state.loading && (
-                <p>No classes in this year yet.</p>
+                <EmptyState
+                title="No classes in this year yet"
+                description="Create grades and classes to begin organizing students and subjects."
+                action={
+                  manage ? (
+                    <Button onClick={() => setEditing('new')}>
+                      Add class
+                    </Button>
+                  ) : undefined
+                }
+              />
               )}
               {state.data && <Paging {...state} nextCursor={state.data.nextCursor} />}
             </>
@@ -290,9 +300,17 @@ function Children({
               ))}
             </ul>
             {state.data && !state.data.items.length && !state.loading && (
-              <p>
-                No {kind} yet. Add the first {singular} for this class.
-              </p>
+              <EmptyState
+                title={`No ${kind} configured`}
+                description={`Add the first ${singular} for this class to set up sections or subjects.`}
+                action={
+                  manage ? (
+                    <Button onClick={() => setEditing('new')}>
+                      Add {singular}
+                    </Button>
+                  ) : undefined
+                }
+              />
             )}
             {state.data && <Paging {...state} nextCursor={state.data.nextCursor} />}
           </>

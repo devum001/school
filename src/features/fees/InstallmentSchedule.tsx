@@ -34,9 +34,9 @@ export default function InstallmentSchedule({
             <tr>
               <th>Installment</th>
               <th>Due date</th>
-              <th>Amount</th>
-              <th>Paid</th>
-              <th>Balance</th>
+              <th className="currency-cell">Amount</th>
+              <th className="currency-cell">Paid</th>
+              <th className="currency-cell">Balance</th>
               <th>Status</th>
               <th>Paid Date</th>
             </tr>
@@ -46,9 +46,9 @@ export default function InstallmentSchedule({
               <tr key={o.id}>
                 <td>{o.label}</td>
                 <td>{displayDate(o.dueDate)}</td>
-                <td>{money(o.net)}</td>
-                <td>{money(o.paid)}</td>
-                <td>{money(o.outstanding)}</td>
+                <td className="currency-cell">{money(o.net)}</td>
+                <td className="currency-cell">{money(o.paid)}</td>
+                <td className="currency-cell">{money(o.outstanding)}</td>
                 <td>
                   <Badge tone={!o.outstanding ? 'green' : o.dueDate < today ? 'amber' : 'neutral'}>
                     {!o.outstanding

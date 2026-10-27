@@ -315,7 +315,14 @@ function FeeWorkspace({
         />
       ) : (
         <>
-          {state.loading && <p role="status">Loading student fees…</p>}
+          <LoadingOverlay
+            loading={state.loading}
+            size="xl"
+            label="Loading student fees…"
+            message="Loading student fees…"
+          >
+            <div style={{ minHeight: state.loading ? 160 : 0 }} />
+          </LoadingOverlay>
           {tab === 'Overview' && data && (
             <>
               <div className="stats-grid four fee-stats">

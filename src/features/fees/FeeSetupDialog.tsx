@@ -307,11 +307,11 @@ export default function FeeSetupDialog({
                   <thead>
                     <tr>
                       <th>Student</th>
-                      <th>Base fee ₹</th>
-                      <th>Concession ₹</th>
-                      <th>Scholarship ₹</th>
-                      <th>Already paid ₹</th>
-                      <th>Final fee</th>
+                      <th className="currency-cell">Base fee ₹</th>
+                      <th className="currency-cell">Concession ₹</th>
+                      <th className="currency-cell">Scholarship ₹</th>
+                      <th className="currency-cell">Already paid ₹</th>
+                      <th className="currency-cell">Final fee</th>
                       <th>Details</th>
                     </tr>
                   </thead>

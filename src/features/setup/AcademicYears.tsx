@@ -8,6 +8,7 @@ import {
   Modal,
   Panel,
   PickerInput,
+  EmptyState,
 } from '../../components/ui/Primitives';
 import {
   setupApi,
@@ -124,7 +125,17 @@ export default function AcademicYears({
                 </table>
               </div>
               {state.data && !state.data.items.length && !state.loading && (
-                <p>No academic years yet. Create your first year to begin.</p>
+                <EmptyState
+                title="No academic years configured"
+                description="Create your first academic year to begin enrollment and fee tracking."
+                action={
+                  manage ? (
+                    <Button onClick={() => setEditing('new')}>
+                      Create academic year
+                    </Button>
+                  ) : undefined
+                }
+              />
               )}
               {state.data && <Paging {...state} nextCursor={state.data.nextCursor} />}
             </>

@@ -99,19 +99,19 @@ export default function ResultsView({
       <table>
         <thead>
           <tr>
-            <th>Rank</th>
+            <th className="mono">Rank</th>
             <th>Student</th>
             {!scope && <th>Section</th>}
-            <th>Admission number</th>
-            <th>Marks / Maximum</th>
-            <th>Overall</th>
-            <th>Tests</th>
+            <th className="mono">Admission number</th>
+            <th className="currency-cell">Marks / Maximum</th>
+            <th className="currency-cell">Overall</th>
+            <th className="currency-cell">Tests</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.enrollment.id}>
-              <td>{r.rank ? `#${r.rank}` : '—'}</td>
+              <td className="mono">{r.rank ? `#${r.rank}` : '—'}</td>
               <td>
                 <StudentRecordLink className="text-link" to={history(r.student.id)}>
                   {r.student.name}
@@ -119,12 +119,12 @@ export default function ResultsView({
                 <small>Roll {r.enrollment.rollNumber}</small>
               </td>
               {!scope && <td>{r.sectionName || 'Without section'}</td>}
-              <td>{r.student.admissionNumber || '—'}</td>
-              <td>{r.count ? `${r.marks} / ${r.maximum}` : '—'}</td>
-              <td>
+              <td className="mono muted">{r.student.admissionNumber || '—'}</td>
+              <td className="currency-cell">{r.count ? `${r.marks} / ${r.maximum}` : '—'}</td>
+              <td className="currency-cell">
                 <strong>{r.count ? `${r.percentage.toFixed(1)}%` : 'Pending'}</strong>
               </td>
-              <td>{r.count}</td>
+              <td className="currency-cell">{r.count}</td>
             </tr>
           ))}
         </tbody>

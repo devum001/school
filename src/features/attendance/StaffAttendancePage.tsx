@@ -54,6 +54,64 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
   );
   const [draft, setDraft] = useState<Record<string, AttendanceStatus>>({}),
     [error, setError] = useState('');
+  const handleStaffAttendanceKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    rowIndex: number,
+    statusIndex: number,
+    memberId: string,
+  ) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const table = e.currentTarget.closest('table');
+    if (!table) return;
+    const tableRows = Array.from(table.querySelectorAll('tbody tr'));
+
+    const focusButton = (rIdx: number, sIdx: number) => {
+      const targetRow = tableRows[rIdx];
+      if (!targetRow) return;
+      const buttons = targetRow.querySelectorAll<HTMLButtonElement>('.status-options button');
+      const targetBtn = buttons[sIdx];
+      if (targetBtn) {
+        targetBtn.focus();
+        targetBtn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    };
+
+    const key = e.key.toLowerCase();
+    if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      e.preventDefault();
+      focusButton(rowIndex + 1, statusIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusButton(rowIndex - 1, statusIndex);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      focusButton(rowIndex, Math.max(0, statusIndex - 1));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      focusButton(rowIndex, Math.min(statuses.length - 1, statusIndex + 1));
+    } else if (key === 'p') {
+      e.preventDefault();
+      setDraft((prev) => ({ ...prev, [memberId]: 'present' }));
+      focusButton(rowIndex + 1, statuses.indexOf('present'));
+    } else if (key === 'a') {
+      e.preventDefault();
+      setDraft((prev) => ({ ...prev, [memberId]: 'absent' }));
+      focusButton(rowIndex + 1, statuses.indexOf('absent'));
+    } else if (key === 'l') {
+      e.preventDefault();
+      setDraft((prev) => ({ ...prev, [memberId]: 'late' }));
+      focusButton(rowIndex + 1, statuses.indexOf('late'));
+    } else if (key === 'h') {
+      e.preventDefault();
+      setDraft((prev) => ({ ...prev, [memberId]: 'half-day' }));
+      focusButton(rowIndex + 1, statuses.indexOf('half-day'));
+    } else if (key === 'u') {
+      e.preventDefault();
+      setDraft((prev) => ({ ...prev, [memberId]: 'unmarked' }));
+      focusButton(rowIndex + 1, statuses.indexOf('unmarked'));
+    }
+  };
+
   const dirty = Object.entries(draft).some(
     ([id, status]) => staffStatusFor(state, id, date) !== status,
   );
@@ -211,13 +269,14 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
                             role="group"
                             aria-label={`${member.name} attendance`}
                           >
-                            {statuses.map((value) => (
+                            {statuses.map((value, statusIndex) => (
                               <button
                                 type="button"
                                 key={value}
                                 aria-pressed={status === value}
                                 className={status === value ? `selected ${value}` : ''}
-                                onClick={() => setDraft({ ...draft, [member.id]: value })}
+                                onClick={() => setDraft((prev) => ({ ...prev, [member.id]: value }))}
+                                onKeyDown={(e) => handleStaffAttendanceKeyDown(e, index, statusIndex, member.id)}
                               >
                                 {STATUS_LABELS[value]}
                               </button>

@@ -85,7 +85,7 @@ export default function FeePayments({
               <tr>
                 <th>Student / receipt</th>
                 <th>Date</th>
-                <th>Amount</th>
+                <th className="currency-cell">Amount</th>
                 <th>Method</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -99,7 +99,7 @@ export default function FeePayments({
                     <small>{p.receipt}</small>
                   </th>
                   <td>{formatCalendarDate(p.date)}</td>
-                  <td>{money(p.amount)}</td>
+                  <td className="currency-cell">{money(p.amount)}</td>
                   <td>{p.method}</td>
                   <td>
                     <span className={`fee-status ${p.reversedAt ? 'overdue' : 'paid'}`}>

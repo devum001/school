@@ -121,20 +121,20 @@ export default function FeeStudentLedger({
                     <thead>
                       <tr>
                         <th>Due date</th>
-                        <th>Amount due</th>
-                        <th>Previously paid</th>
-                        <th>Collected</th>
-                        <th>Remaining</th>
+                        <th className="currency-cell">Amount due</th>
+                        <th className="currency-cell">Previously paid</th>
+                        <th className="currency-cell">Collected</th>
+                        <th className="currency-cell">Remaining</th>
                       </tr>
                     </thead>
                     <tbody>
                       {a.installments.map((i) => (
                         <tr key={i.id}>
                           <td>{formatCalendarDate(i.dueDate)}</td>
-                          <td>{money(i.amount)}</td>
-                          <td>{money(i.openingPaid)}</td>
-                          <td>{money(i.paid)}</td>
-                          <td>{money(installmentBalance(i))}</td>
+                          <td className="currency-cell">{money(i.amount)}</td>
+                          <td className="currency-cell">{money(i.openingPaid)}</td>
+                          <td className="currency-cell">{money(i.paid)}</td>
+                          <td className="currency-cell">{money(installmentBalance(i))}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -388,8 +388,8 @@ function CollectPayment({
             <thead>
               <tr>
                 <th>Year / Due</th>
-                <th>Remaining</th>
-                <th>Allocate</th>
+                <th className="currency-cell">Remaining</th>
+                <th className="currency-cell">Allocate</th>
               </tr>
             </thead>
             <tbody>

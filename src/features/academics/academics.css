@@ -20,7 +20,7 @@
 }
 .test-detail-heading p,
 .results-section-heading p {
-  color: #596675;
+  color: var(--muted, #566967);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -35,7 +35,7 @@
   margin-bottom: 7px;
 }
 .results-section-heading h2 svg {
-  color: #886627;
+  color: var(--school-gold-edge, #c5ad7c);
 }
 .leader-grid {
   display: grid;
@@ -67,7 +67,7 @@
   --award-light: #fafcfe;
   --award-border: #a9b9c9;
   --award-accent: #778b9e;
-  --award-ink: #3d5268;
+  --award-ink: var(--text-main, #263b3a);
   --award-medal: #bfccd9;
 }
 .leader-card.place-3 {
@@ -166,7 +166,7 @@
 .tests-history-table small,
 .marks-entry-table small {
   display: block;
-  color: #596675;
+  color: var(--muted, #566967);
   font-size: 11px;
   margin-top: 6px;
   line-height: 1.5;
@@ -198,7 +198,7 @@
 }
 .rankings-empty {
   padding: 24px;
-  color: #596675;
+  color: var(--muted, #566967);
   font-size: 13px;
 }
 .academic-load-more {
@@ -228,7 +228,7 @@
 .test-trend small {
   display: block;
   font-size: 11px;
-  color: #596675;
+  color: var(--muted, #566967);
   margin-top: 5px;
 }
 .test-trend-track {
@@ -273,7 +273,7 @@
 }
 .marks-entry-summary {
   font-size: 12px;
-  color: #596675;
+  color: var(--muted, #566967);
   flex-wrap: wrap;
 }
 .marks-entry-table {
@@ -361,7 +361,7 @@
 }
 .academic-results td small {
   display: block;
-  color: #596675;
+  color: var(--muted, #566967);
   font-size: 11px;
   margin-top: 6px;
 }
@@ -375,7 +375,7 @@
   align-items: center;
   gap: 5px;
   margin-top: 6px;
-  color: #596675;
+  color: var(--muted, #566967);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -389,7 +389,7 @@
 }
 .test-attendance-note {
   padding: 16px 22px;
-  color: #596675;
+  color: var(--muted, #566967);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -399,7 +399,7 @@
 }
 .test-absence-panel td small {
   display: block;
-  color: #596675;
+  color: var(--muted, #566967);
   margin-top: 6px;
   font-size: 11px;
 }

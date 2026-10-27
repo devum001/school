@@ -67,7 +67,7 @@ export function StudentFees({ enrollmentId }: { enrollmentId: string }) {
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Amount</th>
+                <th className="currency-cell">Amount</th>
                 <th>Mode</th>
                 <th>Receipt</th>
                 <th>Status</th>
@@ -77,7 +77,7 @@ export function StudentFees({ enrollmentId }: { enrollmentId: string }) {
               {[...summary.payments].reverse().map((p) => (
                 <tr key={p.id}>
                   <td>{displayDate(p.date)}</td>
-                  <td>
+                  <td className="currency-cell">
                     <strong>{money(p.amount)}</strong>
                   </td>
                   <td>

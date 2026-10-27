@@ -144,7 +144,7 @@ export default function FeeOpeningDialog({
                   <tr>
                     <th>Student</th>
                     <th>Admission number</th>
-                    <th>Previous-year outstanding (₹)</th>
+                    <th className="currency-cell">Previous-year outstanding (₹)</th>
                   </tr>
                 </thead>
                 <tbody>

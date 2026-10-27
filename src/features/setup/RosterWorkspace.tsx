@@ -1,7 +1,7 @@
 import { displayTimestamp } from '../../lib/displayFormat';
 import { useCallback, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Button, Modal, Panel } from '../../components/ui/Primitives';
+import { Button, Modal, Panel, EmptyState } from '../../components/ui/Primitives';
 import { onboardingApi, type RosterKind, type Person } from '../../services/onboardingService';
 import { setupApi } from '../../services/schoolSetupService';
 import { accessError, type SchoolAccess } from '../../services/schoolAccessService';
@@ -441,7 +441,10 @@ export function History({
                 </li>
               ))}
             </ul>
-            {state.data && !state.data.items.length && !state.loading && <p>No imports yet.</p>}
+            {state.data && !state.data.items.length && !state.loading && <EmptyState
+              title="No roster imports yet"
+              description="Upload an Excel workbook to batch import students or staff records."
+            />}
             {state.data && <Paging {...state} nextCursor={state.data.nextCursor} />}
           </>
         )}

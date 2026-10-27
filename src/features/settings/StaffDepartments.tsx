@@ -134,7 +134,7 @@ export default function StaffDepartments() {
             <thead>
               <tr>
                 <th scope="col">Department</th>
-                <th scope="col">Staff</th>
+                <th scope="col" className="currency-cell">Staff</th>
               </tr>
             </thead>
             <tbody>

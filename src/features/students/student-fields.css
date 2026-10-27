@@ -12,3 +12,19 @@
   line-height: 1.45;
   margin-top: 4px;
 }
+
+/* Clickable & Keyboard Navigable Roster Rows */
+.clickable-roster-row {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.clickable-roster-row:hover {
+  background: var(--surface-heading, #f4f8f7) !important;
+}
+
+.clickable-roster-row:focus-visible {
+  outline: 2px solid var(--focus-ring, #78a8c6) !important;
+  outline-offset: -2px;
+  background: var(--surface-heading, #f4f8f7) !important;
+}
