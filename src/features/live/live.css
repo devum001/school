@@ -136,38 +136,64 @@
   overflow-wrap: anywhere;
 }
 .live-tabs {
+  position: relative;
   display: flex;
-  gap: 24px;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  gap: 4px;
+  margin: 0 0 24px;
+  padding: 5px 6px;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--surface-panel);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  box-sizing: border-box;
+}
+.live-tabs::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 .live-tabs a {
-  padding: 16px 4px;
-  color: #526174;
-  border-bottom: 3px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 18px;
+  color: var(--school-forest);
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
   white-space: nowrap;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: all 140ms ease;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.live-tabs a:hover {
+  background: #eef5f1;
+  color: var(--school-forest);
 }
 .live-tabs a.active {
-  color: #18504e;
-  border-color: #18504e;
-  font-weight: 600;
-}
-.live-account dt {
-  color: #526174;
-  font-size: 12px;
-  margin-bottom: 6px;
-}
-.live-account dd {
-  margin: 0 0 20px;
-  overflow-wrap: anywhere;
-}
-@media (max-width: 600px) {
-  .live-content,
-  .live-form {
-    padding: 16px;
-  }
-  .live-tabs {
-    gap: 16px;
-  }
+  background: var(--school-tab-selected, #bddfc9);
+  color: var(--school-forest, #12373b);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(18, 55, 59, 0.12);
 }
 .platform-search {
   display: flex;

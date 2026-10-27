@@ -121,26 +121,107 @@
 }
 .hr-tabs,
 .teacher-detail-tabs {
+  position: relative;
   display: flex;
-  gap: 24px;
-  border-bottom: 1px solid var(--border);
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  gap: 4px;
+  margin: 0 0 24px;
+  padding: 5px 6px;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--surface-panel);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow-x: auto;
-  margin-bottom: 24px;
+  overflow-y: hidden;
+  white-space: nowrap;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  box-sizing: border-box;
+}
+.hr-tabs::-webkit-scrollbar,
+.teacher-detail-tabs::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 .hr-tabs button,
-.teacher-detail-tabs button {
-  background: none;
+.hr-tabs a,
+.teacher-detail-tabs button,
+.teacher-detail-tabs a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 18px;
+  margin: 0;
   border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 12px 3px;
+  border-radius: 24px;
+  background: transparent;
   white-space: nowrap;
-  color: var(--muted);
+  color: var(--school-forest);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 140ms ease;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.hr-tabs button:hover,
+.hr-tabs a:hover,
+.teacher-detail-tabs button:hover,
+.teacher-detail-tabs a:hover {
+  background: #eef5f1;
+  color: var(--school-forest);
 }
 .hr-tabs button[aria-selected='true'],
-.teacher-detail-tabs button[aria-selected='true'] {
-  border-bottom-color: var(--school-forest);
-  color: var(--school-header);
-  font-weight: 600;
+.hr-tabs button.active,
+.hr-tabs a[aria-selected='true'],
+.hr-tabs a.active,
+.teacher-detail-tabs button[aria-selected='true'],
+.teacher-detail-tabs button.active {
+  background: var(--school-tab-selected, #bddfc9);
+  color: var(--school-forest, #12373b);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(18, 55, 59, 0.12);
+}
+.hr-tabs button:focus-visible,
+.hr-tabs a:focus-visible,
+.teacher-detail-tabs button:focus-visible,
+.teacher-detail-tabs a:focus-visible {
+  outline: 3px solid var(--focus-ring, #78a8c6);
+  outline-offset: 1px;
+  border-radius: 24px;
+}
+@media (max-width: 768px) {
+  .hr-tabs,
+  .teacher-detail-tabs {
+    width: 100%;
+    border-radius: 26px;
+    padding: 4px;
+    margin-bottom: 16px;
+    gap: 4px;
+  }
+  .hr-tabs button,
+  .hr-tabs a,
+  .teacher-detail-tabs button,
+  .teacher-detail-tabs a {
+    padding: 7px 14px;
+    min-height: 36px;
+    font-size: 12.5px;
+    gap: 6px;
+    border-radius: 20px;
+  }
 }
 .teacher-overview {
   display: grid;

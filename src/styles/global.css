@@ -1602,33 +1602,109 @@ tfoot td {
   margin-left: 11px;
 }
 .tabs {
+  position: relative;
   display: flex;
-  gap: 28px;
-  border-bottom: 1px solid #e0e6ef;
-  margin-bottom: 23px;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-.tabs > button {
-  padding: 0 1px 15px;
-  background: transparent;
-  border-bottom: 2px solid transparent;
-  color: #5c646e;
-  font-weight: 500;
-  font-size: 12px;
-  display: flex;
-  gap: 8px;
   align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  gap: 4px;
+  margin: 0 0 24px;
+  padding: 5px 6px;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--surface-panel);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  box-sizing: border-box;
 }
-.tabs > button.active {
-  color: #2d4d6d;
-  border-bottom-color: #365b80;
+.tabs::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
-.tabs > button > span {
-  padding: 1px 5px;
-  border-radius: var(--radius-badge);
-  background: #e8edf4;
+.tabs > button,
+.tabs > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 18px;
+  margin: 0;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  color: var(--school-forest);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 140ms ease;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.tabs > button:hover,
+.tabs > a:hover {
+  background: #eef5f1;
+  color: var(--school-forest);
+}
+.tabs > button.active,
+.tabs > a.active,
+.tabs > button[aria-selected='true'],
+.tabs > a[aria-selected='true'] {
+  background: var(--school-tab-selected, #bddfc9);
+  color: var(--school-forest, #12373b);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(18, 55, 59, 0.12);
+}
+.tabs > button:focus-visible,
+.tabs > a:focus-visible {
+  outline: 3px solid var(--focus-ring, #78a8c6);
+  outline-offset: 1px;
+  border-radius: 24px;
+}
+.tabs > button > span,
+.tabs > a > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 7px;
   font-size: 11px;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: rgba(18, 55, 59, 0.1);
+  color: var(--school-forest);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+@media (max-width: 768px) {
+  .tabs {
+    width: 100%;
+    border-radius: 26px;
+    padding: 4px;
+    margin-bottom: 16px;
+    gap: 4px;
+  }
+  .tabs > button,
+  .tabs > a {
+    padding: 7px 14px;
+    min-height: 36px;
+    font-size: 12.5px;
+    gap: 6px;
+    border-radius: 20px;
+  }
 }
 .notification-grid {
   display: grid;

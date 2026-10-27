@@ -11,12 +11,17 @@ export default function TabRail({
   ...props
 }: HTMLAttributes<HTMLDivElement> & { variant?: 'primary' | 'secondary' }) {
   const viewport = useRef<HTMLDivElement>(null);
-  const scrollEdge = useRef<number | null>(null);
   const [position, setPosition] = useState<RailPosition>({
     overflowing: false,
     atStart: true,
     atEnd: true,
   });
+
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const startScrollLeft = useRef(0);
+  const dragDistance = useRef(0);
+
   const measure = useCallback(() => {
     const element = viewport.current;
     if (!element) return;
@@ -34,6 +39,7 @@ export default function TabRail({
         : next,
     );
   }, []);
+
   const reveal = useCallback((tab?: HTMLElement | null) => {
     const element = viewport.current;
     if (!element) return;
@@ -41,19 +47,13 @@ export default function TabRail({
     if (!selected) return;
     const bounds = element.getBoundingClientRect();
     const item = selected.getBoundingClientRect();
-    if (item.left < bounds.left) element.scrollLeft += item.left - bounds.left - 3;
-    else if (item.right > bounds.right) element.scrollLeft += item.right - bounds.right + 3;
-  }, []);
-
-  const scrollToEdge = useCallback(() => {
-    const element = viewport.current;
-    if (!element || scrollEdge.current === null) return;
-    const left = scrollEdge.current > 0 ? element.scrollWidth - element.clientWidth : 0;
-    if (Math.abs(element.scrollLeft - left) > 1)
-      element.scrollTo({
-        left,
+    if (item.left < bounds.left + 16 || item.right > bounds.right - 16) {
+      selected.scrollIntoView({
         behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'nearest',
+        inline: 'center',
       });
+    }
   }, []);
 
   useLayoutEffect(() => {
@@ -63,16 +63,11 @@ export default function TabRail({
       reveal();
       measure();
     };
-    scrollEdge.current = null;
     refresh();
     const observer = new ResizeObserver(() => {
-      // Arrow visibility changes the viewport width; keep the requested edge in view.
-      if (scrollEdge.current !== null) scrollToEdge();
-      else reveal();
       measure();
     });
     const resize = () => {
-      scrollEdge.current = null;
       refresh();
     };
     window.addEventListener('resize', resize);
@@ -83,20 +78,59 @@ export default function TabRail({
       observer.disconnect();
       window.removeEventListener('resize', resize);
     };
-  }, [children, measure, reveal, scrollToEdge]);
+  }, [children, measure, reveal]);
 
   function slide(direction: number) {
     const element = viewport.current;
     if (!element) return;
-    scrollEdge.current = direction;
-    scrollToEdge();
+    const step = Math.max(element.clientWidth * 0.75, 200);
+    element.scrollBy({
+      left: direction * step,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
   }
 
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const element = viewport.current;
+    if (!element) return;
+    isDragging.current = true;
+    startX.current = e.pageX;
+    startScrollLeft.current = element.scrollLeft;
+    dragDistance.current = 0;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging.current) return;
+    const element = viewport.current;
+    if (!element) return;
+    const delta = e.pageX - startX.current;
+    dragDistance.current = Math.abs(delta);
+    element.scrollLeft = startScrollLeft.current - delta;
+  };
+
+  const handleMouseUp = () => {
+    isDragging.current = false;
+  };
+
+  const handleClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (dragDistance.current > 5) {
+      e.preventDefault();
+      e.stopPropagation();
+      dragDistance.current = 0;
+    }
+  };
+
   return (
-    <div className={`tab-rail ${variant} ${className}`} data-overflow={position.overflowing}>
+    <div
+      className={`tab-rail ${variant} ${className}`}
+      data-overflow={position.overflowing}
+      data-at-start={position.atStart}
+      data-at-end={position.atEnd}
+    >
       <button
         type="button"
-        className="tab-rail-arrow"
+        className="tab-rail-arrow prev"
         aria-label={`Scroll ${label} tabs left`}
         disabled={position.atStart}
         hidden={!position.overflowing || position.atStart}
@@ -111,8 +145,12 @@ export default function TabRail({
         role="tablist"
         aria-label={label}
         onScroll={measure}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onClickCapture={handleClickCapture}
         onFocusCapture={(event) => {
-          scrollEdge.current = null;
           reveal(event.target.closest<HTMLElement>('[role="tab"]'));
           measure();
         }}
@@ -122,7 +160,7 @@ export default function TabRail({
       </div>
       <button
         type="button"
-        className="tab-rail-arrow"
+        className="tab-rail-arrow next"
         aria-label={`Scroll ${label} tabs right`}
         disabled={position.atEnd}
         hidden={!position.overflowing || position.atEnd}

@@ -528,26 +528,95 @@
   margin-bottom: 20px;
 }
 .academic-tabs {
+  position: relative;
   display: flex;
-  gap: 24px;
-  border-bottom: 1px solid var(--border);
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  gap: 4px;
+  margin: 0 0 24px;
+  padding: 5px 6px;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--surface-panel);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow-x: auto;
-  margin-bottom: 24px;
-}
-.academic-tabs button {
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 14px 3px;
-  color: var(--muted);
+  overflow-y: hidden;
   white-space: nowrap;
-  font: inherit;
-  cursor: pointer;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  box-sizing: border-box;
 }
-.academic-tabs button[aria-selected='true'] {
+.academic-tabs::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.academic-tabs button,
+.academic-tabs a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 18px;
+  margin: 0;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
   color: var(--school-forest);
-  border-bottom-color: var(--school-forest);
-  font-weight: 600;
+  white-space: nowrap;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 140ms ease;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.academic-tabs button:hover,
+.academic-tabs a:hover {
+  background: #eef5f1;
+  color: var(--school-forest);
+}
+.academic-tabs button[aria-selected='true'],
+.academic-tabs button.active,
+.academic-tabs a[aria-selected='true'],
+.academic-tabs a.active {
+  background: var(--school-tab-selected, #bddfc9);
+  color: var(--school-forest, #12373b);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(18, 55, 59, 0.12);
+}
+.academic-tabs button:focus-visible,
+.academic-tabs a:focus-visible {
+  outline: 3px solid var(--focus-ring, #78a8c6);
+  outline-offset: 1px;
+  border-radius: 24px;
+}
+@media (max-width: 768px) {
+  .academic-tabs {
+    width: 100%;
+    border-radius: 26px;
+    padding: 4px;
+    margin-bottom: 16px;
+    gap: 4px;
+  }
+  .academic-tabs button,
+  .academic-tabs a {
+    padding: 7px 14px;
+    min-height: 36px;
+    font-size: 12.5px;
+    gap: 6px;
+    border-radius: 20px;
+  }
 }
 .academic-context {
   display: flex;

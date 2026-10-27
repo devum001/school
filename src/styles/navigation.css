@@ -1,6 +1,11 @@
-/* Tabs stay on one row; only the arrow controls move an overflowing rail. */
+/* ==========================================================================
+   Schoolwell Master Pill Shape Tab Navigation & Finger Slide System
+   ========================================================================== */
+
+/* Outer tab rail container - Classic Pill Capsule */
 .tab-rail,
 .workspace main .tab-rail {
+  position: relative;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -9,97 +14,204 @@
   min-width: 0;
   gap: 4px;
   margin: 0 0 24px;
-  padding: 7px;
+  padding: 5px 6px;
   border: 1px solid var(--border);
   border-radius: 30px;
   background: var(--surface-panel);
-  box-shadow: var(--shadow);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow: visible;
+  box-sizing: border-box;
 }
+
+/* Scrollable viewport - smooth finger slide on mobile & drag on desktop */
 .tab-rail-viewport {
   position: relative;
   display: flex;
   flex: 1 1 auto;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   white-space: nowrap;
-  touch-action: pan-y;
-  user-select: none;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
   scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
+  user-select: none;
+  padding: 0 2px;
 }
+
+.tab-rail-viewport:active {
+  cursor: grabbing;
+}
+
 .tab-rail-viewport::-webkit-scrollbar {
   display: none;
+  width: 0;
+  height: 0;
 }
-.tab-rail .tab-rail-viewport > [role='tab'] {
+
+/* Individual tab items - Rounded Pill shape */
+.tab-rail .tab-rail-viewport > [role='tab'],
+.tab-rail .tab-rail-viewport > a,
+.tab-rail .tab-rail-viewport > button {
   display: inline-flex;
   flex: 0 0 auto;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  max-width: 100%;
-  min-height: 40px;
+  min-height: 38px;
   margin: 0;
-  padding: 9px 18px;
+  padding: 8px 18px;
   border: 0;
   border-radius: 24px;
   background: transparent;
   color: var(--school-forest);
-  font: inherit;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.35;
   white-space: nowrap;
   text-align: center;
-  overflow: hidden;
-  transition: background-color 120ms ease;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 140ms ease;
+  box-sizing: border-box;
 }
+
 .tab-rail [role='tab'] > span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.tab-rail.primary .tab-rail-viewport > [role='tab'][aria-selected='true'] {
-  background: var(--school-tab-selected);
-  color: var(--school-forest);
-  font-weight: 700;
-}
-.tab-rail .tab-rail-viewport > [role='tab']:not([aria-selected='true']):hover {
+
+/* Hover state on pill */
+.tab-rail .tab-rail-viewport > [role='tab']:not([aria-selected='true']):not(.active):hover,
+.tab-rail .tab-rail-viewport > a:not([aria-selected='true']):not(.active):hover,
+.tab-rail .tab-rail-viewport > button:not([aria-selected='true']):not(.active):hover {
   background: #eef5f1;
+  color: var(--school-forest);
 }
+
+/* Active / Selected state - Schoolwell Signature Sage-Mint Pill with Forest Teal text */
+.tab-rail .tab-rail-viewport > [role='tab'][aria-selected='true'],
+.tab-rail .tab-rail-viewport > [role='tab'].active,
+.tab-rail .tab-rail-viewport > a[aria-selected='true'],
+.tab-rail .tab-rail-viewport > a.active,
+.tab-rail .tab-rail-viewport > button[aria-selected='true'],
+.tab-rail .tab-rail-viewport > button.active {
+  background: var(--school-tab-selected, #bddfc9);
+  color: var(--school-forest, #12373b);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(18, 55, 59, 0.12);
+}
+
+/* Tab icon styles */
+.tab-rail [role='tab'] svg,
+.tab-rail [role='tab'] .app-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+  transition: opacity 140ms ease;
+}
+.tab-rail [role='tab'][aria-selected='true'] svg,
+.tab-rail [role='tab'][aria-selected='true'] .app-icon {
+  opacity: 1;
+  color: var(--school-forest);
+}
+
+/* Tab badges / counters inside pill */
+.tab-rail [role='tab'] span:not(:first-child),
+.tab-rail [role='tab'] .badge,
+.tab-rail [role='tab'] .tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: rgba(18, 55, 59, 0.1);
+  color: var(--school-forest);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+/* Focus indicator - WCAG 2.2 AA */
 .tab-rail [role='tab']:focus-visible,
+.tab-rail .tab-rail-viewport > a:focus-visible,
+.tab-rail .tab-rail-viewport > button:focus-visible,
 .tab-rail .tab-rail-arrow:focus-visible {
-  outline: 2px solid var(--school-forest);
-  outline-offset: -3px;
+  outline: 3px solid var(--focus-ring, #78a8c6);
+  outline-offset: 1px;
+  border-radius: 24px;
 }
+
+/* Navigation arrows for desktop overflow */
 .tab-rail .tab-rail-arrow,
 .workspace main .tab-rail .tab-rail-arrow {
   display: grid;
   place-items: center;
-  flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
   padding: 0;
-  margin: 0;
+  margin: 0 2px;
   border: 1px solid var(--border);
   border-radius: 50%;
-  background: var(--surface-panel);
+  background: var(--surface-panel, #fcfdfc);
   color: var(--school-forest);
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  z-index: 2;
+  transition: background-color 140ms ease, border-color 140ms ease;
 }
+
 .tab-rail .tab-rail-arrow[hidden],
 .workspace main .tab-rail .tab-rail-arrow[hidden] {
   display: none;
 }
+
 .tab-rail .tab-rail-arrow:not(:disabled):hover {
-  background: #e2ece6;
-  border-color: #93aaa1;
+  background: #edf5f3;
+  border-color: var(--school-gold-edge);
 }
+
 .tab-rail .tab-rail-arrow:disabled {
-  opacity: 0.35;
+  opacity: 0.3;
+  cursor: not-allowed;
 }
+
+/* Secondary variant compatibility - Unified Pill rail */
+.tab-rail.secondary,
+.workspace main .tab-rail.secondary {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 5px;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--surface-toolbar, #f1f4f3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.tab-rail.secondary .tab-rail-viewport {
+  gap: 4px;
+}
+.tab-rail.secondary .tab-rail-viewport > [role='tab'] {
+  min-height: 36px;
+  padding: 7px 16px;
+  border-radius: 20px;
+}
+.tab-rail.secondary .tab-rail-viewport > [role='tab'][aria-selected='true'] {
+  background: #ffffff;
+  color: var(--school-forest);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-weight: 700;
+}
+
 .workspace main .settings-tabs {
   border: 0;
   overflow: visible;
@@ -107,36 +219,13 @@
 }
 .section-navigation {
   min-width: 0;
-  margin: 0 0 22px;
-}
-.tab-rail.secondary,
-.workspace main .tab-rail.secondary {
   width: 100%;
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  margin: 0 0 22px;
 }
 .section-navigation .tab-rail {
   margin-bottom: 0;
 }
-.tab-rail.secondary .tab-rail-viewport {
-  gap: 24px;
-}
-.tab-rail.secondary .tab-rail-viewport > [role='tab'] {
-  min-height: 44px;
-  padding: 9px 2px 12px;
-  border-bottom: 3px solid transparent;
-  border-radius: 0;
-  color: var(--muted);
-}
-.tab-rail.secondary .tab-rail-viewport > [role='tab'][aria-selected='true'] {
-  color: var(--school-forest);
-  border-bottom-color: var(--school-gold);
-  font-weight: 700;
-}
+
 .setup-stack > .section-navigation,
 .staff-settings-stack > .section-navigation,
 .admin-settings-stack > .section-navigation {
@@ -192,15 +281,45 @@
   flex-wrap: wrap;
   justify-content: start;
 }
-@media (max-width: 640px) {
-  .tab-rail .tab-rail-viewport > [role='tab'] {
-    padding-left: 12px;
-    padding-right: 12px;
+
+@media (max-width: 768px) {
+  /* On mobile screens, rail takes full width and arrows are hidden for uninterrupted finger swiping */
+  .tab-rail,
+  .workspace main .tab-rail,
+  .tab-rail.secondary,
+  .workspace main .tab-rail.secondary {
+    width: 100%;
+    border-radius: 26px;
+    padding: 4px;
+    margin-bottom: 16px;
+  }
+
+  .tab-rail .tab-rail-arrow,
+  .workspace main .tab-rail .tab-rail-arrow {
+    display: none !important;
+  }
+
+  .tab-rail-viewport {
+    gap: 4px;
+    padding: 0 2px;
+  }
+
+  .tab-rail .tab-rail-viewport > [role='tab'],
+  .tab-rail .tab-rail-viewport > a,
+  .tab-rail .tab-rail-viewport > button {
+    padding: 7px 14px;
+    min-height: 36px;
+    font-size: 12.5px;
+    gap: 6px;
+    border-radius: 20px;
+  }
+
+  .tab-rail.secondary .tab-rail-viewport > [role='tab'] {
+    min-height: 34px;
+    padding: 6px 12px;
     font-size: 12px;
   }
-  .tab-rail.secondary .tab-rail-viewport {
-    gap: 18px;
-  }
+
   .routed-form {
     padding: 18px;
   }
@@ -229,6 +348,7 @@
     margin-left: 0;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .tab-rail .tab-rail-viewport > [role='tab'] {
     transition: none;
