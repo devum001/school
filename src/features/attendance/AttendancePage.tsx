@@ -25,6 +25,8 @@ import { formatSchoolTime, studentLateCutoff } from '../../lib/studentTimings';
 import { configuredSchoolHours, schoolHoursForDate } from '../../lib/schoolHours';
 import { defaultAttendancePolicy } from '../../lib/settings';
 import AttendanceTabs from '../../components/shared/AttendanceTabs';
+import LiveHrWorkspace from '../hr/HrWorkspace';
+import StaffAttendancePage from './StaffAttendancePage';
 import '../../styles/student-timings.css';
 const statuses = Object.keys(STATUS_LABELS) as AttendanceStatus[];
 export default function AttendancePage() {
@@ -40,6 +42,7 @@ function AttendanceRegister() {
   const today = useToday();
   const notify = useFeedback();
   const [params, setParams] = useSearchParams();
+  const register = params.get('register') === 'staff' ? 'staff' : 'student';
   const requested = params.get('class');
   const classId = state.classes.some((c) => c.id === requested)
     ? requested!
@@ -184,13 +187,35 @@ function AttendanceRegister() {
           </>
         }
       />
-      <AttendanceTabs date={date} />
-      {feature && !state.classes.length && (
-        <p className="panel-note">
-          No classes are assigned to you yet. Your school administrator can assign classes and
-          subjects in Teachers → Teaching assignments.
-        </p>
-      )}
+      <AttendanceTabs
+        date={date}
+        value={register}
+        onChange={(val) => {
+          setParams((prev) => {
+            const next = new URLSearchParams(prev);
+            if (val === 'staff') {
+              next.set('register', 'staff');
+            } else {
+              next.delete('register');
+            }
+            return next;
+          });
+        }}
+      />
+      {register === 'staff' ? (
+        feature ? (
+          <LiveHrWorkspace section="attendance" hideNavigation />
+        ) : (
+          <StaffAttendancePage embedded />
+        )
+      ) : (
+        <>
+          {feature && !state.classes.length && (
+            <p className="panel-note">
+              No classes are assigned to you yet. Your school administrator can assign classes and
+              subjects in Teachers → Teaching assignments.
+            </p>
+          )}
       <div id="attendance-register-content">
         <Panel>
           <div className="toolbar attendance-toolbar">
@@ -382,6 +407,8 @@ function AttendanceRegister() {
           </Button>
         </div>
       </Modal>
+        </>
+      )}
     </>
   );
 }

@@ -1,5 +1,5 @@
 import ImportSteps from './ImportSteps';
-import { formatRosterCell, formatCalendarDate, formatBirthDateInput } from '../../lib/displayFormat';
+import { autoCapitalizeName, formatRosterCell, formatCalendarDate, formatBirthDateInput } from '../../lib/displayFormat';
 import { productApi } from '../../services/productService';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -622,9 +622,10 @@ export default function ImportJob({
                                         value={cellDraft}
                                         placeholder={isDate ? 'DD-MM-YYYY' : undefined}
                                         onChange={(e) => {
-                                          const val = isDate
-                                            ? formatBirthDateInput(e.target.value, cellDraft)
-                                            : e.target.value;
+                                          const isNameCol = ['student name', 'name', 'guardian name', 'first name', 'last name'].includes(colName);
+                                          let val = e.target.value;
+                                          if (isDate) val = formatBirthDateInput(val, cellDraft);
+                                          else if (isNameCol) val = autoCapitalizeName(val);
                                           setCellDraft(val);
                                         }}
                                         onBlur={() => {

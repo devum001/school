@@ -5,10 +5,12 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
 import {
+  AppIcon,
   PickerInput,
   Avatar,
   Badge,
   Button,
+  Modal,
   EmptyState,
   PageHeading,
   Panel,
@@ -20,13 +22,11 @@ import { currentPayrollMonth, payrollCycle } from '../../lib/staffPayroll';
 import { salaryMonthSchema } from '../../lib/staffSalary';
 import { displayDate } from '../../lib/config';
 import StaffDialog from './StaffDialog';
-import StaffAttendancePage from '../attendance/StaffAttendancePage';
 import '../../styles/ledgers.css';
 
-const tabs = ['All Staff', 'Attendance', 'Leave'] as const;
+const tabs = ['All Staff', 'Leave'] as const;
 const STAFF_HR_ICONS: Record<(typeof tabs)[number], IconName> = {
   'All Staff': 'staff',
-  Attendance: 'attendance',
   Leave: 'document',
 };
 export default function StaffHRPage() {
@@ -39,7 +39,8 @@ export default function StaffHRPage() {
     focus = params.get('staff') ?? '';
   const [query, setQuery] = useState(''),
     [editing, setEditing] = useState<string | null>(null),
-    [adding, setAdding] = useState(params.get('add') === 'teacher');
+    [adding, setAdding] = useState(params.get('add') === 'teacher'),
+    [importing, setImporting] = useState(false);
   const requestedMonth = params.get('month'),
     month = salaryMonthSchema.safeParse(requestedMonth).success
       ? requestedMonth!
@@ -71,7 +72,7 @@ export default function StaffHRPage() {
     <div className="ledger-stack">
       <PageHeading
         title="Staff & HR"
-        actions={<Button onClick={() => setAdding(true)}>Add Staff</Button>}
+        actions={<div style={{ display: 'flex', gap: '8px' }}><Button variant="secondary" onClick={() => setImporting(true)}><AppIcon name="upload" size={16} />Import Staff</Button><Button onClick={() => setAdding(true)}>Add Staff</Button></div>}
       />
       <SectionNavigation
         label="Staff & HR"
@@ -212,7 +213,6 @@ export default function StaffHRPage() {
             )}
           </Panel>
         )}
-        {tab === 'Attendance' && <StaffAttendancePage embedded />}
         {tab === 'Leave' && (
           <Panel
             title="Leave"
@@ -247,7 +247,7 @@ export default function StaffHRPage() {
               </label>
               <Link
                 className="button secondary staff-toolbar-action"
-                to={`/staff?tab=Attendance&date=${today >= cycle.start && today <= cycle.end ? today : cycle.end > today ? today : cycle.end}${focus ? `&staff=${encodeURIComponent(focus)}` : ''}${department ? `&department=${encodeURIComponent(department)}` : ''}`}
+                to={`/attendance?register=staff&date=${today >= cycle.start && today <= cycle.end ? today : cycle.end > today ? today : cycle.end}${focus ? `&staff=${encodeURIComponent(focus)}` : ''}${department ? `&department=${encodeURIComponent(department)}` : ''}`}
               >
                 Open Staff Attendance
               </Link>
@@ -293,6 +293,20 @@ export default function StaffHRPage() {
           </Panel>
         )}
       </div>
+
+      {importing && (
+        <Modal
+          open
+          wide
+          title="Import staff from Excel"
+          description="Upload an Excel workbook to batch import staff records."
+          onClose={() => setImporting(false)}
+        >
+          <div style={{ padding: '20px' }}>
+            <p>Staff Excel batch import is configured for live workspace.</p>
+          </div>
+        </Modal>
+      )}
       {adding && (
         <StaffDialog
           teaching={params.get('add') === 'teacher'}

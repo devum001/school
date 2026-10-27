@@ -1,5 +1,6 @@
 import StaffLoginDialog from '../hr/StaffLoginDialog';
-import { titleCase } from '../../lib/displayFormat';
+import { autoCapitalizeName, titleCase } from '../../lib/displayFormat';
+import { AppIcon } from '../../components/ui/Primitives';
 import StaffDepartmentOptions from '../hr/StaffDepartmentOptions';
 import LiveHrWorkspace from '../hr/HrWorkspace';
 import { useCallback, useState } from 'react';
@@ -51,23 +52,14 @@ export default function LiveStaff({
     [editing, setEditing] = useState<Person | 'new' | null>(
       params.get('add') === 'teacher' ? 'new' : null,
     ),
-    [change, setChange] = useState<Person | null>(null);
+    [change, setChange] = useState<Person | null>(null),
+    [importing, setImporting] = useState(false);
   const manage = access.permissions.includes('staff.manage'),
     requested = params.get('section');
   const items = [
     { id: 'directory', label: teachersOnly ? 'Teachers' : 'All Staff' },
-    ...(manage ? [{ id: 'import', label: 'Import staff' }] : []),
     ...(access.permissions.includes('attendance.manage')
-      ? [
-          { id: 'attendance', label: 'Attendance' },
-          { id: 'leave', label: 'Leave' },
-        ]
-      : []),
-    ...(access.permissions.includes('payroll.view')
-      ? [{ id: 'salary', label: 'Salary Expenses' }]
-      : []),
-    ...(access.permissions.includes('attendance.self')
-      ? [{ id: 'self', label: 'My attendance & salary' }]
+      ? [{ id: 'leave', label: 'Leave' }]
       : []),
     ...(access.permissions.includes('assignments.view')
       ? [{ id: 'assignments', label: 'Teaching assignments' }]
@@ -126,17 +118,30 @@ export default function LiveStaff({
           <Panel
             title={teachersOnly ? 'Teachers' : 'Staff & HR'}
             action={
-              <div className="panel-header-actions">
-                <SearchInput
-                  value={query}
-                  onChange={setQuery}
-                  placeholder="Search staff name or code…"
-                />
-                {manage && (
-                  <Button onClick={() => setEditing('new')}>
-                    {teachersOnly ? 'Add Teacher' : 'Add Staff'}
-                  </Button>
-                )}
+              <div className="panel-header-actions staff-header-toolbar">
+                <div className="staff-search-input">
+                  <SearchInput
+                    value={query}
+                    onChange={setQuery}
+                    placeholder="Search staff name or code…"
+                  />
+                </div>
+                <div className="staff-header-buttons">
+                  {manage && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setImporting(true)}
+                    >
+                      <AppIcon name="upload" size={16} />
+                      Import Staff
+                    </Button>
+                  )}
+                  {manage && (
+                    <Button onClick={() => setEditing('new')}>
+                      {teachersOnly ? 'Add Teacher' : 'Add Staff'}
+                    </Button>
+                  )}
+                </div>
               </div>
             }
           >
@@ -250,6 +255,22 @@ export default function LiveStaff({
             </p>
           </Panel>
         </LoadingOverlay>
+      )}
+            {importing && (
+        <Modal
+          open
+          wide
+          title="Import staff from Excel"
+          description="Upload an Excel workbook to batch import staff records."
+          onClose={() => {
+            setImporting(false);
+            state.reload();
+          }}
+        >
+          <div style={{ padding: '0 20px 20px' }}>
+            <RosterWorkspace access={access} kind="staff" yearId={yearId} />
+          </div>
+        </Modal>
       )}
       {editing && (
         <StaffEditor
@@ -426,7 +447,7 @@ function StaffEditor({
                     maxLength={key === 'code' ? 40 : 100}
                     disabled={key === 'code' && !!person}
                     value={draft[key]}
-                    onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                    onChange={(e) => setDraft({ ...draft, [key]: (key === 'name' || key === 'designation') ? autoCapitalizeName(e.target.value) : e.target.value })}
                   />
                 </label>
               ))}

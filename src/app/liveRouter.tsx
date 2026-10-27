@@ -28,7 +28,7 @@ export const liveRouter = createBrowserRouter([
       { path: 'attendance', element: <LiveLearning area="attendance" /> },
       { path: 'classes', element: <LiveLearning area="classes" /> },
       { path: 'academics', element: <LiveLearning area="academics" /> },
-      { path: 'attendance/staff', element: <LiveHrWorkspace section="attendance" /> },
+      { path: 'attendance/staff', element: <Navigate replace to="/attendance?register=staff" /> },
       {
         path: 'fees',
         element: (

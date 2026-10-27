@@ -2,12 +2,14 @@ import FeeOnboardingWorkspace from './onboarding/FeeOnboardingWorkspace';
 import { orderedClasses } from '../../lib/schoolLabels';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckSquare, Download, RefreshCw, Wallet } from 'lucide-react';
+import { CheckSquare, Download, RefreshCw } from 'lucide-react';
 import {
+  AppIcon,
   Button,
   EmptyState,
   PageHeading,
   Panel,
+  PickerInput,
   SearchInput,
   StatCard,
   LoadingOverlay,
@@ -16,6 +18,7 @@ import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useLiveSchool } from '../live/schoolContext';
 import { useRemote } from '../live/useRemote';
 import LiveHrWorkspace from '../hr/HrWorkspace';
+import { liveHrAdapter } from '../../services/hrService';
 import {
   feeApi,
   type FeeContext,
@@ -74,6 +77,32 @@ export default function LiveFinanceWorkspace() {
           })
         }
       />
+      {tab === 'Overview' && (
+        <SectionNavigation
+          label="Finance overview views"
+          items={[
+            { id: 'summary', label: 'Collections & Revenue', icon: 'wallet' },
+            { id: 'salary', label: 'Salary Summary', icon: 'finance-balance' },
+            { id: 'recent', label: 'Recent Transactions', icon: 'receipt' },
+          ]}
+          value={
+            ['salary', 'recent'].includes(params.get('financeView') ?? '')
+              ? params.get('financeView')!
+              : 'summary'
+          }
+          onChange={(value) =>
+            setParams((previous) => {
+              const next = new URLSearchParams(previous);
+              if (value === 'summary') {
+                next.delete('financeView');
+              } else {
+                next.set('financeView', value);
+              }
+              return next;
+            })
+          }
+        />
+      )}
       {tab === 'Salary Expenses' ? (
         <LiveHrWorkspace section="salary" hideNavigation />
       ) : !canView ? (
@@ -107,6 +136,7 @@ export default function LiveFinanceWorkspace() {
           schoolId={schoolId}
           context={state.data}
           permissions={access.permissions}
+          payroll={payroll}
           tab={tab}
           setTab={(value) =>
             setParams((previous) => {
@@ -131,6 +161,7 @@ function FeeWorkspace({
   schoolId,
   context,
   permissions,
+  payroll,
   tab,
   setTab,
   setYear,
@@ -138,6 +169,7 @@ function FeeWorkspace({
   schoolId: string;
   context: FeeContext;
   permissions: readonly string[];
+  payroll: boolean;
   tab: string;
   setTab: (t: string) => void;
   setYear: (id: string) => void;
@@ -153,7 +185,34 @@ function FeeWorkspace({
     [student, setStudent] = useState<{ row: FeeStudentRow; collect: boolean } | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [version, setVersion] = useState(0);
+    [version, setVersion] = useState(0),
+    [params, setParams] = useSearchParams();
+  const period = (params.get('period') === 'cycle' ? 'cycle' : 'year') as 'year' | 'cycle';
+  const month = params.get('month') || (context.today ? context.today.slice(0, 7) : new Date().toISOString().slice(0, 7));
+  const financeView = params.get('financeView') ?? 'summary';
+  const update = (key: string, value: string) =>
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      return next;
+    });
+
+  const [salaryExpenses, setSalaryExpenses] = useState(0);
+  useEffect(() => {
+    if (!payroll) return;
+    const ctrl = new AbortController();
+    liveHrAdapter(schoolId)
+      .load(month, false, ctrl.signal)
+      .then((hr) => {
+        const total = hr.payments.reduce((s, p) => s + p.amount, 0);
+        setSalaryExpenses(total);
+      })
+      .catch(() => {
+        setSalaryExpenses(0);
+      });
+    return () => ctrl.abort();
+  }, [schoolId, payroll, month]);
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(search), 300);
     return () => clearTimeout(timer);
@@ -245,65 +304,95 @@ function FeeWorkspace({
       >
         <div />
       </LoadingOverlay>
-      <div className="fee-filter-bar">
-        <label className="field">
-          Academic year
-          <select value={context.yearId} onChange={(e) => setYear(e.target.value)}>
-            {context.years.map((y) => (
-              <option value={y.id} key={y.id}>
-                {y.name}
-                {y.status === 'closed' ? ' · Closed' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-        {tab !== 'Transactions' && (
-          <>
-            <label className="filter-label">
-              <span>Class</span>
-              <select
-                value={classId}
-                onChange={(e) => {
-                  setClass(e.target.value);
-                  setSection('');
-                  reset();
-                }}
-              >
-                <option value="">All classes</option>
-                {orderedClasses(context.classes).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
+      {(tab === 'Overview' || tab === 'Transactions') && (
+        <div className="finance-period">
+          <label className="field">
+            <select
+              aria-label="Finance period"
+              value={period}
+              onChange={(e) => update('period', e.target.value)}
+            >
+              <option value="year">Academic Year</option>
+              <option value="cycle">Monthly Cycle</option>
+            </select>
+          </label>
+          {period === 'cycle' && (
+            <label className="field">
+              Finance cycle month
+              <PickerInput
+                aria-label="Finance cycle month"
+                type="month"
+                value={month}
+                onChange={(e) => update('month', e.target.value)}
+              />
+            </label>
+          )}
+          <p>
+            {period === 'cycle'
+              ? `${month}-01 – ${month}-28`
+              : year
+                ? `${formatCalendarDate(year.start)} – ${formatCalendarDate(year.end > (context.today || '') ? (context.today || '') : year.end)}`
+                : ''}
+          </p>
+        </div>
+      )}
+      {tab === 'Student Fees' && (
+        <div className="fee-filter-bar">
+          <label className="field">
+            Academic year
+            <select value={context.yearId} onChange={(e) => setYear(e.target.value)}>
+              {context.years.map((y) => (
+                <option value={y.id} key={y.id}>
+                  {y.name}
+                  {y.status === 'closed' ? ' · Closed' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter-label">
+            <span>Class</span>
+            <select
+              value={classId}
+              onChange={(e) => {
+                setClass(e.target.value);
+                setSection('');
+                reset();
+              }}
+            >
+              <option value="">All classes</option>
+              {orderedClasses(context.classes).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter-label">
+            <span>Section</span>
+            <select
+              value={sectionId}
+              disabled={!classId}
+              onChange={(e) => {
+                setSection(e.target.value);
+                reset();
+              }}
+            >
+              <option value="">Whole class</option>
+              {context.sections
+                .filter((s) => s.classId === classId)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label className="filter-label">
-              <span>Section</span>
-              <select
-                value={sectionId}
-                disabled={!classId}
-                onChange={(e) => {
-                  setSection(e.target.value);
-                  reset();
-                }}
-              >
-                <option value="">Whole class</option>
-                {context.sections
-                  .filter((s) => s.classId === classId)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          </>
-        )}
-        <Button variant="secondary" onClick={refresh}>
-          <RefreshCw size={16} />
-          Refresh
-        </Button>
-      </div>
+            </select>
+          </label>
+          <Button variant="secondary" onClick={refresh}>
+            <RefreshCw size={16} />
+            Refresh
+          </Button>
+        </div>
+      )}
       {tab === 'Transactions' ? (
         <FeePayments
           key={version}
@@ -323,124 +412,129 @@ function FeeWorkspace({
           >
             <div style={{ minHeight: state.loading ? 160 : 0 }} />
           </LoadingOverlay>
-          {tab === 'Overview' && data && (
+          {tab === 'Overview' && (
             <>
-              <div className="stats-grid four fee-stats">
-                {[
-                  ['Net fees assigned', data.summary.net, '', 'After concessions and scholarships'],
-                  [
-                    'Collected this month',
-                    data.summary.collected,
-                    '',
-                    'Actual payments; excludes opening balances',
-                  ],
-                  [
-                    'Outstanding',
-                    data.summary.outstanding,
-                    'outstanding',
-                    'Current and previous-year dues',
-                  ],
-                  [
-                    'Overdue',
-                    data.summary.overdue,
-                    'overdue',
-                    'Unpaid installments past their due dates',
-                  ],
-                ].map(([label, value, filter, detail]) => (
-                  <button
-                    className="fee-stat-button"
-                    key={String(label)}
-                    onClick={() => {
-                      setStatus(String(filter));
-                      reset();
-                      setTab('Student Fees');
-                    }}
-                  >
-                    <StatCard
-                      label={String(label)}
-                      value={money(Number(value))}
-                      detail={String(detail)}
-                      icon={<Wallet size={30} />}
-                    />
-                  </button>
-                ))}
-              </div>
-              <div className="fee-overview-grid">
-                <Panel
-                  title="Ready for collection"
-                  subtitle="Set up the common fee arrangement, then adjust individual exceptions."
-                >
-                  <div className="fee-dashboard-action">
-                    <strong>{data.summary.pending}</strong>
-                    <div>
-                      <h3>Students need fee setup</h3>
-                      <p>Unconfigured students are never shown as paid.</p>
+              {financeView === 'salary' ? (
+                <LiveHrWorkspace section="salary" hideNavigation />
+              ) : financeView === 'recent' ? (
+                <FeePayments
+                  key={version}
+                  schoolId={schoolId}
+                  schoolName={context.schoolName}
+                  yearId={context.yearId}
+                  canReverse={can('fees.reverse')}
+                  changed={refresh}
+                />
+              ) : (
+                data && (
+                  <>
+                    <div className="stats-grid four finance-summary fee-stats">
+                      <StatCard
+                        label="Student Fee Collections"
+                        value={money(data.summary.collected)}
+                        detail="Recorded student fee collections"
+                        icon={<AppIcon name="receipt" size={48} />}
+                        tone="green"
+                      />
+                      <StatCard
+                        label="Salary Expenses"
+                        value={money(salaryExpenses)}
+                        detail="Recorded salary payments"
+                        icon={<AppIcon name="wallet" size={48} />}
+                        tone="amber"
+                      />
+                      <StatCard
+                        label="Net Revenue"
+                        value={money(data.summary.collected - salaryExpenses)}
+                        detail="Revenue minus paid salaries"
+                        icon={<AppIcon name="finance-balance" size={48} />}
+                      />
+                      <StatCard
+                        label="Pending Student Fees"
+                        value={money(data.summary.outstanding)}
+                        detail="All current fee plans, including future dues"
+                        icon={<AppIcon name="fees" size={48} />}
+                      />
                     </div>
-                    <Button
-                      onClick={() => {
-                        setStatus('pending');
-                        reset();
-                        setTab('Student Fees');
-                      }}
-                    >
-                      Set up fees
-                    </Button>
-                  </div>
-                  <p className="panel-padding">
-                    Concessions & scholarships: <strong>{money(data.summary.concessions)}</strong>
-                  </p>
-                </Panel>
-                <Panel title="Class-wise balances">
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Class</th>
-                          <th>Students</th>
-                          <th>Outstanding</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.classes.map((c) => (
-                          <tr key={c._id ?? 'former'}>
-                            <th>
-                              {context.classes.find((v) => v.id === c._id)?.name ??
-                                'No current enrollment'}
-                            </th>
-                            <td>{c.count}</td>
-                            <td>{money(c.outstanding)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Panel>
-              </div>
-              <div className="fee-inline">
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setStatus('overdue');
-                    reset();
-                    setTab('Student Fees');
-                  }}
-                >
-                  Review overdue students
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setStatus('outstanding');
-                    reset();
-                    setTab('Student Fees');
-                  }}
-                >
-                  Upcoming installments & balances
-                </Button>
-                <Button variant="secondary" onClick={() => setTab('Transactions')}>
-                  Recent payments & receipts
-                </Button>
-              </div>
+                    <div className="fee-overview-grid">
+                      <Panel
+                        title="Ready for collection"
+                        subtitle="Set up the common fee arrangement, then adjust individual exceptions."
+                      >
+                        <div className="fee-dashboard-action">
+                          <strong>{data.summary.pending}</strong>
+                          <div>
+                            <h3>Students need fee setup</h3>
+                            <p>Unconfigured students are never shown as paid.</p>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setStatus('pending');
+                              reset();
+                              setTab('Student Fees');
+                            }}
+                          >
+                            Set up fees
+                          </Button>
+                        </div>
+                        <p className="panel-padding">
+                          Concessions & scholarships: <strong>{money(data.summary.concessions)}</strong>
+                        </p>
+                      </Panel>
+                      <Panel title="Class-wise balances">
+                        <div className="table-wrap">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Class</th>
+                                <th>Students</th>
+                                <th>Outstanding</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {data.classes.map((c) => (
+                                <tr key={c._id ?? 'former'}>
+                                  <th>
+                                    {context.classes.find((v) => v.id === c._id)?.name ??
+                                      'No current enrollment'}
+                                  </th>
+                                  <td>{c.count}</td>
+                                  <td>{money(c.outstanding)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </Panel>
+                    </div>
+                    <div className="fee-inline">
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setStatus('overdue');
+                          reset();
+                          setTab('Student Fees');
+                        }}
+                      >
+                        Review overdue students
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setStatus('outstanding');
+                          reset();
+                          setTab('Student Fees');
+                        }}
+                      >
+                        Upcoming installments & balances
+                      </Button>
+                      <Button variant="secondary" onClick={() => update('financeView', 'recent')}>
+                        Recent payments & receipts
+                      </Button>
+                    </div>
+                  </>
+                )
+              )}
             </>
           )}
           {tab === 'Student Fees' && (

@@ -10,6 +10,7 @@ import { defaultStaffPayroll } from '../../lib/settings';
 import { staffDirectory, staffDesignation, type StaffInput } from '../../lib/staffStructure';
 import { money } from '../../lib/config';
 import { salaryNet } from '../../lib/staffSalary';
+import { autoCapitalizeName } from '../../lib/displayFormat';
 import { useDraftGuard } from '../academics/useDraftGuard';
 import { readProfileImage } from '../../lib/fileUploads';
 import '../../styles/ledgers.css';
@@ -179,7 +180,7 @@ export default function StaffDialog({
                 required
                 maxLength={80}
                 value={draft.name}
-                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                onChange={(event) => setDraft({ ...draft, name: autoCapitalizeName(event.target.value) })}
               />
             </label>
             <label className="field">
@@ -189,7 +190,7 @@ export default function StaffDialog({
                 maxLength={80}
                 value={draft.designation ?? ''}
                 placeholder="For example, Physics Teacher or Driver"
-                onChange={(event) => setDraft({ ...draft, designation: event.target.value })}
+                onChange={(event) => setDraft({ ...draft, designation: autoCapitalizeName(event.target.value) })}
               />
             </label>
             <label className="field">

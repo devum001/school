@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { createBrowserRouter, Link } from 'react-router-dom';
+import { createBrowserRouter, Link, Navigate } from 'react-router-dom';
 import AppShell from '../components/layout/DemoAppShell';
 import { LazyBoundary, RouteError } from './RouteBoundaries';
 const Dashboard = lazy(() => import('../features/dashboard/DashboardPage'));
@@ -12,7 +12,6 @@ const TeacherProfile = lazy(() => import('../features/teachers/TeacherProfilePag
 const Staff = lazy(() => import('../features/teachers/StaffHRPage'));
 const Classes = lazy(() => import('../features/classes/ClassesPage'));
 const Attendance = lazy(() => import('../features/attendance/AttendancePage'));
-const StaffAttendance = lazy(() => import('../features/attendance/StaffAttendancePage'));
 const Fees = lazy(() => import('../features/fees/FinanceWorkspace'));
 const Academics = lazy(() => import('../features/academics/AcademicsPage'));
 const Notifications = lazy(() => import('../features/notifications/CommunicationWorkspace'));
@@ -35,7 +34,7 @@ export const demoRouter = createBrowserRouter([
           { path: 'teachers/:teacherId', element: <TeacherProfile /> },
           { path: 'staff', element: <Staff /> },
           { path: 'attendance', element: <Attendance /> },
-          { path: 'attendance/staff', element: <StaffAttendance /> },
+          { path: 'attendance/staff', element: <Navigate replace to="/attendance?register=staff" /> },
           { path: 'fees', element: <Fees /> },
           { path: 'academics', element: <Academics /> },
           { path: 'notifications', element: <Notifications /> },

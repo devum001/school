@@ -170,3 +170,13 @@ export function formatExportCell(column: string, value: string | number): string
     return displayTimestamp(value);
   return value;
 }
+
+
+/**
+ * Automatically capitalizes the first letter of each word in a name field
+ * as the user types (e.g. "a" -> "A", "aarav" -> "Aarav", "aarav s" -> "Aarav S").
+ */
+export function autoCapitalizeName(value: string): string {
+  if (!value) return '';
+  return value.replace(/(^|[\s\-])([a-z\u00E0-\u00FC])/g, (_, boundary, char) => boundary + char.toUpperCase());
+}

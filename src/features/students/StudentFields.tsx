@@ -2,6 +2,7 @@ import type { StudentField, StudentFieldErrors } from './studentFormValidation';
 import './student-fields.css';
 import { PickerInput } from '../../components/ui/Primitives';
 import { orderedClasses, sectionLabel } from '../../lib/schoolLabels';
+import { autoCapitalizeName } from '../../lib/displayFormat';
 import type { StudentInput } from '../../lib/management';
 import type { SchoolClass, Section } from '../../types/domain';
 export default function StudentFields({
@@ -62,7 +63,7 @@ export default function StudentFields({
             maxLength={100}
             {...attrs('name')}
             value={draft.name}
-            onChange={(e) => field('name', e.target.value)}
+            onChange={(e) => field('name', autoCapitalizeName(e.target.value))}
           />
           {message('name')}
         </label>
@@ -180,7 +181,7 @@ export default function StudentFields({
             {...attrs('guardianName')}
             value={draft.guardian.name}
             onChange={(e) =>
-              setDraft({ ...draft, guardian: { ...draft.guardian, name: e.target.value } })
+              setDraft({ ...draft, guardian: { ...draft.guardian, name: autoCapitalizeName(e.target.value) } })
             }
           />
           {message('guardianName')}
@@ -193,7 +194,7 @@ export default function StudentFields({
             {...attrs('guardianRelation')}
             value={draft.guardian.relation}
             onChange={(e) =>
-              setDraft({ ...draft, guardian: { ...draft.guardian, relation: e.target.value } })
+              setDraft({ ...draft, guardian: { ...draft.guardian, relation: autoCapitalizeName(e.target.value) } })
             }
           />
           {message('guardianRelation')}
