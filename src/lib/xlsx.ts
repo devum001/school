@@ -1,4 +1,4 @@
-import { formatExportCell } from './displayFormat';
+import { formatExportCell, formatCalendarDate } from './displayFormat';
 /** Minimal XLSX interchange for the student template, using browser ZIP/XML APIs. */
 export type ExcelCell = string | number;
 const encoder = new TextEncoder();
@@ -300,17 +300,9 @@ export async function readStudentWorkbook(
       if (!row) continue;
       if (typeof row[col] === 'number') {
         row[col] = excelBirthDate(row[col] as number, date1904);
-      } else if (typeof row[col] === 'string') {
-        const raw = String(row[col]).trim();
-        const isoMatch = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/.exec(raw);
-        if (isoMatch) {
-          row[col] = `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
-        } else {
-          const dmyMatch = /^(\d{2})[-/](\d{2})[-/](\d{4})$/.exec(raw);
-          if (dmyMatch) {
-            row[col] = `${dmyMatch[1]}-${dmyMatch[2]}-${dmyMatch[3]}`;
-          }
-        }
+      } else if (typeof row[col] === 'string' || row[col] !== undefined) {
+        const formatted = formatCalendarDate(row[col]);
+        if (formatted) row[col] = formatted;
       }
     }
   }

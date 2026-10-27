@@ -1171,3 +1171,63 @@
     width: 100%;
   }
 }
+
+
+/* Floating autocomplete suggestions for Import cell editing (Relationship, Class) */
+.import-cell-active {
+  position: relative !important;
+}
+
+.import-cell-suggestions {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 1050;
+  min-width: 140px;
+  max-width: 240px;
+  max-height: 190px;
+  overflow-y: auto;
+  background: var(--surface-panel, #ffffff);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.import-cell-suggestion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1e293b;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  user-select: none;
+  transition: all 0.1s ease;
+}
+
+.import-cell-suggestion-item:hover,
+.import-cell-suggestion-item.is-selected {
+  background: #e6f4ea;
+  color: #12373b;
+  font-weight: 600;
+}
+
+.import-cell-suggestion-item kbd {
+  font-size: 10px;
+  font-family: inherit;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(18, 55, 59, 0.08);
+  color: #12373b;
+}

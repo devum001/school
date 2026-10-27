@@ -1,6 +1,7 @@
 import ImportSteps from './ImportSteps';
-import { formatRosterCell } from '../../lib/displayFormat';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { formatRosterCell, formatCalendarDate, formatBirthDateInput } from '../../lib/displayFormat';
+import { productApi } from '../../services/productService';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
@@ -19,6 +20,22 @@ import { ApiError, apiService, isCancelled } from '../../services/apiService';
 import { downloadText } from '../../lib/liveRosterImport';
 import { useDraftGuard } from '../academics/useDraftGuard';
 import './import.css';
+
+
+const RELATIONSHIP_OPTIONS = [
+  'Father',
+  'Mother',
+  'Guardian',
+  'Uncle',
+  'Aunt',
+  'Brother',
+  'Sister',
+  'Grandfather',
+  'Grandmother',
+  'Self',
+  'Parent',
+  'Other',
+];
 
 export default function ImportJob({
   schoolId,
@@ -52,17 +69,44 @@ export default function ImportJob({
     [editing, setEditing] = useState<ImportDetail['rows'][number] | null>(null),
     [confirm, setConfirm] = useState<'confirm' | 'cancel' | 'retry' | null>(null);
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [suggestionIdx, setSuggestionIdx] = useState(0);
+  const [schoolClasses, setSchoolClasses] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    if (!schoolId || !job?.academicYearId) return;
+    const controller = new AbortController();
+    productApi
+      .studentContext(schoolId, job.academicYearId, controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted && data.classes) {
+          setSchoolClasses(data.classes.map((c) => ({ id: c.id, name: c.name })));
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [schoolId, job?.academicYearId]);
+
 
   const commitCellEdit = useCallback(
     async (rowNum: number, colIdx: number, nextValue: string) => {
       if (!job) return;
       const row = job.rows.find((r) => r.number === rowNum);
       if (!row) return;
+
+      const colName = job.columns[colIdx]?.trim().toLowerCase() ?? '';
+      let cleanVal = nextValue.trim();
+
+      // Normalize date if date column
+      if (['birth date', 'dob', 'date of birth', 'joined on', 'date of joining'].includes(colName)) {
+        cleanVal = formatCalendarDate(cleanVal) || cleanVal;
+      }
+
       const currentVal = row.cells[colIdx] ?? '';
-      if (currentVal.trim() === nextValue.trim()) return;
+      if (currentVal.trim() === cleanVal) return;
 
       const updatedCells = [...row.cells];
-      updatedCells[colIdx] = nextValue.trim();
+      updatedCells[colIdx] = cleanVal;
       row.cells = updatedCells;
       setJob({ ...job });
 
@@ -79,6 +123,106 @@ export default function ImportJob({
     [job, schoolId, reload],
   );
 
+  
+  const classColIndex = useMemo(
+    () => job?.columns.findIndex((c) => c.trim().toLowerCase() === 'class') ?? -1,
+    [job?.columns],
+  );
+
+  const availableClasses = useMemo(() => {
+    if (!job || classColIndex < 0) return [];
+    return [
+      ...new Set(
+        job.rows
+          .map((r) => formatRosterCell('Class', r.cells[classColIndex] ?? '').trim())
+          .filter(Boolean),
+      ),
+    ];
+  }, [job, classColIndex]);
+
+  const activeColName =
+    activeCell && job ? job.columns[activeCell.colIdx]?.trim().toLowerCase() ?? '' : '';
+  const isRelCol =
+    [
+      'relationship',
+      'guardian relation',
+      'guardian relationship',
+      'relation',
+    ].includes(activeColName) || activeColName.includes('relation');
+  const isClassCol =
+    ['class', 'grade', 'standard'].includes(activeColName) ||
+    activeColName.startsWith('class') ||
+    activeColName.startsWith('grade') ||
+    activeColName.includes('class');
+  const isDateCol =
+    [
+      'birth date',
+      'dob',
+      'date of birth',
+      'joined on',
+      'date of joining',
+    ].includes(activeColName) ||
+    activeColName.includes('birth') ||
+    activeColName.includes('dob');
+
+  const activeSuggestions = useMemo(() => {
+    if (!activeCell || !job) return [];
+    const q = cellDraft.trim().toLowerCase();
+    if (isRelCol) {
+      if (!q) return RELATIONSHIP_OPTIONS;
+      return RELATIONSHIP_OPTIONS.filter((opt) => opt.toLowerCase().includes(q)).sort((a, b) => {
+        const aStarts = a.toLowerCase().startsWith(q);
+        const bStarts = b.toLowerCase().startsWith(q);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return a.localeCompare(b);
+      });
+    }
+    if (isClassCol) {
+      const listSet = new Set<string>();
+      listSet.add('Nursery');
+      listSet.add('LKG');
+      listSet.add('UKG');
+      for (let i = 1; i <= 12; i++) {
+        listSet.add(`Class ${i}`);
+      }
+      schoolClasses.forEach((c) => {
+        if (c.name) listSet.add(c.name);
+      });
+      availableClasses.forEach((c) => {
+        if (c) listSet.add(c);
+      });
+      const all = Array.from(listSet);
+      if (!q) return all;
+      const num = q.match(/\d+/)?.[0];
+      return all
+        .filter((c) => {
+          const cLower = c.toLowerCase();
+          if (cLower.includes(q)) return true;
+          if (num && cLower.includes(num)) return true;
+          return false;
+        })
+        .sort((a, b) => {
+          const aLower = a.toLowerCase();
+          const bLower = b.toLowerCase();
+          if (num) {
+            const aNum = aLower.match(/\d+/)?.[0];
+            const bNum = bLower.match(/\d+/)?.[0];
+            if (aNum === num && bNum !== num) return -1;
+            if (bNum === num && aNum !== num) return 1;
+          }
+          if (aLower.startsWith(q) && !bLower.startsWith(q)) return -1;
+          if (bLower.startsWith(q) && !aLower.startsWith(q)) return 1;
+          return a.localeCompare(b, undefined, { numeric: true });
+        });
+    }
+    return [];
+  }, [activeCell, job, cellDraft, isRelCol, isClassCol, schoolClasses, availableClasses]);
+
+  useEffect(() => {
+    setSuggestionIdx(0);
+  }, [activeCell?.rowNum, activeCell?.colIdx, cellDraft]);
+
   const handleCellKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
     rowNum: number,
@@ -90,9 +234,29 @@ export default function ImportJob({
     const currentFilteredIdx = filteredRowsList.findIndex((r) => r.number === rowNum);
     const numCols = job.columns.length;
 
+    // Arrow keys for suggestions dropdown
+    if (activeSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSuggestionIdx((i) => (i + 1) % activeSuggestions.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSuggestionIdx((i) => (i - 1 + activeSuggestions.length) % activeSuggestions.length);
+        return;
+      }
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault();
-      void commitCellEdit(rowNum, colIdx, cellDraft);
+      let finalVal = cellDraft;
+      if (activeSuggestions.length > 0) {
+        finalVal = activeSuggestions[suggestionIdx] ?? activeSuggestions[0] ?? cellDraft;
+      } else if (isDateCol) {
+        finalVal = formatCalendarDate(cellDraft) || cellDraft;
+      }
+      void commitCellEdit(rowNum, colIdx, finalVal);
       if (currentFilteredIdx < filteredRowsList.length - 1) {
         const nextRow = filteredRowsList[currentFilteredIdx + 1];
         setActiveCell({ rowNum: nextRow.number, colIdx });
@@ -111,7 +275,13 @@ export default function ImportJob({
 
     if (e.key === 'Tab') {
       e.preventDefault();
-      void commitCellEdit(rowNum, colIdx, cellDraft);
+      let finalVal = cellDraft;
+      if (activeSuggestions.length > 0) {
+        finalVal = activeSuggestions[suggestionIdx] ?? activeSuggestions[0] ?? cellDraft;
+      } else if (isDateCol) {
+        finalVal = formatCalendarDate(cellDraft) || cellDraft;
+      }
+      void commitCellEdit(rowNum, colIdx, finalVal);
       if (!e.shiftKey) {
         if (colIdx < numCols - 1) {
           setActiveCell({ rowNum, colIdx: colIdx + 1 });
@@ -246,21 +416,6 @@ export default function ImportJob({
     }
   }
 
-  const classColIndex = useMemo(
-    () => job?.columns.findIndex((c) => c.trim().toLowerCase() === 'class') ?? -1,
-    [job?.columns],
-  );
-
-  const availableClasses = useMemo(() => {
-    if (!job || classColIndex < 0) return [];
-    return [
-      ...new Set(
-        job.rows
-          .map((r) => formatRosterCell('Class', r.cells[classColIndex] ?? '').trim())
-          .filter(Boolean),
-      ),
-    ];
-  }, [job, classColIndex]);
 
   const filteredRows = useMemo(() => {
     if (!job) return [];
@@ -442,6 +597,10 @@ export default function ImportJob({
                                   const isCellActive =
                                     activeCell?.rowNum === row.number &&
                                     activeCell?.colIdx === index;
+                                  const colName = job.columns[index]?.trim().toLowerCase() ?? '';
+                                  const isDate = ['birth date', 'dob', 'date of birth', 'joined on', 'date of joining'].includes(colName);
+                                  const showSuggestions = isCellActive && activeSuggestions.length > 0;
+
                                   return isCellActive ? (
                                     <td
                                       key={index}
@@ -461,15 +620,54 @@ export default function ImportJob({
                                         }}
                                         className="import-cell-inline-input"
                                         value={cellDraft}
-                                        onChange={(e) => setCellDraft(e.target.value)}
+                                        placeholder={isDate ? 'DD-MM-YYYY' : undefined}
+                                        onChange={(e) => {
+                                          const val = isDate
+                                            ? formatBirthDateInput(e.target.value, cellDraft)
+                                            : e.target.value;
+                                          setCellDraft(val);
+                                        }}
                                         onBlur={() => {
-                                          void commitCellEdit(row.number, index, cellDraft);
-                                          setActiveCell(null);
+                                          blurTimerRef.current = setTimeout(() => {
+                                            let finalVal = cellDraft;
+                                            if (isDate) {
+                                              finalVal = formatCalendarDate(cellDraft) || cellDraft;
+                                            }
+                                            void commitCellEdit(row.number, index, finalVal);
+                                            setActiveCell(null);
+                                          }, 150);
                                         }}
                                         onKeyDown={(e) =>
                                           handleCellKeyDown(e, row.number, index, filteredRows)
                                         }
                                       />
+                                      {showSuggestions && (
+                                        <div
+                                          className="import-cell-suggestions"
+                                          role="listbox"
+                                          onMouseDown={(e) => e.preventDefault()}
+                                        >
+                                          {activeSuggestions.map((suggestion, sIdx) => {
+                                            const isSelected = sIdx === suggestionIdx;
+                                            return (
+                                              <button
+                                                key={suggestion}
+                                                type="button"
+                                                className={`import-cell-suggestion-item ${isSelected ? 'is-selected' : ''}`}
+                                                onClick={() => {
+                                                  if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+                                                  setCellDraft(suggestion);
+                                                  void commitCellEdit(row.number, index, suggestion);
+                                                  setActiveCell(null);
+                                                }}
+                                              >
+                                                <span>{suggestion}</span>
+                                                {isSelected && <kbd>Enter ↵</kbd>}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
                                     </td>
                                   ) : (
                                     <td
@@ -477,6 +675,7 @@ export default function ImportJob({
                                       className="import-cell-editable"
                                       title="Click to edit (navigate with ↑ ↓ ← → or Tab / Enter)"
                                       onClick={() => {
+                                        if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
                                         if (job.status === 'draft') {
                                           if (
                                             activeCell &&
