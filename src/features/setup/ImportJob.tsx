@@ -8,7 +8,6 @@ import {
   Check,
   CheckCircle2,
   FileSpreadsheet,
-  Pen,
   RefreshCw,
   Search,
   XCircle,
@@ -43,6 +42,9 @@ export default function ImportJob({
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [job, setJob] = useState<ImportDetail>(),
+    [activeCell, setActiveCell] = useState<{ rowNum: number; colIdx: number } | null>(null),
+    [cellDraft, setCellDraft] = useState(''),
+    [savingCell, setSavingCell] = useState(false),
     [offset, setOffset] = useState(0),
     [attempt, setAttempt] = useState(0),
     [error, setError] = useState(''),
@@ -50,6 +52,146 @@ export default function ImportJob({
     [editing, setEditing] = useState<ImportDetail['rows'][number] | null>(null),
     [confirm, setConfirm] = useState<'confirm' | 'cancel' | 'retry' | null>(null);
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
+
+  const commitCellEdit = useCallback(
+    async (rowNum: number, colIdx: number, nextValue: string) => {
+      if (!job) return;
+      const row = job.rows.find((r) => r.number === rowNum);
+      if (!row) return;
+      const currentVal = row.cells[colIdx] ?? '';
+      if (currentVal.trim() === nextValue.trim()) return;
+
+      const updatedCells = [...row.cells];
+      updatedCells[colIdx] = nextValue.trim();
+      row.cells = updatedCells;
+      setJob({ ...job });
+
+      try {
+        setSavingCell(true);
+        await onboardingApi.correct(schoolId, job, row.number, updatedCells);
+        reload();
+      } catch (err) {
+        console.error('Cell auto-save failed:', err);
+      } finally {
+        setSavingCell(false);
+      }
+    },
+    [job, schoolId, reload],
+  );
+
+  const handleCellKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    rowNum: number,
+    colIdx: number,
+    filteredRowsList: ImportDetail['rows'],
+  ) => {
+    if (!job) return;
+    const input = e.currentTarget;
+    const currentFilteredIdx = filteredRowsList.findIndex((r) => r.number === rowNum);
+    const numCols = job.columns.length;
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      void commitCellEdit(rowNum, colIdx, cellDraft);
+      if (currentFilteredIdx < filteredRowsList.length - 1) {
+        const nextRow = filteredRowsList[currentFilteredIdx + 1];
+        setActiveCell({ rowNum: nextRow.number, colIdx });
+        setCellDraft(nextRow.cells[colIdx] ?? '');
+      } else {
+        setActiveCell(null);
+      }
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setActiveCell(null);
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      void commitCellEdit(rowNum, colIdx, cellDraft);
+      if (!e.shiftKey) {
+        if (colIdx < numCols - 1) {
+          setActiveCell({ rowNum, colIdx: colIdx + 1 });
+          const curRow = filteredRowsList[currentFilteredIdx];
+          setCellDraft(curRow.cells[colIdx + 1] ?? '');
+        } else if (currentFilteredIdx < filteredRowsList.length - 1) {
+          const nextRow = filteredRowsList[currentFilteredIdx + 1];
+          setActiveCell({ rowNum: nextRow.number, colIdx: 0 });
+          setCellDraft(nextRow.cells[0] ?? '');
+        }
+      } else {
+        if (colIdx > 0) {
+          setActiveCell({ rowNum, colIdx: colIdx - 1 });
+          const curRow = filteredRowsList[currentFilteredIdx];
+          setCellDraft(curRow.cells[colIdx - 1] ?? '');
+        } else if (currentFilteredIdx > 0) {
+          const prevRow = filteredRowsList[currentFilteredIdx - 1];
+          setActiveCell({ rowNum: prevRow.number, colIdx: numCols - 1 });
+          setCellDraft(prevRow.cells[numCols - 1] ?? '');
+        }
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      void commitCellEdit(rowNum, colIdx, cellDraft);
+      if (currentFilteredIdx > 0) {
+        const prevRow = filteredRowsList[currentFilteredIdx - 1];
+        setActiveCell({ rowNum: prevRow.number, colIdx });
+        setCellDraft(prevRow.cells[colIdx] ?? '');
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      void commitCellEdit(rowNum, colIdx, cellDraft);
+      if (currentFilteredIdx < filteredRowsList.length - 1) {
+        const nextRow = filteredRowsList[currentFilteredIdx + 1];
+        setActiveCell({ rowNum: nextRow.number, colIdx });
+        setCellDraft(nextRow.cells[colIdx] ?? '');
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowLeft') {
+      const isAtStart = input.selectionStart === 0 && input.selectionEnd === 0;
+      const isAllSelected =
+        input.selectionStart === 0 && input.selectionEnd === input.value.length;
+      if (isAtStart || isAllSelected) {
+        e.preventDefault();
+        void commitCellEdit(rowNum, colIdx, cellDraft);
+        if (colIdx > 0) {
+          setActiveCell({ rowNum, colIdx: colIdx - 1 });
+          const curRow = filteredRowsList[currentFilteredIdx];
+          setCellDraft(curRow.cells[colIdx - 1] ?? '');
+        }
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowRight') {
+      const isAtEnd =
+        input.selectionStart === input.value.length &&
+        input.selectionEnd === input.value.length;
+      const isAllSelected =
+        input.selectionStart === 0 && input.selectionEnd === input.value.length;
+      if (isAtEnd || isAllSelected) {
+        e.preventDefault();
+        void commitCellEdit(rowNum, colIdx, cellDraft);
+        if (colIdx < numCols - 1) {
+          setActiveCell({ rowNum, colIdx: colIdx + 1 });
+          const curRow = filteredRowsList[currentFilteredIdx];
+          setCellDraft(curRow.cells[colIdx + 1] ?? '');
+        }
+      }
+      return;
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -284,7 +426,6 @@ export default function ImportJob({
                                 <th key={column}>{column}</th>
                               ))}
                               <th>Status</th>
-                              <th className="import-correction-cell">Corrections</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -297,24 +438,77 @@ export default function ImportJob({
                                   {row.number}
                                   {row.outcome !== 'pending' && <small>{row.outcome}</small>}
                                 </th>
-                                {row.cells.map((cell, index) => (
-                                  <td
-                                    key={index}
-                                    style={
-                                      index === 0
-                                        ? { fontWeight: 600, color: '#0f172a' }
-                                        : undefined
-                                    }
-                                  >
-                                    {formatRosterCell(job.columns[index], cell) || '—'}
-                                    {index === 0 &&
-                                      row.errors.map((message) => (
-                                        <p className="sr-only" key={message}>
-                                          {message}
-                                        </p>
-                                      ))}
-                                  </td>
-                                ))}
+                                {row.cells.map((cell, index) => {
+                                  const isCellActive =
+                                    activeCell?.rowNum === row.number &&
+                                    activeCell?.colIdx === index;
+                                  return isCellActive ? (
+                                    <td
+                                      key={index}
+                                      className="import-cell-active"
+                                      style={
+                                        index === 0
+                                          ? { fontWeight: 600 }
+                                          : undefined
+                                      }
+                                    >
+                                      <input
+                                        ref={(el) => {
+                                          if (el && document.activeElement !== el) {
+                                            el.focus();
+                                            el.select();
+                                          }
+                                        }}
+                                        className="import-cell-inline-input"
+                                        value={cellDraft}
+                                        onChange={(e) => setCellDraft(e.target.value)}
+                                        onBlur={() => {
+                                          void commitCellEdit(row.number, index, cellDraft);
+                                          setActiveCell(null);
+                                        }}
+                                        onKeyDown={(e) =>
+                                          handleCellKeyDown(e, row.number, index, filteredRows)
+                                        }
+                                      />
+                                    </td>
+                                  ) : (
+                                    <td
+                                      key={index}
+                                      className="import-cell-editable"
+                                      title="Click to edit (navigate with ↑ ↓ ← → or Tab / Enter)"
+                                      onClick={() => {
+                                        if (job.status === 'draft') {
+                                          if (
+                                            activeCell &&
+                                            (activeCell.rowNum !== row.number ||
+                                              activeCell.colIdx !== index)
+                                          ) {
+                                            void commitCellEdit(
+                                              activeCell.rowNum,
+                                              activeCell.colIdx,
+                                              cellDraft,
+                                            );
+                                          }
+                                          setActiveCell({ rowNum: row.number, colIdx: index });
+                                          setCellDraft(cell ?? '');
+                                        }
+                                      }}
+                                      style={
+                                        index === 0
+                                          ? { fontWeight: 600, color: '#0f172a' }
+                                          : undefined
+                                      }
+                                    >
+                                      {formatRosterCell(job.columns[index], cell) || '—'}
+                                      {index === 0 &&
+                                        row.errors.map((message) => (
+                                          <p className="sr-only" key={message}>
+                                            {message}
+                                          </p>
+                                        ))}
+                                    </td>
+                                  );
+                                })}
                                 <td>
                                   {row.errors.length === 0 ? (
                                     <span className="import-status-badge" data-valid="true">
@@ -332,18 +526,6 @@ export default function ImportJob({
                                     </span>
                                   )}
                                 </td>
-                                <td className="import-correction-cell">
-                                  {job.status === 'draft' && row.outcome === 'pending' && (
-                                    <button
-                                      type="button"
-                                      className="import-inline-edit-btn"
-                                      onClick={() => setEditing(row)}
-                                    >
-                                      <Pen size={10} aria-hidden="true" />
-                                      <span>Edit row {row.number}</span>
-                                    </button>
-                                  )}
-                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -358,6 +540,7 @@ export default function ImportJob({
                             : ''}
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          {savingCell && <span style={{ color: 'var(--green-hover)', fontSize: 11, fontWeight: 600 }}>Saving edit…</span>}
                           {(onlyErrors || searchQuery || classFilter) && (
                             <button
                               type="button"
