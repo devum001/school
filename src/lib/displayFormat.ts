@@ -1,7 +1,7 @@
 /** Calendar values remain ISO in APIs/storage; people enter and read day-month-year. */
 export function parseCalendarDate(value: string): string | null {
   const raw = value.trim();
-  const parts = /^(\d{2})-(\d{2})-(\d{4})$/.exec(raw);
+  const parts = /^(\d{2})[-/](\d{2})[-/](\d{4})$/.exec(raw);
   const iso = parts ? `${parts[3]}-${parts[2]}-${parts[1]}` : raw;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
   const date = new Date(`${iso}T12:00:00Z`);
