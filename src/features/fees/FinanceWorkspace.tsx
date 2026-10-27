@@ -246,8 +246,8 @@ export default function FinanceWorkspace() {
                         <th>Person</th>
                         <th>Type</th>
                         <th>Date</th>
-                        <th>Income</th>
-                        <th>Expense</th>
+                        <th className="currency-cell">Income</th>
+                        <th className="currency-cell">Expense</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -256,8 +256,12 @@ export default function FinanceWorkspace() {
                           <th scope="row">{entry.name}</th>
                           <td>{entry.type}</td>
                           <td>{displayDate(entry.date)}</td>
-                          <td>{entry.income ? money(entry.income) : '—'}</td>
-                          <td>{entry.expense ? money(entry.expense) : '—'}</td>
+                          <td className="currency-cell">
+                            {entry.income ? money(entry.income) : '—'}
+                          </td>
+                          <td className="currency-cell">
+                            {entry.expense ? money(entry.expense) : '—'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -348,8 +352,8 @@ export default function FinanceWorkspace() {
                     <th>Date</th>
                     <th>Mode</th>
                     <th>Reference</th>
-                    <th>Income</th>
-                    <th>Expense</th>
+                    <th className="currency-cell">Income</th>
+                    <th className="currency-cell">Expense</th>
                     <th>Document</th>
                   </tr>
                 </thead>
@@ -361,8 +365,10 @@ export default function FinanceWorkspace() {
                       <td>{displayDate(entry.date)}</td>
                       <td>{entry.method}</td>
                       <td>{entry.reference || '—'}</td>
-                      <td>{entry.income ? money(entry.income) : '—'}</td>
-                      <td>{entry.expense ? money(entry.expense) : '—'}</td>
+                      <td className="currency-cell">{entry.income ? money(entry.income) : '—'}</td>
+                      <td className="currency-cell">
+                        {entry.expense ? money(entry.expense) : '—'}
+                      </td>
                       <td>
                         <button className="text-link" onClick={() => setDocument(entry.document)}>
                           {entry.number}

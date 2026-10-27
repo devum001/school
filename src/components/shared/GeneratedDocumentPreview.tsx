@@ -26,19 +26,6 @@ export default function GeneratedDocumentPreview({
     () => (brandingMode === 'draft' ? data : documentWithBranding(state, data)),
     [state, data, brandingMode],
   );
-  return <DocumentPreview data={renderedData} compact={compact} actions={actions} />;
-}
-// Receives verified document data directly, without subscribing to demo persistence.
-export function DocumentPreview({
-  data: renderedData,
-  compact = false,
-  actions = true,
-}: {
-  data: GeneratedDocument;
-  compact?: boolean;
-  actions?: boolean;
-}) {
-  const data = renderedData;
   const [image, setImage] = useState(''),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);

@@ -1,3 +1,4 @@
+import { formatCalendarDate } from '../../lib/displayFormat';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -28,7 +29,7 @@ export default function LiveStudents({
   access: SchoolAccess;
   yearId: string | null;
   classId?: string;
-  mode?: 'directory' | 'new' | 'import';
+  mode?: 'directory' | 'new' | 'import' | 'profile';
   onChanged?: () => void;
 }) {
   const load = useCallback(
@@ -44,11 +45,13 @@ export default function LiveStudents({
       </Panel>
     );
   const loadingMessage =
-    mode === 'new'
-      ? 'Loading student admission form…'
-      : mode === 'import'
-        ? 'Loading student import…'
-        : 'Loading students…';
+    mode === 'profile'
+      ? 'Loading student profile…'
+      : mode === 'new'
+        ? 'Loading student admission form…'
+        : mode === 'import'
+          ? 'Loading student import…'
+          : 'Loading students…';
   if (state.error)
     return (
       <Panel>
@@ -107,6 +110,7 @@ function StudentWorkspace({
   const section =
       params.get('studentSection') === 'none' ? '' : (params.get('studentSection') ?? ''),
     search = params.get('studentSearch') ?? '';
+  const studentId = mode === 'profile' ? location.pathname.split('/')[2] : undefined;
   const load = useCallback(
     (signal: AbortSignal, after?: string) =>
       mode === 'new' || mode === 'import'
@@ -116,8 +120,9 @@ function StudentWorkspace({
             sectionId: section || undefined,
             search,
             after,
+            studentId,
           }),
-    [access.schoolId, yearId, selectedClass, section, search, mode],
+    [access.schoolId, yearId, selectedClass, section, search, studentId, mode],
   );
   const list = useSetupList(load),
     [adding, setAdding] = useState(false),
@@ -280,15 +285,32 @@ function StudentWorkspace({
     ) : (
       <Panel>Student management access is required.</Panel>
     );
-  const loadingLabel = current ? `Loading ${current.name} students…` : 'Loading students…';
+  const loadingLabel =
+    mode === 'profile'
+      ? 'Loading student profile…'
+      : current
+        ? `Loading ${current.name} students…`
+        : 'Loading students…';
   const isBusy = contextLoading || list.loading;
   return (
     <>
-      <LoadingOverlay loading={isBusy} size="xl" label={loadingLabel} message={loadingLabel}>
+      <LoadingOverlay
+        loading={isBusy}
+        size="xl"
+        label={loadingLabel}
+        message={loadingLabel}
+      >
         <Panel
-          title={current ? `${current.name} students` : 'Student directory'}
+          title={
+            mode === 'profile'
+              ? 'Student details'
+              : current
+                ? `${current.name} students`
+                : 'Student directory'
+          }
           subtitle={`${snapshot.year.name} · ${list.data?.total ?? 0} saved enrollments`}
           action={
+            mode !== 'profile' &&
             manage && (
               <div className="student-import-actions">
                 {current && (
@@ -321,9 +343,9 @@ function StudentWorkspace({
             )
           }
         >
-          {filters}
+          {mode !== 'profile' && filters}
           {list.error && <LoadState {...list} loading={false} retry={list.reload} />}
-          {!list.error && (
+          {!list.error && mode !== 'profile' && (
             <>
               {list.data && list.data.items.length === 0 && !list.loading ? (
                 <EmptyState
@@ -358,6 +380,31 @@ function StudentWorkspace({
               {list.data && <Paging {...list} nextCursor={list.data.nextCursor} />}
             </>
           )}
+          {mode === 'profile' &&
+            (list.data?.items ?? []).map((r) => (
+              <dl key={r.id} className="detail-list">
+                <div>
+                  <dt>Birth date</dt>
+                  <dd>
+                    {r.student.birthDate ? formatCalendarDate(r.student.birthDate) : 'Not provided'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Guardian</dt>
+                  <dd>
+                    {r.student.guardianName} · {r.student.guardianRelation}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Parent mobile</dt>
+                  <dd>{r.student.guardianPhone || 'Not provided'}</dd>
+                </div>
+                <div>
+                  <dt>Address</dt>
+                  <dd>{r.student.address || 'Not provided'}</dd>
+                </div>
+              </dl>
+            ))}
         </Panel>
       </LoadingOverlay>
       {manage && (inlineImport || params.has('import')) && importer}

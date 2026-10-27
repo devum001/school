@@ -699,6 +699,72 @@ export default function StudentImportDialog({
             )}
 
             <div className="import-footer-right">
+              {step === 2 &&
+                grid &&
+                preview &&
+                preview.errors.length > 0 &&
+                preview.rows.some((r) => !r.error) && (
+                  <button
+                    type="button"
+                    className="import-white-btn"
+                    onClick={() => {
+                      const errorRowNums = new Set(
+                        preview.rows.filter((r) => Boolean(r.error)).map((r) => r.row),
+                      );
+                      const errorCsvRows = [
+                        [...grid[0].map((c) => String(c ?? '')), 'Validation Error'],
+                        ...preview.rows
+                          .filter((r) => Boolean(r.error))
+                          .map((r) => [
+                            ...(grid[r.row - 1] ?? []).map((c) => String(c ?? '')),
+                            r.error ?? '',
+                          ]),
+                      ];
+                      const csvContent = errorCsvRows
+                        .map((row) =>
+                          row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
+                        )
+                        .join('\r\n');
+                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const anchor = document.createElement('a');
+                      anchor.href = url;
+                      anchor.download = 'student-import-errors.csv';
+                      anchor.click();
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+                      const validGrid: ExcelCell[][] = [
+                        grid[0],
+                        ...grid.slice(1).filter((_, index) => !errorRowNums.has(index + 2)),
+                      ];
+                      try {
+                        const nextPreview = previewStudentImport(
+                          repository.getSnapshot(),
+                          target,
+                          validGrid,
+                        );
+                        setGrid(validGrid);
+                        setPreview(nextPreview);
+                        setOnlyErrors(false);
+                        setOffset(0);
+                        setError('');
+                        if (nextPreview.errors.length === 0) {
+                          setStep(3);
+                        }
+                      } catch (cause) {
+                        setError(
+                          cause instanceof Error ? cause.message : 'Unable to filter valid rows.',
+                        );
+                      }
+                    }}
+                  >
+                    <FileSpreadsheet size={13} aria-hidden="true" />
+                    <span>
+                      Import {preview.rows.filter((r) => !r.error).length} Valid &amp; Export{' '}
+                      {preview.errors.length} Errors
+                    </span>
+                  </button>
+                )}
               <button
                 type="button"
                 className="import-primary-btn"

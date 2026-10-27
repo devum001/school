@@ -117,7 +117,7 @@ const stateSchema = z.object({
   notifications: z.array(z.never()),
   activities: z.array(z.never()),
 });
-export const snapshotSchema = z.object({
+const snapshotSchema = z.object({
   state: stateSchema,
   today: z.string(),
   timezone: z.string(),

@@ -169,36 +169,3 @@ it('keeps the authenticated workspace and school selection during session revali
   await validating;
   expect(sessionStore.getSnapshot().schoolId).toBe('b'.repeat(24));
 });
-
-it('remembers the selected school after fresh authentication but rejects a revoked or foreign preference', async () => {
-  const storage = new Map<string, string>();
-  vi.stubGlobal('sessionStorage', {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => storage.set(key, value),
-  });
-  try {
-    const multiple = {
-      ...session,
-      memberships: [
-        ...session.memberships,
-        { ...session.memberships[0], schoolId: 'b'.repeat(24) },
-      ],
-    };
-    vi.mocked(authService.session).mockResolvedValue(multiple);
-    await sessionStore.restore();
-    sessionStore.selectSchool('b'.repeat(24));
-    await sessionStore.logout();
-    await sessionStore.restore();
-    expect(sessionStore.getSnapshot().schoolId).toBe('b'.repeat(24));
-    await sessionStore.logout();
-    vi.mocked(authService.session).mockResolvedValue(session);
-    await sessionStore.restore();
-    expect(sessionStore.getSnapshot().schoolId).toBe('a'.repeat(24));
-    await sessionStore.logout();
-    storage.set('schoolwell:selected-school:user', 'c'.repeat(24));
-    await sessionStore.restore();
-    expect(sessionStore.getSnapshot().schoolId).toBe('a'.repeat(24));
-  } finally {
-    vi.unstubAllGlobals();
-  }
-});

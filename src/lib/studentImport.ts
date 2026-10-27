@@ -34,11 +34,45 @@ export function previewStudentImport(
   const schoolClass = state.classes.find(
     (c) => c.schoolId === state.school.id && c.id === (legacySection?.classId ?? scopeId),
   );
-  if (!schoolClass && !(grid[0] ?? []).some((h) => String(h).trim().toLowerCase() === 'class'))
+  const headerAliases: Record<string, string> = {
+    'admission no': 'admission number',
+    'admission no.': 'admission number',
+    admission_no: 'admission number',
+    admission_number: 'admission number',
+    'scholar no': 'admission number',
+    'std name': 'student name',
+    student_name: 'student name',
+    'full name': 'student name',
+    'std roll': 'roll number',
+    'roll no': 'roll number',
+    'roll no.': 'roll number',
+    roll_number: 'roll number',
+    roll: 'roll number',
+    dob: 'birth date',
+    'date of birth': 'birth date',
+    birth_date: 'birth date',
+    'father name': 'guardian name',
+    'parent name': 'guardian name',
+    guardian_name: 'guardian name',
+    guardian: 'guardian name',
+    'guardian phone': 'parent mobile',
+    guardian_phone: 'parent mobile',
+    parent_mobile: 'parent mobile',
+    'mobile number': 'parent mobile',
+    mobile: 'parent mobile',
+    contact: 'parent mobile',
+    grade: 'class',
+    standard: 'class',
+  };
+  const normalizeHeader = (value: ExcelCell) => {
+    const clean = String(value).trim().replace(/\s+/g, ' ').toLowerCase();
+    return headerAliases[clean] ?? clean;
+  };
+  if (!schoolClass && !(grid[0] ?? []).some((h) => normalizeHeader(h) === 'class'))
     throw new Error('Choose a class from this school or include the Class column.');
   if (grid.length > 1001) throw new Error('Import up to 1,000 students per file.');
 
-  const headers = (grid[0] ?? []).map((value) => String(value).trim().toLowerCase());
+  const headers = (grid[0] ?? []).map(normalizeHeader);
   for (const header of [
     'Student Name',
     'Admission Number',

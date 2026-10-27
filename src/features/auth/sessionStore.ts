@@ -11,17 +11,6 @@ let revision = 0;
 let restoration: Promise<void> | undefined;
 let hasAuthenticatedSession = false;
 const expiredMessage = 'Your session has expired. Please sign in again.';
-function preferredSchool(session: Session, selected: string | null) {
-  let preference = selected;
-  try {
-    preference ??= sessionStorage.getItem(`schoolwell:selected-school:${session.user.id}`);
-  } catch {
-    /* Storage may be unavailable. */
-  }
-  return session.memberships.some((item) => item.schoolId === preference)
-    ? preference
-    : (session.memberships[0]?.schoolId ?? null);
-}
 const listeners = new Set<() => void>();
 const publish = (next: AuthState) => {
   state = next;
@@ -53,7 +42,9 @@ export const sessionStore = {
           publish({
             status: 'authenticated',
             session,
-            schoolId: preferredSchool(session, selectedSchool),
+            schoolId: session.memberships.some((item) => item.schoolId === selectedSchool)
+              ? selectedSchool
+              : (session.memberships[0]?.schoolId ?? null),
           });
         }
       } catch (error) {
@@ -99,14 +90,8 @@ export const sessionStore = {
     publish({ status: 'anonymous', session: null, schoolId: null });
   },
   selectSchool(id: string) {
-    if (state.session?.memberships.some((item) => item.schoolId === id)) {
-      try {
-        sessionStorage.setItem(`schoolwell:selected-school:${state.session.user.id}`, id);
-      } catch {
-        /* Keep the current in-memory selection. */
-      }
+    if (state.session?.memberships.some((item) => item.schoolId === id))
       publish({ ...state, schoolId: id });
-    }
   },
 };
 apiService.onUnauthorized(() => {

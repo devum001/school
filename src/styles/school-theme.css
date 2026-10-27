@@ -6,11 +6,27 @@
   --school-gold: #e2c58a;
   --school-tab-selected: #bddfc9;
   --school-gold-edge: #c5ad7c;
+  --school-spark-start: #f4d58e;
+  --school-spark-core: #fff8db;
   --school-header-height: 73px;
   --school-text: #f4f8f7;
   --school-muted: #b6cecc;
   --school-border: #365b5e;
   --navy: #19494d;
+  --green: #2c816e;
+  --green-hover: #236858;
+  --color-danger: #c53030;
+  --color-danger-subtle: #fee2e2;
+  --color-warning: #d97706;
+  --color-warning-subtle: #fef3c7;
+  --text-main: #263b3a;
+  --shadow-dialog: 0 12px 32px rgba(18, 55, 59, 0.16);
+  --focus-ring: 3px solid #78a8c6;
+  --focus-offset: 3px;
+  --text-subhead: 15px;
+  --text-title: 17px;
+  --text-headline: 21px;
+  --text-hero: 26px;
 }
 body {
   background: var(--surface-canvas);

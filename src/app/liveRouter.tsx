@@ -1,5 +1,3 @@
-import { lazy, Suspense } from 'react';
-const LiveFinanceWorkspace = lazy(() => import('../features/fees/LiveFinanceWorkspace'));
 import LiveLearning from '../features/live/LiveLearning';
 import LiveHrWorkspace from '../features/hr/HrWorkspace';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
@@ -29,14 +27,7 @@ export const liveRouter = createBrowserRouter([
       { path: 'classes', element: <LiveLearning area="classes" /> },
       { path: 'academics', element: <LiveLearning area="academics" /> },
       { path: 'attendance/staff', element: <LiveHrWorkspace section="attendance" /> },
-      {
-        path: 'fees',
-        element: (
-          <Suspense fallback={<p role="status">Loading finance…</p>}>
-            <LiveFinanceWorkspace />
-          </Suspense>
-        ),
-      },
+      { path: 'fees', element: <LiveHrWorkspace section="salary" /> },
       { path: 'staff/self', element: <LiveHrWorkspace section="self" /> },
       ...[{ path: 'notifications', title: 'Notifications' }].map(({ path, title }) => ({
         path,

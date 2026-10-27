@@ -616,8 +616,8 @@ function HrContent({
                 <tr>
                   <th>Staff member</th>
                   <th>Department</th>
-                  <th>Net salary</th>
-                  <th>Paid / outstanding</th>
+                  <th className="currency-cell">Net salary</th>
+                  <th className="currency-cell">Paid / outstanding</th>
                   <th>Status / due date</th>
                   <th>Actions</th>
                 </tr>
@@ -645,8 +645,8 @@ function HrContent({
                         )}
                       </td>
                       <td>{titleCase(p.department || '') || '—'}</td>
-                      <td>{item ? rupees(item.net) : 'Not prepared'}</td>
-                      <td>
+                      <td className="currency-cell">{item ? rupees(item.net) : 'Not prepared'}</td>
+                      <td className="currency-cell">
                         {item
                           ? `${rupees(payrollPaid(item, data))} / ${rupees(item.net - payrollPaid(item, data))}`
                           : '—'}

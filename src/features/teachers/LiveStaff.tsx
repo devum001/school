@@ -185,16 +185,10 @@ export default function LiveStaff({
                           </td>
                           <td>
                             {manage && (
-                              <>
-                                {p.status === 'active' &&
-                                  !p.userId &&
-                                  access.permissions.includes('memberships.manage') &&
-                                  access.permissions.includes('roles.view') && (
-                                    <Button variant="ghost" onClick={() => setLoginStaff(p)}>
-                                      Enable login
-                                    </Button>
-                                  )}
-                                {p.userId && <Badge tone="green">Login linked</Badge>}
+                              <div className="hr-actions">
+                                <Button variant="secondary" onClick={() => setEditing(p)}>
+                                  Edit
+                                </Button>
                                 {access.permissions.includes('payroll.view') &&
                                   access.permissions.includes('payroll.manage') && (
                                     <Button
@@ -211,13 +205,19 @@ export default function LiveStaff({
                                       Salary & attendance
                                     </Button>
                                   )}
-                                <Button variant="ghost" onClick={() => setEditing(p)}>
-                                  Edit
-                                </Button>
+                                {p.status === 'active' &&
+                                  !p.userId &&
+                                  access.permissions.includes('memberships.manage') &&
+                                  access.permissions.includes('roles.view') && (
+                                    <Button variant="ghost" onClick={() => setLoginStaff(p)}>
+                                      Enable login
+                                    </Button>
+                                  )}
+                                {p.userId && <Badge tone="green">Login linked</Badge>}
                                 <Button variant="ghost" onClick={() => setChange(p)}>
                                   {p.status === 'active' ? 'Archive' : 'Restore'}
                                 </Button>
-                              </>
+                              </div>
                             )}
                           </td>
                         </tr>

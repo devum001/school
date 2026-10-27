@@ -121,8 +121,46 @@ export async function readRosterFile(
   if (!grid) throw new Error('Choose a .csv or .xlsx file.');
   if (grid.length < 2 || grid.length > 1001)
     throw new Error('Include a header and between 1 and 1,000 data rows.');
-  const normalize = (value: string) =>
-    value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+  const aliasMap: Record<string, string> = {
+    'admission no': 'admission number',
+    'admission no.': 'admission number',
+    admission_no: 'admission number',
+    admission_number: 'admission number',
+    'scholar no': 'admission number',
+    'std name': 'student name',
+    student_name: 'student name',
+    'full name': 'student name',
+    'std roll': 'roll number',
+    'roll no': 'roll number',
+    'roll no.': 'roll number',
+    roll_number: 'roll number',
+    roll: 'roll number',
+    dob: 'birth date',
+    'date of birth': 'birth date',
+    birth_date: 'birth date',
+    'father name': 'guardian name',
+    'parent name': 'guardian name',
+    guardian_name: 'guardian name',
+    guardian: 'guardian name',
+    'parent mobile': 'guardian phone',
+    parent_mobile: 'guardian phone',
+    guardian_phone: 'guardian phone',
+    'mobile number': 'guardian phone',
+    'emp code': 'staff code',
+    'employee code': 'staff code',
+    staff_code: 'staff code',
+    'teacher name': 'staff name',
+    'employee name': 'staff name',
+    staff_name: 'staff name',
+    'joining date': 'joined on',
+    'date of joining': 'joined on',
+    joined_on: 'joined on',
+    qualifications: 'qualification',
+  };
+  const normalize = (value: string) => {
+    const clean = value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+    return aliasMap[clean] ?? clean;
+  };
   const headers = grid[0].map(normalize),
     expected = columns.map(normalize);
   if (
@@ -133,6 +171,8 @@ export async function readRosterFile(
     throw new Error(
       'The columns do not match this template. Download the template and keep every heading.',
     );
+  const canonicalByNorm = new Map(columns.map((col) => [normalize(col), col]));
+  grid[0] = headers.map((h, i) => canonicalByNorm.get(h) ?? grid[0][i]);
   if (
     new TextEncoder().encode(JSON.stringify(grid)).length > 1024 * 1024 ||
     grid.some(

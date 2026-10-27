@@ -135,9 +135,15 @@ export default function StaffPage({ embedded = false }: { embedded?: boolean }) 
               <thead>
                 <tr>
                   <th scope="col">Staff</th>
-                  <th scope="col">Salary</th>
-                  <th scope="col">Leave Deduction</th>
-                  <th scope="col">Net Salary</th>
+                  <th scope="col" className="currency-cell">
+                    Salary
+                  </th>
+                  <th scope="col" className="currency-cell">
+                    Leave Deduction
+                  </th>
+                  <th scope="col" className="currency-cell">
+                    Net Salary
+                  </th>
                   <th scope="col">Leave details</th>
                   <th scope="col">Status</th>
                   <th scope="col">Actions</th>
@@ -164,15 +170,17 @@ export default function StaffPage({ embedded = false }: { embedded?: boolean }) 
                           </div>
                         </div>
                       </th>
-                      <td>
+                      <td className="currency-cell">
                         {payment
                           ? money(payment.gross)
                           : summary.salary
                             ? money(summary.gross)
                             : 'Not set'}
                       </td>
-                      <td>{money(payment?.leaveDeduction ?? summary.leaveDeduction)}</td>
-                      <td>
+                      <td className="currency-cell">
+                        {money(payment?.leaveDeduction ?? summary.leaveDeduction)}
+                      </td>
+                      <td className="currency-cell">
                         {payment ? money(payment.net) : summary.salary ? money(summary.net) : '—'}
                       </td>
                       <td>
@@ -225,7 +233,7 @@ export default function StaffPage({ embedded = false }: { embedded?: boolean }) 
                 <tr>
                   <th>Staff</th>
                   <th>Month</th>
-                  <th>Amount paid</th>
+                  <th className="currency-cell">Amount paid</th>
                   <th>Payment date</th>
                   <th>Mode</th>
                   <th>Reference</th>
@@ -245,7 +253,7 @@ export default function StaffPage({ embedded = false }: { embedded?: boolean }) 
                     <tr key={payment.id}>
                       <th scope="row">{payment.document.recipientName}</th>
                       <td>{payment.month}</td>
-                      <td>{money(payment.amountPaid)}</td>
+                      <td className="currency-cell">{money(payment.amountPaid)}</td>
                       <td>{displayDate(payment.date)}</td>
                       <td>{payment.method}</td>
                       <td>{payment.reference || '—'}</td>

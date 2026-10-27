@@ -153,10 +153,10 @@ export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
                   <tr>
                     <th>Student</th>
                     <th>Class</th>
-                    <th>Total fee</th>
+                    <th className="currency-cell">Total fee</th>
                     <th>Installments</th>
-                    <th>Paid</th>
-                    <th>Remaining amount</th>
+                    <th className="currency-cell">Paid</th>
+                    <th className="currency-cell">Remaining amount</th>
                     <th>Status</th>
                     <th />
                   </tr>
@@ -176,7 +176,7 @@ export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
                       <td>
                         {r.className} · {r.sectionName}
                       </td>
-                      <td>{money(r.fees.total)}</td>
+                      <td className="currency-cell">{money(r.fees.total)}</td>
                       <td className="fee-progress-cell">
                         <strong>
                           {!r.fees.count
@@ -199,8 +199,8 @@ export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
                           View details
                         </Button>
                       </td>
-                      <td>{money(r.fees.paid)}</td>
-                      <td>
+                      <td className="currency-cell">{money(r.fees.paid)}</td>
+                      <td className="currency-cell">
                         <strong>{money(r.fees.outstanding)}</strong>
                       </td>
                       <td>
@@ -274,7 +274,7 @@ export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
                     <th>Student</th>
                     <th>Date</th>
                     <th>Method</th>
-                    <th>Amount</th>
+                    <th className="currency-cell">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -290,7 +290,7 @@ export default function FeesPage({ embedded = false }: { embedded?: boolean }) {
                         </td>
                         <td>{displayDate(p.date)}</td>
                         <td>{p.method}</td>
-                        <td>{money(p.amount)}</td>
+                        <td className="currency-cell">{money(p.amount)}</td>
                       </tr>
                     );
                   })}

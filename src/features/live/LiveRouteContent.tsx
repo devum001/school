@@ -1,4 +1,3 @@
-import LiveStudentProfile from '../students/LiveStudentProfile';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { PageHeading, Panel } from '../../components/ui/Primitives';
 import LiveStudents from '../students/LiveStudents';
@@ -31,23 +30,20 @@ export function ExistingPeopleRoute() {
       />
       {pathname.startsWith('/students') ? (
         can('students.view') ? (
-          pathname.startsWith('/students/') &&
-          !['/students/new', '/students/import'].includes(pathname) ? (
-            <LiveStudentProfile key={`${schoolId}:${year}:${pathname}`} yearId={year} />
-          ) : (
-            <LiveStudents
-              key={`${schoolId}:${year}:${pathname}`}
-              access={access}
-              yearId={year}
-              mode={
-                pathname === '/students/new'
-                  ? 'new'
-                  : pathname === '/students/import'
-                    ? 'import'
-                    : 'directory'
-              }
-            />
-          )
+          <LiveStudents
+            key={`${schoolId}:${year}:${pathname}`}
+            access={access}
+            yearId={year}
+            mode={
+              pathname === '/students/new'
+                ? 'new'
+                : pathname === '/students/import'
+                  ? 'import'
+                  : pathname === '/students'
+                    ? 'directory'
+                    : 'profile'
+            }
+          />
         ) : (
           denied
         )
