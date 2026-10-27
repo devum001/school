@@ -124,7 +124,14 @@
 }
 
 /* Tab badges / counters inside pill */
-.tab-rail [role='tab'] span:not(:first-child),
+.tab-rail [role='tab'] .tab-label {
+  display: inline;
+  background: transparent !important;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
 .tab-rail [role='tab'] .badge,
 .tab-rail [role='tab'] .tab-count {
   display: inline-flex;

@@ -39,7 +39,7 @@ export default function SectionNavigation({
           const content = (
             <>
               {item.icon && <AppIcon name={item.icon} size={18} />}
-              <span>{item.label}</span>
+              <span className="tab-label">{item.label}</span>
               {item.badge !== undefined && <span className="tab-count">{item.badge}</span>}
             </>
           );
