@@ -1,6 +1,5 @@
-import TabRail from '../../components/ui/TabRail';
+import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useState } from 'react';
-import { tabKeyboard } from '../../lib/tabKeyboard';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
@@ -51,30 +50,15 @@ export default function TeacherProfilePage() {
       <Link className="back-link" to="/teachers">
         ← Teacher List
       </Link>
-      <TabRail className="teacher-detail-tabs" role="tablist" aria-label="Teacher detail">
-        {(['Overview', 'Documents'] as const).map((value, index) => (
-          <button
-            key={value}
-            id={`teacher-tab-${value}`}
-            role="tab"
-            aria-controls="teacher-detail-panel"
-            aria-selected={tab === value}
-            tabIndex={tab === value ? 0 : -1}
-            onKeyDown={(e) =>
-              tabKeyboard(
-                e,
-                index,
-                ['Overview', 'Documents'] as const,
-                (value) => setParams({ tab: value }),
-                (value) => `teacher-tab-${value}`,
-              )
-            }
-            onClick={() => setParams({ tab: value })}
-          >
-            {value}
-          </button>
-        ))}
-      </TabRail>
+      <SectionNavigation
+        label="Teacher detail"
+        value={tab}
+        onChange={(value) => setParams({ tab: value })}
+        items={[
+          { id: 'Overview', label: 'Overview', icon: 'overview' },
+          { id: 'Documents', label: 'Documents', icon: 'document' },
+        ]}
+      />
       <div id="teacher-detail-panel" role="tabpanel" aria-labelledby={`teacher-tab-${tab}`}>
         {tab === 'Overview' ? (
           <div className="ledger-stack">

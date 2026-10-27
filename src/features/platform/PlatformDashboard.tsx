@@ -1,3 +1,4 @@
+import SectionNavigation from '../../components/shared/SectionNavigation';
 import { displayTimestamp } from '../../lib/displayFormat';
 import OwnerRecovery from './OwnerRecovery';
 import { useCallback, useState } from 'react';
@@ -23,18 +24,16 @@ export default function PlatformDashboard() {
         title="Platform administration"
         description="Manage school registrations and accounts. Each school manages its own operations."
       />
-      <nav className="settings-tabs live-tabs" aria-label="Platform sections">
-        {['Schools', 'Accounts', 'Activity', 'My account'].map((name) => (
-          <Link
-            key={name}
-            className={tab === name ? 'active' : ''}
-            aria-current={tab === name ? 'page' : undefined}
-            to={`/platform?tab=${encodeURIComponent(name)}`}
-          >
-            {name}
-          </Link>
-        ))}
-      </nav>
+      <SectionNavigation
+        label="Platform sections"
+        value={tab}
+        items={[
+          { id: 'Schools', label: 'Schools', icon: 'overview-grid', to: '/platform?tab=Schools' },
+          { id: 'Accounts', label: 'Accounts', icon: 'users', to: '/platform?tab=Accounts' },
+          { id: 'Activity', label: 'Activity', icon: 'security', to: '/platform?tab=Activity' },
+          { id: 'My account', label: 'My account', icon: 'user-check', to: '/platform?tab=My%20account' },
+        ]}
+      />
       {tab === 'Schools' ? (
         <PlatformSchools />
       ) : tab === 'Accounts' ? (

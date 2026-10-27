@@ -259,8 +259,8 @@ function RoleEditor({
           value={permissionTab}
           onChange={setPermissionTab}
           items={[
-            { id: 'view', label: 'View' },
-            { id: 'manage', label: 'Manage' },
+            { id: 'view', label: 'View', icon: 'security' },
+            { id: 'manage', label: 'Manage', icon: 'edit' },
           ]}
         />
         <p>

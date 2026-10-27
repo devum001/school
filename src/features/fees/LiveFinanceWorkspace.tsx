@@ -31,6 +31,15 @@ import FeeStudentLedger from './FeeStudentLedger';
 import FeePayments from './FeePayments';
 import './fees-live.css';
 import '../../styles/ledgers.css';
+import type { IconName } from '../../components/ui/AppIcon';
+
+const LIVE_FINANCE_ICONS: Record<string, IconName> = {
+  Overview: 'overview',
+  'Student Fees': 'fees',
+  'Salary Expenses': 'wallet',
+  Transactions: 'receipt',
+};
+
 export default function LiveFinanceWorkspace() {
   const { schoolId, access } = useLiveSchool(),
     [params, setParams] = useSearchParams();
@@ -55,7 +64,7 @@ export default function LiveFinanceWorkspace() {
       <PageHeading title="Finance" />
       <SectionNavigation
         label="Finance"
-        items={tabs.map((t) => ({ id: t, label: t }))}
+        items={tabs.map((t) => ({ id: t, label: t, icon: LIVE_FINANCE_ICONS[t] || 'fees' }))}
         value={tab ?? ''}
         onChange={(value) =>
           setParams((previous) => {

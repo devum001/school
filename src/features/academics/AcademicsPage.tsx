@@ -1,8 +1,7 @@
-import TabRail from '../../components/ui/TabRail';
+import SectionNavigation from '../../components/shared/SectionNavigation';
 import { examClasses } from '../../lib/testScope';
 import { examGroups, matchesAcademicScope } from '../../lib/academicGroups';
 import ClassName from '../../components/shared/ClassName';
-import { tabKeyboard } from '../../lib/tabKeyboard';
 import { useState } from 'react';
 
 import { Link, useSearchParams } from 'react-router-dom';
@@ -111,48 +110,18 @@ export default function AcademicsPage() {
         }
       />
 
-      <TabRail className="academic-tabs academic-main-tabs" role="tablist" aria-label="Test and Result">
-        <button
-          role="tab"
-          id="academics-tab-tests"
-          tabIndex={!resultsView ? 0 : -1}
-          onKeyDown={(event) =>
-            tabKeyboard(
-              event,
-              0,
-              ['tests', 'results'],
-              (tab) =>
-                change({ view: tab === 'results' ? 'results' : null, test: null, marks: null }),
-              (tab) => `academics-tab-${tab}`,
-            )
-          }
-          aria-selected={!resultsView}
-          onClick={() => change({ view: null, test: null, marks: null })}
-        >
-          <AppIcon name="document" size={16} />
-          Recent Tests / Exams
-        </button>
-        <button
-          role="tab"
-          id="academics-tab-results"
-          tabIndex={resultsView ? 0 : -1}
-          onKeyDown={(event) =>
-            tabKeyboard(
-              event,
-              1,
-              ['tests', 'results'],
-              (tab) =>
-                change({ view: tab === 'results' ? 'results' : null, test: null, marks: null }),
-              (tab) => `academics-tab-${tab}`,
-            )
-          }
-          aria-selected={resultsView}
-          onClick={() => change({ view: 'results', test: null, marks: null })}
-        >
-          <AppIcon name="trophy" size={16} />
-          Results
-        </button>
-      </TabRail>
+      <SectionNavigation
+        label="Test and Result"
+        className="academic-tabs academic-main-tabs"
+        value={resultsView ? 'results' : 'tests'}
+        onChange={(tab) =>
+          change({ view: tab === 'results' ? 'results' : null, test: null, marks: null })
+        }
+        items={[
+          { id: 'tests', label: 'Recent Tests / Exams', icon: 'document' },
+          { id: 'results', label: 'Results', icon: 'trophy' },
+        ]}
+      />
 
       {!resultsView && (
         <div className="academic-context academic-test-search">

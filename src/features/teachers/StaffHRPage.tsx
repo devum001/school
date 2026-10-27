@@ -1,6 +1,6 @@
-import TabRail from '../../components/ui/TabRail';
+import SectionNavigation from '../../components/shared/SectionNavigation';
+import type { IconName } from '../../components/ui/AppIcon';
 import { useState } from 'react';
-import { tabKeyboard } from '../../lib/tabKeyboard';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
@@ -24,6 +24,11 @@ import StaffAttendancePage from '../attendance/StaffAttendancePage';
 import '../../styles/ledgers.css';
 
 const tabs = ['All Staff', 'Attendance', 'Leave'] as const;
+const STAFF_HR_ICONS: Record<(typeof tabs)[number], IconName> = {
+  'All Staff': 'staff',
+  Attendance: 'attendance',
+  Leave: 'document',
+};
 export default function StaffHRPage() {
   const state = useSchool(),
     today = useToday(),
@@ -68,30 +73,16 @@ export default function StaffHRPage() {
         title="Staff & HR"
         actions={<Button onClick={() => setAdding(true)}>Add Staff</Button>}
       />
-      <TabRail className="hr-tabs" role="tablist" aria-label="Staff & HR">
-        {tabs.map((value, index) => (
-          <button
-            key={value}
-            id={`hr-tab-${index}`}
-            role="tab"
-            aria-controls="hr-panel"
-            aria-selected={tab === value}
-            tabIndex={tab === value ? 0 : -1}
-            onKeyDown={(e) =>
-              tabKeyboard(
-                e,
-                index,
-                tabs,
-                (value) => update('tab', value),
-                (_, i) => `hr-tab-${i}`,
-              )
-            }
-            onClick={() => update('tab', value)}
-          >
-            {value}
-          </button>
-        ))}
-      </TabRail>
+      <SectionNavigation
+        label="Staff & HR"
+        value={tab}
+        onChange={(value) => update('tab', value)}
+        items={tabs.map((value) => ({
+          id: value,
+          label: value,
+          icon: STAFF_HR_ICONS[value] || 'staff',
+        }))}
+      />
       {focus && (
         <p className="panel-note">
           Viewing {members.find((member) => member.id === focus)?.name ?? 'selected staff'} ·{' '}

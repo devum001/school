@@ -1,4 +1,3 @@
-import TabRail from '../../components/ui/TabRail';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -26,7 +25,6 @@ import { salaryMonthSchema } from '../../lib/staffSalary';
 import { schoolMonthlyFinance } from '../../lib/schoolFinance';
 import { financeEntries } from '../../lib/financeLedger';
 import { downloadCsv } from '../../lib/download';
-import { tabKeyboard } from '../../lib/tabKeyboard';
 import type { GeneratedDocument } from '../../types/ledger';
 import FeesPage from './FeesPage';
 import StaffPage from '../teachers/StaffPage';
@@ -80,38 +78,23 @@ export default function FinanceWorkspace() {
   return (
     <div className="ledger-stack finance-workspace">
       <PageHeading title="Finance" />
-      <TabRail className="hr-tabs" role="tablist" aria-label="Finance">
-        {tabs.map((value, index) => (
-          <button
-            key={value}
-            id={`finance-tab-${index}`}
-            role="tab"
-            aria-controls="finance-panel"
-            aria-selected={value === tab}
-            tabIndex={value === tab ? 0 : -1}
-            onClick={() => update('tab', value)}
-            onKeyDown={(e) =>
-              tabKeyboard(
-                e,
-                index,
-                tabs,
-                (value) => update('tab', value),
-                (_, i) => `finance-tab-${i}`,
-              )
-            }
-          >
-            <AppIcon name={financeTabIcons[value]} size={16} />
-            {value}
-          </button>
-        ))}
-      </TabRail>
+      <SectionNavigation
+        label="Finance"
+        value={tab}
+        onChange={(value) => update('tab', value)}
+        items={tabs.map((value) => ({
+          id: value,
+          label: value,
+          icon: financeTabIcons[value],
+        }))}
+      />
       {tab === 'Overview' && (
         <SectionNavigation
           label="Finance overview views"
           items={[
-            { id: 'summary', label: 'Collections & Revenue' },
-            { id: 'salary', label: 'Salary Summary' },
-            { id: 'recent', label: 'Recent Transactions' },
+            { id: 'summary', label: 'Collections & Revenue', icon: 'wallet' },
+            { id: 'salary', label: 'Salary Summary', icon: 'finance-balance' },
+            { id: 'recent', label: 'Recent Transactions', icon: 'receipt' },
           ]}
           value={
             ['salary', 'recent'].includes(params.get('financeView') ?? '')

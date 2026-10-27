@@ -13,6 +13,13 @@ import {
 } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
 import SectionNavigation from '../../components/shared/SectionNavigation';
+import type { IconName } from '../../components/ui/Primitives';
+const HR_NAV_ICONS: Record<string, IconName> = {
+  salary: 'wallet',
+  attendance: 'attendance',
+  leave: 'document',
+  self: 'staff',
+};
 import { useToday } from '../../app/useToday';
 import { useLiveSchool } from '../live/schoolContext';
 import { useRemote } from '../live/useRemote';
@@ -162,7 +169,7 @@ export function HrWorkspace({
       {!settings && (
         <div className="hr-top-bar">
           {!hideNavigation && items.length > 1 && (
-            <SectionNavigation label="Staff & HR" items={items} value={tab} onChange={setTab} />
+            <SectionNavigation label="Staff & HR" items={items.map((i) => ({ ...i, icon: HR_NAV_ICONS[i.id] || ('staff' as const) }))} value={tab} onChange={setTab} />
           )}
           <label className="hr-month-corner">
             <span className="sr-only">

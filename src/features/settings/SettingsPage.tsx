@@ -1,6 +1,6 @@
-import TabRail from '../../components/ui/TabRail';
+import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useSearchParams } from 'react-router-dom';
-import { AppIcon, type IconName, PageHeading } from '../../components/ui/Primitives';
+import { type IconName, PageHeading } from '../../components/ui/Primitives';
 import type { ReactNode } from 'react';
 import './settings.css';
 import '../../styles/admin-settings.css';
@@ -54,36 +54,16 @@ export default function SettingsPage({
   return (
     <div className="school-settings">
       <PageHeading title="School settings" />
-      <nav className="settings-tabs" aria-label="School settings sections">
-        <TabRail role="tablist" aria-label="Settings">
-          {tabs.map((label, index) => (
-            <button
-              key={label}
-              type="button"
-              role="tab"
-              id={`settings-tab-${index}`}
-              aria-controls="settings-content"
-              aria-selected={tab === label}
-              tabIndex={tab === label ? 0 : -1}
-              onClick={() => selectTab(label)}
-              onKeyDown={(event) => {
-                let next: number;
-                if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
-                else if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
-                else if (event.key === 'Home') next = 0;
-                else if (event.key === 'End') next = tabs.length - 1;
-                else return;
-                event.preventDefault();
-                selectTab(tabs[next]);
-                document.getElementById(`settings-tab-${next}`)?.focus();
-              }}
-            >
-              <AppIcon name={TAB_ICONS[label] ?? 'settings'} size={18} />
-              <span>{label === 'Classes, Sections & Grades' ? 'Classes & sections' : label}</span>
-            </button>
-          ))}
-        </TabRail>
-      </nav>
+      <SectionNavigation
+        label="School settings sections"
+        items={tabs.map((label) => ({
+          id: label,
+          label: label === 'Classes, Sections & Grades' ? 'Classes & sections' : label,
+          icon: TAB_ICONS[label] ?? 'settings',
+        }))}
+        value={tab}
+        onChange={selectTab}
+      />
       <div
         id="settings-content"
         role="tabpanel"

@@ -2,6 +2,15 @@ import { useCallback } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { Button, LoadingOverlay, Panel, StatCard } from '../../components/ui/Primitives';
 import SectionNavigation from '../../components/shared/SectionNavigation';
+import type { IconName } from '../../components/ui/Primitives';
+const SETTINGS_ICONS: Record<string, IconName> = {
+  General: 'settings',
+  'Classes, Sections & Grades': 'graduation-cap',
+  'Academic years': 'document',
+  'Staff & Payroll': 'staff',
+  'Roles & Permissions': 'security',
+  'Data & Security': 'security',
+};
 import LiveSchoolProfile from '../settings/LiveSchoolProfile';
 import LiveClassStructure from '../settings/LiveClassStructure';
 import LiveStudents from '../students/LiveStudents';
@@ -181,7 +190,7 @@ function SchoolWorkspace({ schoolId }: { schoolId: string }) {
     <>
       <nav className="settings-tabs" aria-label="School settings sections">
         <SectionNavigation
-          items={available.map((s) => ({ id: s.name, label: s.name }))}
+          items={available.map((s) => ({ id: s.name, label: s.name, icon: SETTINGS_ICONS[s.name] || 'settings' }))}
           value={active}
           onChange={choose}
           label="Settings"

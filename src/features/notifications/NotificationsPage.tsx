@@ -1,3 +1,4 @@
+import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useToday } from '../../app/useToday';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -69,16 +70,15 @@ export default function NotificationsPage() {
           </Badge>
         }
       />
-      <div className="tabs">
-        <button className={tab === 'compose' ? 'active' : ''} onClick={() => setTab('compose')}>
-          <AppIcon name="send" size={16} />
-          Compose notice
-        </button>
-        <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
-          <AppIcon name="inbox" size={16} />
-          Notification history <span>{state.notifications.length}</span>
-        </button>
-      </div>
+      <SectionNavigation
+        label="Notifications"
+        value={tab}
+        onChange={(value: string) => setTab(value as 'compose' | 'history')}
+        items={[
+          { id: 'compose', label: 'Compose notice', icon: 'send' },
+          { id: 'history', label: 'Notification history', icon: 'inbox', badge: state.notifications.length },
+        ]}
+      />
       <div className="info-banner">
         <AppIcon name="security" size={18} />
         <span>

@@ -204,8 +204,8 @@ export default function ResultsView({
       <SectionNavigation
         label="Result views"
         items={[
-          { id: 'overall', label: 'Overall Leaderboard' },
-          { id: 'recent', label: 'Recent Results' },
+          { id: 'overall', label: 'Overall Leaderboard', icon: 'trophy' },
+          { id: 'recent', label: 'Recent Results', icon: 'document' },
         ]}
         value={recentView ? 'recent' : 'overall'}
         onChange={(value) =>

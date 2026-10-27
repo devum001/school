@@ -1,4 +1,4 @@
-import TabRail from '../../components/ui/TabRail';
+import SectionNavigation from '../../components/shared/SectionNavigation';
 import { StudentProfileBridge } from './studentProfileBridge';
 import { useContext, useState } from 'react';
 import StudentDialog from './StudentDialog';
@@ -156,35 +156,29 @@ export default function StudentProfilePage() {
           onDeleted={() => navigate('/students')}
         />
       )}
-      <TabRail className="tabs profile-tabs" role="tablist" aria-label="Student profile tabs">
-        {tabs
+      <SectionNavigation
+        label="Student profile tabs"
+        value={tab}
+        onChange={(t) =>
+          setParams((previous) => {
+            const next = new URLSearchParams(previous);
+            next.set('tab', t);
+            return next;
+          })
+        }
+        items={tabs
           .filter(
             (t) =>
               !bridge ||
               !['attendance', 'academics', 'fees'].includes(t) ||
               bridge[t as 'attendance' | 'academics' | 'fees'],
           )
-          .map((t) => (
-            <button
-              role="tab"
-              aria-selected={tab === t}
-              id={`tab-${t}`}
-              aria-controls={`panel-${t}`}
-              key={t}
-              className={tab === t ? 'active' : ''}
-              onClick={() =>
-                setParams((previous) => {
-                  const next = new URLSearchParams(previous);
-                  next.set('tab', t);
-                  return next;
-                })
-              }
-            >
-              <AppIcon name={tabIcons[t]} size={16} />
-              {t === 'academics' ? 'Progress Report' : t[0].toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-      </TabRail>
+          .map((t) => ({
+            id: t,
+            label: t === 'academics' ? 'Progress Report' : t[0].toUpperCase() + t.slice(1),
+            icon: tabIcons[t],
+          }))}
+      />
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === 'overview' && (
           <>

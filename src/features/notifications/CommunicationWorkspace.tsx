@@ -1,4 +1,4 @@
-import TabRail from '../../components/ui/TabRail';
+import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
@@ -106,33 +106,16 @@ export default function CommunicationWorkspace() {
           </Link>
         }
       />
-      <TabRail className="communication-tabs" role="tablist" aria-label="Notifications">
-        {tabs.map((value, index) => (
-          <button
-            role="tab"
-            key={value}
-            id={`communication-tab-${index}`}
-            aria-controls="communication-panel"
-            aria-selected={tab === value}
-            tabIndex={tab === value ? 0 : -1}
-            onClick={() => chooseTab(value)}
-            onKeyDown={(e) => {
-              if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
-              e.preventDefault();
-              const next =
-                e.key === 'Home'
-                  ? 0
-                  : e.key === 'End'
-                    ? tabs.length - 1
-                    : (index + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
-              chooseTab(tabs[next]);
-              document.getElementById(`communication-tab-${next}`)?.focus();
-            }}
-          >
-            {value}
-          </button>
-        ))}
-      </TabRail>
+      <SectionNavigation
+        label="Notifications"
+        value={tab}
+        onChange={chooseTab}
+        items={tabs.map((value) => ({
+          id: value,
+          label: value,
+          icon: value === 'History' ? 'inbox' : 'send',
+        }))}
+      />
       {error && (
         <p className="form-error" role="alert">
           {error}

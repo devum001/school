@@ -22,6 +22,16 @@ import { LoadState, Paging, ConfirmAction } from '../setup/SetupControls';
 import RosterWorkspace from '../setup/RosterWorkspace';
 import PeopleRelations from '../setup/PeopleRelations';
 import SectionNavigation from '../../components/shared/SectionNavigation';
+import type { IconName } from '../../components/ui/Primitives';
+const STAFF_NAV_ICONS: Record<string, IconName> = {
+  directory: 'staff',
+  import: 'upload',
+  attendance: 'attendance',
+  leave: 'document',
+  salary: 'wallet',
+  self: 'staff',
+  assignments: 'document',
+};
 import { useDraftGuard } from '../academics/useDraftGuard';
 import { useToday } from '../../app/useToday';
 import { readProfileImage } from '../../lib/fileUploads';
@@ -83,7 +93,7 @@ export default function LiveStaff({
         />
       )}
       <SectionNavigation
-        items={items}
+        items={items.map((i) => ({ ...i, icon: STAFF_NAV_ICONS[i.id] || ('staff' as const) }))}
         value={section}
         onChange={(value) =>
           setParams((previous) => {
