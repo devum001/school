@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { Bus, Building2 } from 'lucide-react';
 import { Button, Modal, Panel, LoadingOverlay } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
 import {
@@ -15,6 +16,7 @@ import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import { money } from '../../lib/config';
 import FeePayments from './FeePayments';
 import FeeSetupDialog, { AmountField } from './FeeSetupDialog';
+
 export default function FeeStudentLedger({
   schoolId,
   context,
@@ -87,61 +89,91 @@ export default function FeeStudentLedger({
                 )}
               </div>
             </div>
-            {state.data.accounts.map((a) => (
-              <Panel
-                key={a.id}
-                title={`${a.yearName}${a.historical ? ' · Opening dues' : ''}`}
-                subtitle={a.reason || 'Student fee agreement'}
-                action={
-                  a.historical && can('fees.manage') ? (
-                    <Button variant="secondary" onClick={() => setCorrection(a)}>
-                      Correct opening balance
-                    </Button>
-                  ) : undefined
-                }
-              >
-                <div className="fee-account-summary">
-                  <span>
-                    Agreed: <strong>{money(a.baseFee - a.concession - a.scholarship)}</strong>
-                  </span>
-                  <span>
-                    Concession / scholarship: <strong>{money(a.concession + a.scholarship)}</strong>
-                  </span>
-                  <span>
-                    Outstanding: <strong>{money(accountBalance(a))}</strong>
-                  </span>
-                </div>
-                {a.asOf && (
-                  <p className="panel-padding">
-                    Balance recorded on {formatCalendarDate(a.asOf)}. These are not new collections.
-                  </p>
-                )}
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Due date</th>
-                        <th className="currency-cell">Amount due</th>
-                        <th className="currency-cell">Previously paid</th>
-                        <th className="currency-cell">Collected</th>
-                        <th className="currency-cell">Remaining</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {a.installments.map((i) => (
-                        <tr key={i.id}>
-                          <td>{formatCalendarDate(i.dueDate)}</td>
-                          <td className="currency-cell">{money(i.amount)}</td>
-                          <td className="currency-cell">{money(i.openingPaid)}</td>
-                          <td className="currency-cell">{money(i.paid)}</td>
-                          <td className="currency-cell">{money(installmentBalance(i))}</td>
+            {state.data.accounts.map((a) => {
+              const busPaise = a.transportFee ?? 0;
+              const hostelPaise = a.hostelFee ?? 0;
+              const hasFacilities = Boolean(
+                a.transportActive || busPaise > 0 || a.hostelActive || hostelPaise > 0,
+              );
+              const tuitionPaise =
+                a.tuitionFee !== undefined && a.tuitionFee > 0
+                  ? a.tuitionFee
+                  : Math.max(0, a.baseFee - busPaise - hostelPaise);
+              return (
+                <Panel
+                  key={a.id}
+                  title={`${a.yearName}${a.historical ? ' · Opening dues' : ''}`}
+                  subtitle={a.reason || 'Student fee agreement'}
+                  action={
+                    a.historical && can('fees.manage') ? (
+                      <Button variant="secondary" onClick={() => setCorrection(a)}>
+                        Correct opening balance
+                      </Button>
+                    ) : undefined
+                  }
+                >
+                  <div className="fee-account-summary">
+                    {hasFacilities && (
+                      <span>
+                        Tuition: <strong>{money(tuitionPaise)}</strong>
+                      </span>
+                    )}
+                    {(a.transportActive || busPaise > 0) && (
+                      <span className="fee-facility-badge">
+                        <Bus size={14} /> Bus ({a.transportMonths || 12}m
+                        {a.transportRoute ? ` · ${a.transportRoute}` : ''}):{' '}
+                        <strong>{money(busPaise)}</strong>
+                      </span>
+                    )}
+                    {(a.hostelActive || hostelPaise > 0) && (
+                      <span className="fee-facility-badge">
+                        <Building2 size={14} /> Hostel ({a.hostelMonths || 12}m
+                        {a.hostelRoom ? ` · ${a.hostelRoom}` : ''}):{' '}
+                        <strong>{money(hostelPaise)}</strong>
+                      </span>
+                    )}
+                    <span>
+                      Agreed: <strong>{money(a.baseFee - a.concession - a.scholarship)}</strong>
+                    </span>
+                    <span>
+                      Concession / scholarship: <strong>{money(a.concession + a.scholarship)}</strong>
+                    </span>
+                    <span>
+                      Outstanding: <strong>{money(accountBalance(a))}</strong>
+                    </span>
+                  </div>
+                  {a.asOf && (
+                    <p className="panel-padding">
+                      Balance recorded on {formatCalendarDate(a.asOf)}. These are not new collections.
+                    </p>
+                  )}
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Due date</th>
+                          <th className="currency-cell">Amount due</th>
+                          <th className="currency-cell">Previously paid</th>
+                          <th className="currency-cell">Collected</th>
+                          <th className="currency-cell">Remaining</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Panel>
-            ))}
+                      </thead>
+                      <tbody>
+                        {a.installments.map((i) => (
+                          <tr key={i.id}>
+                            <td>{formatCalendarDate(i.dueDate)}</td>
+                            <td className="currency-cell">{money(i.amount)}</td>
+                            <td className="currency-cell">{money(i.openingPaid)}</td>
+                            <td className="currency-cell">{money(i.paid)}</td>
+                            <td className="currency-cell">{money(installmentBalance(i))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Panel>
+              );
+            })}
             {!state.data.accounts.length && (
               <div className="fee-callout">
                 <p>Fees have not been set up. This student is not marked as paid.</p>
@@ -235,6 +267,7 @@ export default function FeeStudentLedger({
     </section>
   );
 }
+
 function CollectPayment({
   schoolId,
   context,
@@ -257,6 +290,7 @@ function CollectPayment({
         .map((i) => ({
           accountId: a.id!,
           yearName: a.yearName,
+          historical: a.historical || a.academicYearId !== context.yearId,
           installmentId: i.id,
           dueDate: i.dueDate,
           balance: installmentBalance(i),
@@ -281,6 +315,13 @@ function CollectPayment({
       amount > 0 &&
       amount === allocated &&
       allocations.every((a) => a.amount >= 0 && a.amount <= a.balance);
+
+  const totalPendingPaise = pending.reduce((s, i) => s + i.balance, 0);
+  const oldDuesPendingPaise = pending
+    .filter((i) => i.historical)
+    .reduce((s, i) => s + i.balance, 0);
+  const nextDuePaise = pending[0]?.balance ?? 0;
+
   return (
     <Modal
       open
@@ -334,6 +375,53 @@ function CollectPayment({
           <div />
         </LoadingOverlay>
         <>
+          <div className="fee-quick-split-bar" style={{ marginBottom: 4 }}>
+            <span>Quick fill:</span>
+            {nextDuePaise > 0 && (
+              <button
+                type="button"
+                className="fee-split-pill"
+                onClick={() => {
+                  setCustom(false);
+                  setAmount(nextDuePaise);
+                }}
+              >
+                Next installment ({money(nextDuePaise)})
+              </button>
+            )}
+            {totalPendingPaise > nextDuePaise && (
+              <button
+                type="button"
+                className="fee-split-pill rebalance"
+                onClick={() => {
+                  setCustom(false);
+                  setAmount(totalPendingPaise);
+                }}
+              >
+                Pay full remaining lump-sum ({money(totalPendingPaise)})
+              </button>
+            )}
+            {oldDuesPendingPaise > 0 && oldDuesPendingPaise !== totalPendingPaise && (
+              <button
+                type="button"
+                className="fee-split-pill"
+                onClick={() => {
+                  setCustom(true);
+                  const oldMap = Object.fromEntries(
+                    pending.map((p) => [
+                      `${p.accountId}:${p.installmentId}`,
+                      p.historical ? p.balance : 0,
+                    ]),
+                  );
+                  setChosen(oldMap);
+                  setAmount(oldDuesPendingPaise);
+                }}
+              >
+                Clear previous-year dues ({money(oldDuesPendingPaise)})
+              </button>
+            )}
+          </div>
+
           <div className="fee-form-grid">
             <AmountField label="Amount received (₹)" value={amount} onChange={setAmount} />
             <label className="field">
@@ -399,8 +487,8 @@ function CollectPayment({
                     {a.yearName}
                     <small>{formatCalendarDate(a.dueDate)}</small>
                   </th>
-                  <td>{money(a.balance)}</td>
-                  <td>
+                  <td className="currency-cell">{money(a.balance)}</td>
+                  <td className="currency-cell">
                     {custom ? (
                       <input
                         aria-label={`Allocate ${a.yearName} ${a.dueDate}`}

@@ -177,3 +177,98 @@
     flex-basis: 100%;
   }
 }
+
+/* Unified Single + Bulk School Fee Setup Styles */
+.fee-setup-top-stack {
+  display: grid;
+  gap: 16px;
+}
+.fee-quick-bulk-box {
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: #f4f8f7;
+  border: 1px solid var(--border, #d3ddda);
+  display: grid;
+  gap: 14px;
+}
+.fee-quick-bulk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+}
+.fee-quick-bulk-header strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--school-forest, #12373b);
+  font-size: 14px;
+}
+.fee-quick-bulk-header span {
+  color: var(--muted, #617471);
+}
+.fee-quick-bulk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+.fee-inline-pair {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.fee-inline-pair select,
+.fee-inline-pair input {
+  min-width: 0;
+}
+.fee-quick-bulk-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.fee-th-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.fee-cell-facility {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 145px;
+}
+.fee-cell-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--school-forest, #12373b);
+  cursor: pointer;
+}
+.fee-cell-check input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--school-forest, #12373b);
+}
+.fee-cell-facility-inputs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.fee-cell-facility-inputs input {
+  width: 82px !important;
+  padding: 6px 8px !important;
+}
+.fee-cell-facility-inputs select {
+  width: 66px !important;
+  padding: 6px 4px !important;
+}
+.fee-row-dirty {
+  background: #f2f9f5 !important;
+}

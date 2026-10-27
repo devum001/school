@@ -1,18 +1,28 @@
+import { useEffect, useState } from 'react';
 import { ApiError } from '../../services/apiService';
 import {
   focusStudentError,
   validateStudentForm,
   type StudentFieldErrors,
 } from './studentFormValidation';
-import { useState } from 'react';
 import { Button, Modal } from '../../components/ui/Primitives';
 import { useToday } from '../../app/useToday';
 import { useFeedback } from '../../app/useFeedback';
 import { productApi, type StudentRow } from '../../services/productService';
 import type { onboardingApi } from '../../services/onboardingService';
 import type { StudentInput } from '../../lib/management';
+import {
+  feeAgreementFromDraft,
+  feePlanDraft,
+  feePlanDraftFromLedger,
+  previousYearOpeningRow,
+  type FeePlanDraft,
+} from '../../lib/feePlanDraft';
+import { feeApi } from '../../services/feeService';
 import { useDraftGuard } from '../academics/useDraftGuard';
+import FeePlanEditor from './FeePlanEditor';
 import StudentFields from './StudentFields';
+
 export default function LiveStudentForm({
   schoolId,
   yearId,
@@ -44,6 +54,9 @@ export default function LiveStudentForm({
       .filter((c) => c.status === 'active')
       .map((s) => ({ ...s, teacherId: s.teacherId ?? '' }));
   const classId = existing?.classId || initialClassId || classes[0]?.id || '';
+  const defaultDueDate =
+    today < snapshot.year.start ? snapshot.year.start : today;
+
   const [initial] = useState<StudentInput>(() => ({
     name: existing?.student.name ?? '',
     admissionNumber: existing?.student.code ?? '',
@@ -61,8 +74,42 @@ export default function LiveStudentForm({
       : initialSectionId || sections.find((s) => s.classId === classId)?.id || '',
     rollNumber: existing?.rollNumber ?? 0,
   }));
-  const [draft, setDraft] = useState(initial),
-    guard = useDraftGuard(JSON.stringify(initial) !== JSON.stringify(draft) && !busy, close);
+  const [draft, setDraft] = useState(initial);
+  const [initialFees, setInitialFees] = useState<FeePlanDraft>(() =>
+    feePlanDraft(undefined, defaultDueDate),
+  );
+  const [fees, setFees] = useState<FeePlanDraft>(() =>
+    feePlanDraft(undefined, defaultDueDate),
+  );
+
+  useEffect(() => {
+    if (!existing?.student.id) return;
+    const controller = new AbortController();
+    feeApi
+      .student(schoolId, existing.student.id, controller.signal)
+      .then((ledger) => {
+        if (controller.signal.aborted) return;
+        const loaded = feePlanDraftFromLedger(ledger, yearId, defaultDueDate);
+        setInitialFees(loaded);
+        setFees(loaded);
+      })
+      .catch(() => {
+        /* Keep default blank fee form if student fee ledger could not be fetched */
+      });
+    return () => controller.abort();
+  }, [existing?.student.id, schoolId, yearId, defaultDueDate]);
+
+  const feesChanged = JSON.stringify(fees) !== JSON.stringify(initialFees);
+  const hasFeeAmount =
+    Math.round(Number(fees.totalFee || 0) * 100) > 0 ||
+    Math.round(Number(fees.tuitionFee || 0) * 100) > 0 ||
+    (Boolean(fees.transportActive) && Math.round(Number(fees.transportFee || 0) * 100) > 0) ||
+    (Boolean(fees.hostelActive) && Math.round(Number(fees.hostelFee || 0) * 100) > 0);
+
+  const dirty =
+    JSON.stringify(initial) !== JSON.stringify(draft) || feesChanged;
+  const guard = useDraftGuard(dirty && !busy, close);
+
   return (
     <Modal
       open
@@ -74,7 +121,7 @@ export default function LiveStudentForm({
       title={
         guard.confirming ? 'Discard student changes?' : existing ? 'Edit student' : 'Add student'
       }
-      description="Keep student details, guardian contact and enrollment together."
+      description="Keep student details, guardian contact, enrollment, and fee setup together."
     >
       {guard.confirming ? (
         <div className="modal-actions">
@@ -86,7 +133,7 @@ export default function LiveStudentForm({
       ) : (
         <form
           noValidate
-          data-unsaved={JSON.stringify(initial) !== JSON.stringify(draft)}
+          data-unsaved={dirty}
           onSubmit={async (e) => {
             e.preventDefault();
             if (busy) return;
@@ -105,7 +152,7 @@ export default function LiveStudentForm({
             setBusy(true);
             setError('');
             try {
-              await productApi.saveStudent(
+              const savedPerson = await productApi.saveStudent(
                 schoolId,
                 yearId,
                 draft.classId,
@@ -123,6 +170,33 @@ export default function LiveStudentForm({
                 existing?.student,
                 { status: draft.status, enrollmentRevision: existing?.revision },
               );
+
+              if (!existing || feesChanged) {
+                const agreement = feeAgreementFromDraft(
+                  savedPerson.id,
+                  fees,
+                  defaultDueDate,
+                );
+                if (agreement) {
+                  await feeApi.agreements(schoolId, yearId, [agreement]);
+                }
+                const oldDuePaise = Math.max(
+                  0,
+                  Math.round(Number(fees.previousDueAmount || 0) * 100),
+                );
+                if (!fees.hasExistingPreviousDue && oldDuePaise > 0) {
+                  await feeApi.opening(schoolId, yearId, [
+                    previousYearOpeningRow(
+                      savedPerson.id,
+                      oldDuePaise,
+                      snapshot.year.start,
+                      today,
+                      fees.previousDueYearName,
+                    ),
+                  ]);
+                }
+              }
+
               guard.complete(saved);
               notify('Student saved.');
             } catch (cause) {
@@ -156,6 +230,15 @@ export default function LiveStudentForm({
               selected class and section. The numeric part must be unique: SH-12 and AB-12 count as
               the same identifier.
             </p>
+            <FeePlanEditor
+              value={fees}
+              onChange={(nextFees) => {
+                setFees(nextFees);
+                setError('');
+              }}
+              required={hasFeeAmount}
+              defaultDueDate={defaultDueDate}
+            />
             {error && (
               <p role="alert" className="form-error">
                 {error}

@@ -19,6 +19,15 @@ const account = z.object({
   historical: z.boolean(),
   revision: z.number(),
   baseFee: z.number(),
+  tuitionFee: z.number().optional(),
+  transportFee: z.number().optional(),
+  transportActive: z.boolean().optional(),
+  transportRoute: z.string().optional(),
+  transportMonths: z.number().optional(),
+  hostelFee: z.number().optional(),
+  hostelActive: z.boolean().optional(),
+  hostelRoom: z.string().optional(),
+  hostelMonths: z.number().optional(),
   concession: z.number(),
   scholarship: z.number(),
   reason: z.string(),
@@ -120,6 +129,15 @@ export type FeeAgreement = {
   studentId: string;
   revision: number;
   baseFee: number;
+  tuitionFee?: number;
+  transportFee?: number;
+  transportActive?: boolean;
+  transportRoute?: string;
+  transportMonths?: number;
+  hostelFee?: number;
+  hostelActive?: boolean;
+  hostelRoom?: string;
+  hostelMonths?: number;
   concession: number;
   scholarship: number;
   reason: string;
@@ -299,6 +317,88 @@ export function makeInstallments(total: number, count: number, date: string, int
       dueDate: next.toISOString().slice(0, 10),
     };
   });
+}
+
+export function rebalanceInstallments(
+  targetNet: number,
+  currentInstallments: { id: string; amount: number; dueDate: string }[],
+  existingInstallments: {
+    id: string;
+    amount: number;
+    dueDate: string;
+    paid?: number;
+    openingPaid?: number;
+  }[] = [],
+  fallbackDueDate = new Date().toISOString().slice(0, 10),
+): { id: string; amount: number; dueDate: string }[] {
+  if (targetNet <= 0) {
+    const firstDue = currentInstallments[0]?.dueDate || fallbackDueDate;
+    return [{ id: currentInstallments[0]?.id || 'installment-1', amount: 0, dueDate: firstDue }];
+  }
+  const paidMap = new Map(
+    existingInstallments.map((inst) => [inst.id, (inst.paid ?? 0) + (inst.openingPaid ?? 0)]),
+  );
+  const baseRows =
+    currentInstallments.length > 0
+      ? currentInstallments.map((inst) => ({ ...inst }))
+      : makeInstallments(targetNet, 1, fallbackDueDate, 1);
+
+  for (const old of existingInstallments) {
+    const settled = (old.paid ?? 0) + (old.openingPaid ?? 0);
+    if (settled > 0 && !baseRows.some((r) => r.id === old.id)) {
+      baseRows.unshift({ id: old.id, amount: Math.max(old.amount, settled), dueDate: old.dueDate });
+    }
+  }
+
+  const totalSettled = Array.from(paidMap.values()).reduce((sum, v) => sum + v, 0);
+  const effectiveTarget = Math.max(targetNet, totalSettled);
+
+  const unpaidIndices: number[] = [];
+  let lockedSum = 0;
+  baseRows.forEach((row, idx) => {
+    const settled = paidMap.get(row.id) ?? 0;
+    if (settled > 0) {
+      row.amount = settled;
+      lockedSum += settled;
+    } else {
+      unpaidIndices.push(idx);
+    }
+  });
+
+  const remainingToDistribute = Math.max(0, effectiveTarget - lockedSum);
+
+  if (unpaidIndices.length > 0) {
+    if (remainingToDistribute === 0) {
+      if (lockedSum > 0) {
+        return baseRows.filter((row) => (paidMap.get(row.id) ?? 0) > 0);
+      }
+      baseRows[unpaidIndices[0]].amount = effectiveTarget;
+      return [baseRows[unpaidIndices[0]]];
+    }
+    const count = unpaidIndices.length;
+    const each = Math.floor(remainingToDistribute / count);
+    const rem = remainingToDistribute - each * count;
+    if (each === 0) {
+      const firstIdx = unpaidIndices[0];
+      baseRows[firstIdx].amount = remainingToDistribute;
+      return baseRows.filter((_, idx) => !unpaidIndices.slice(1).includes(idx));
+    }
+    unpaidIndices.forEach((rowIdx, i) => {
+      baseRows[rowIdx].amount = each + (i < rem ? 1 : 0);
+    });
+    return baseRows;
+  }
+
+  if (remainingToDistribute > 0) {
+    const lastDue = baseRows[baseRows.length - 1]?.dueDate || fallbackDueDate;
+    const nextDate = makeInstallments(remainingToDistribute, 2, lastDue, 1)[1]?.dueDate || lastDue;
+    baseRows.push({
+      id: `installment-${baseRows.length + 1}`,
+      amount: remainingToDistribute,
+      dueDate: nextDate,
+    });
+  }
+  return baseRows;
 }
 
 /** Due dates determine order, never whether an early payment may be allocated. */

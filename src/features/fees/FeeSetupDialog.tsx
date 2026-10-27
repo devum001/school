@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, Layers3 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bus, Building2, CheckCircle2, Layers3, Sparkles } from 'lucide-react';
 import { Button, Modal, LoadingOverlay } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
 import {
   feeApi,
   makeInstallments,
+  rebalanceInstallments,
   type FeeAgreement,
   type FeeContext,
   type FeeStudentRow,
@@ -12,6 +13,7 @@ import {
 import { money } from '../../lib/config';
 import { titleCase } from '../../lib/displayFormat';
 import { useDraftGuard } from '../academics/useDraftGuard';
+
 export function AmountField({
   label,
   value,
@@ -40,6 +42,7 @@ export function AmountField({
     </label>
   );
 }
+
 export default function FeeSetupDialog({
   schoolId,
   context,
@@ -59,6 +62,14 @@ export default function FeeSetupDialog({
   const editing = students.length === 1 && Boolean(students[0].account);
   const [step, setStep] = useState(editing ? 2 : 1),
     [base, setBase] = useState(0),
+    [transportActive, setTransportActive] = useState(false),
+    [transportFee, setTransportFee] = useState(0),
+    [transportMonths, setTransportMonths] = useState(12),
+    [transportRoute, setTransportRoute] = useState(''),
+    [hostelActive, setHostelActive] = useState(false),
+    [hostelFee, setHostelFee] = useState(0),
+    [hostelMonths, setHostelMonths] = useState(12),
+    [hostelRoom, setHostelRoom] = useState(''),
     [discount, setDiscount] = useState(0),
     [scholarship, setScholarship] = useState(0),
     [reason, setReason] = useState(''),
@@ -67,29 +78,74 @@ export default function FeeSetupDialog({
     [interval, setInterval] = useState(3),
     [date, setDate] = useState(context.today < year.start ? year.start : context.today);
   const asOf = context.today;
+
   const [rows, setRows] = useState<FeeAgreement[]>(
-    students.map((s) => ({
-      studentId: s.id,
-      revision: s.account?.revision ?? -1,
-      baseFee: s.account?.baseFee ?? 0,
-      concession: s.account?.concession ?? 0,
-      scholarship: s.account?.scholarship ?? 0,
-      reason: s.account?.reason ?? '',
-      openingPaid: s.account?.installments.reduce((sum, i) => sum + i.openingPaid, 0) ?? 0,
-      asOf: s.account?.asOf ?? '',
-      installments:
-        s.account?.installments.map((i) => ({ id: i.id, amount: i.amount, dueDate: i.dueDate })) ??
-        [],
-    })),
+    students.map((s) => {
+      const acc = s.account;
+      const tFee = acc?.transportFee ?? 0;
+      const hFee = acc?.hostelFee ?? 0;
+      const tuiFee =
+        acc?.tuitionFee !== undefined && acc.tuitionFee > 0
+          ? acc.tuitionFee
+          : Math.max(0, (acc?.baseFee ?? 0) - tFee - hFee);
+      return {
+        studentId: s.id,
+        revision: acc?.revision ?? -1,
+        baseFee: acc?.baseFee ?? 0,
+        tuitionFee: tuiFee,
+        transportActive: Boolean(acc?.transportActive || tFee > 0),
+        transportFee: tFee,
+        transportMonths: acc?.transportMonths || 12,
+        transportRoute: acc?.transportRoute ?? '',
+        hostelActive: Boolean(acc?.hostelActive || hFee > 0),
+        hostelFee: hFee,
+        hostelMonths: acc?.hostelMonths || 12,
+        hostelRoom: acc?.hostelRoom ?? '',
+        concession: acc?.concession ?? 0,
+        scholarship: acc?.scholarship ?? 0,
+        reason: acc?.reason ?? '',
+        openingPaid: acc?.installments.reduce((sum, i) => sum + i.openingPaid, 0) ?? 0,
+        asOf: acc?.asOf ?? '',
+        installments:
+          acc?.installments.map((i) => ({ id: i.id, amount: i.amount, dueDate: i.dueDate })) ?? [],
+      };
+    }),
   );
+
   const [reviewPage, setReviewPage] = useState(1);
-  const [expanded, setExpanded] = useState<string | null>(null),
+  const [expanded, setExpanded] = useState<string | null>(editing ? students[0].id : null),
     [busy, setBusy] = useState(false),
     [completed, setCompleted] = useState(0),
     [error, setError] = useState('');
   const guard = useDraftGuard(step > 1 && completed < rows.length, close);
+
   const update = (id: string, patch: Partial<FeeAgreement>) =>
     setRows((old) => old.map((r) => (r.studentId === id ? { ...r, ...patch } : r)));
+
+  const updateWithRebalance = (id: string, patch: Partial<FeeAgreement>) => {
+    setRows((old) =>
+      old.map((r) => {
+        if (r.studentId !== id) return r;
+        const next = { ...r, ...patch };
+        const studentAcc = students.find((s) => s.id === id)?.account;
+        const targetNet = Math.max(0, next.baseFee - next.concession - next.scholarship);
+        const rebalanced = rebalanceInstallments(
+          targetNet,
+          next.installments.length
+            ? next.installments
+            : makeInstallments(targetNet, count, date, interval),
+          studentAcc?.installments ?? [],
+          next.installments[0]?.dueDate || date,
+        );
+        return {
+          ...next,
+          ...(r.revision < 0 ? { asOf: next.openingPaid > 0 ? r.asOf || asOf : '' } : {}),
+          installments: rebalanced,
+        };
+      }),
+    );
+  };
+
   const validate = () =>
     rows.every(
       (r) =>
@@ -100,6 +156,7 @@ export default function FeeSetupDialog({
         r.installments.reduce((s, i) => s + i.amount, 0) ===
           r.baseFee - r.concession - r.scholarship,
     );
+
   const submit = async () => {
     if (!validate()) {
       setError(
@@ -127,6 +184,10 @@ export default function FeeSetupDialog({
       setBusy(false);
     }
   };
+
+  const stepOneGross =
+    base + (transportActive ? transportFee : 0) + (hostelActive ? hostelFee : 0);
+
   return (
     <Modal
       open
@@ -158,7 +219,7 @@ export default function FeeSetupDialog({
           onSubmit={(e) => {
             e.preventDefault();
             if (step === 1) {
-              if (base < discount + scholarship) {
+              if (stepOneGross < discount + scholarship) {
                 setError('Discounts cannot exceed the base fee.');
                 return;
               }
@@ -168,13 +229,22 @@ export default function FeeSetupDialog({
                     ? r
                     : {
                         ...r,
-                        baseFee: base,
+                        baseFee: stepOneGross,
+                        tuitionFee: base,
+                        transportActive,
+                        transportFee: transportActive ? transportFee : 0,
+                        transportMonths: transportActive ? transportMonths : 0,
+                        transportRoute: transportActive ? transportRoute : '',
+                        hostelActive,
+                        hostelFee: hostelActive ? hostelFee : 0,
+                        hostelMonths: hostelActive ? hostelMonths : 0,
+                        hostelRoom: hostelActive ? hostelRoom : '',
                         concession: discount,
                         scholarship,
                         reason,
                         asOf: '',
                         installments: makeInstallments(
-                          base - discount - scholarship,
+                          stepOneGross - discount - scholarship,
                           installmentMode ? count : 1,
                           date,
                           interval,
@@ -205,8 +275,8 @@ export default function FeeSetupDialog({
                 <div>
                   <strong>Set the common arrangement once</strong>
                   <p>
-                    Next, adjust only the students who need different fees or installments. Existing
-                    agreements keep their saved values.
+                    Next, adjust only the students who need different fees, bus/hostel services, or
+                    installments. Existing agreements keep their saved values.
                   </p>
                 </div>
               </div>
@@ -232,6 +302,102 @@ export default function FeeSetupDialog({
                     onChange={(e) => setReason(e.target.value)}
                   />
                 </label>
+              </div>
+
+              {/* BUS & HOSTEL FACILITY TOGGLES */}
+              <div className="fee-facility-cards">
+                <div className={`fee-facility-card ${transportActive ? 'active' : ''}`}>
+                  <label className="fee-facility-toggle">
+                    <input
+                      type="checkbox"
+                      checked={transportActive}
+                      onChange={(e) => setTransportActive(e.target.checked)}
+                    />
+                    <Bus size={16} />
+                    <span>Include School Bus / Transport Fee</span>
+                  </label>
+                  {transportActive && (
+                    <div className="fee-facility-fields">
+                      <AmountField
+                        label="Bus fee (₹)"
+                        value={transportFee}
+                        onChange={setTransportFee}
+                      />
+                      <label className="field">
+                        Active months (Mid-year join / stop)
+                        <select
+                          value={transportMonths}
+                          onChange={(e) => setTransportMonths(Number(e.target.value))}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => 12 - i).map((m) => (
+                            <option key={m} value={m}>
+                              {m === 12
+                                ? 'Full year (12 months)'
+                                : `${m} month${m > 1 ? 's' : ''} (Mid-year)`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        Bus route / stop (optional)
+                        <input
+                          value={transportRoute}
+                          maxLength={120}
+                          placeholder="e.g. Route 2"
+                          onChange={(e) => setTransportRoute(e.target.value)}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                <div className={`fee-facility-card ${hostelActive ? 'active' : ''}`}>
+                  <label className="fee-facility-toggle">
+                    <input
+                      type="checkbox"
+                      checked={hostelActive}
+                      onChange={(e) => setHostelActive(e.target.checked)}
+                    />
+                    <Building2 size={16} />
+                    <span>Include Hostel Facility Fee</span>
+                  </label>
+                  {hostelActive && (
+                    <div className="fee-facility-fields">
+                      <AmountField
+                        label="Hostel fee (₹)"
+                        value={hostelFee}
+                        onChange={setHostelFee}
+                      />
+                      <label className="field">
+                        Active months (Mid-year join / leave)
+                        <select
+                          value={hostelMonths}
+                          onChange={(e) => setHostelMonths(Number(e.target.value))}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => 12 - i).map((m) => (
+                            <option key={m} value={m}>
+                              {m === 12
+                                ? 'Full year (12 months)'
+                                : `${m} month${m > 1 ? 's' : ''} (Mid-year)`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        Room / block (optional)
+                        <input
+                          value={hostelRoom}
+                          maxLength={120}
+                          placeholder="e.g. Room 104"
+                          onChange={(e) => setHostelRoom(e.target.value)}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="fee-form-grid">
                 <fieldset className="fee-payment-choice">
                   <legend>Payment arrangement</legend>
                   <label>
@@ -255,7 +421,6 @@ export default function FeeSetupDialog({
                 </fieldset>
                 {installmentMode && (
                   <>
-                    {' '}
                     <label className="field">
                       Number of installments
                       <input
@@ -292,15 +457,16 @@ export default function FeeSetupDialog({
               </div>
               <p className="fee-total">
                 Agreed fee per student{' '}
-                <strong>{money(Math.max(0, base - discount - scholarship))}</strong>
+                <strong>{money(Math.max(0, stepOneGross - discount - scholarship))}</strong>
               </p>
             </>
           )}
           {step === 2 && (
             <>
               <p>
-                Edit the amounts below. Use <strong>Payment details</strong> for custom due dates,
-                previously paid amounts and optional notes. Paid installments are protected.
+                Edit the amounts below. Use <strong>Payment details</strong> for Bus, Hostel,
+                mid-year service changes, custom due dates, and previously paid amounts. Paid
+                installments are protected.
               </p>
               <div className="table-wrap fee-bulk-table">
                 <table>
@@ -323,6 +489,12 @@ export default function FeeSetupDialog({
                           <th scope="row">
                             {titleCase(student.name)}
                             <small>{student.code}</small>
+                            {(r.transportActive || r.hostelActive) && (
+                              <small style={{ color: 'var(--green)' }}>
+                                {r.transportActive ? `Bus ${money(r.transportFee ?? 0)} ` : ''}
+                                {r.hostelActive ? `Hostel ${money(r.hostelFee ?? 0)}` : ''}
+                              </small>
+                            )}
                           </th>
                           {(['baseFee', 'concession', 'scholarship', 'openingPaid'] as const).map(
                             (field) => (
@@ -339,35 +511,23 @@ export default function FeeSetupDialog({
                                   }
                                   value={r[field] / 100}
                                   onChange={(e) => {
-                                    const patch = {
-                                      [field]: Math.round(Number(e.target.value) * 100),
-                                    };
-                                    const next = { ...r, ...patch };
-                                    update(r.studentId, {
-                                      ...patch,
-                                      ...(r.revision < 0
-                                        ? { asOf: next.openingPaid > 0 ? r.asOf || asOf : '' }
-                                        : {}),
-                                      ...(r.revision < 0
-                                        ? {
-                                            installments: makeInstallments(
-                                              Math.max(
-                                                0,
-                                                next.baseFee - next.concession - next.scholarship,
-                                              ),
-                                              r.installments.length || count,
-                                              r.installments[0]?.dueDate || date,
-                                              interval,
-                                            ),
-                                          }
-                                        : {}),
-                                    });
+                                    const val = Math.round(Number(e.target.value) * 100);
+                                    const patch: Partial<FeeAgreement> = { [field]: val };
+                                    if (field === 'baseFee') {
+                                      patch.tuitionFee = Math.max(
+                                        0,
+                                        val - (r.transportFee ?? 0) - (r.hostelFee ?? 0),
+                                      );
+                                    }
+                                    updateWithRebalance(r.studentId, patch);
                                   }}
                                 />
                               </td>
                             ),
                           )}
-                          <td>{money(r.baseFee - r.concession - r.scholarship)}</td>
+                          <td className="currency-cell">
+                            {money(r.baseFee - r.concession - r.scholarship)}
+                          </td>
                           <td>
                             <Button
                               type="button"
@@ -409,86 +569,267 @@ export default function FeeSetupDialog({
               {expanded &&
                 (() => {
                   const r = rows.find((r) => r.studentId === expanded)!;
+                  const student = students.find((s) => s.id === expanded)!;
+                  const tuitionVal =
+                    r.tuitionFee ??
+                    Math.max(0, r.baseFee - (r.transportFee ?? 0) - (r.hostelFee ?? 0));
+                  const schedTotal = r.installments.reduce((s, i) => s + i.amount, 0);
+                  const targetNet = Math.max(0, r.baseFee - r.concession - r.scholarship);
+
+                  const updateBreakdown = (patch: Partial<FeeAgreement>) => {
+                    const next = { ...r, ...patch };
+                    const t = next.tuitionFee ?? tuitionVal;
+                    const b = next.transportActive ? (next.transportFee ?? 0) : 0;
+                    const h = next.hostelActive ? (next.hostelFee ?? 0) : 0;
+                    updateWithRebalance(r.studentId, {
+                      ...patch,
+                      tuitionFee: t,
+                      transportFee: b,
+                      hostelFee: h,
+                      baseFee: t + b + h,
+                    });
+                  };
+
                   return (
                     <section className="fee-schedule-editor">
-                      <h3>
-                        {titleCase(students.find((s) => s.id === expanded)!.name)} · Payment details
-                      </h3>
-                      <div className="fee-form-grid">
-                        <AmountField
-                          label="Already paid before onboarding (₹)"
-                          value={r.openingPaid}
-                          onChange={(v) =>
-                            update(r.studentId, { openingPaid: v, asOf: r.asOf || asOf })
-                          }
-                        />
-                        <label className="field">
-                          Balance recorded on
-                          <CalendarDateInput
-                            value={r.asOf}
-                            max={context.today}
-                            onChange={(e) => update(r.studentId, { asOf: e.target.value })}
+                      <h3>{titleCase(student.name)} · Payment, Bus &amp; Hostel details</h3>
+
+                      {/* TUITION, BUS & HOSTEL BREAKDOWN */}
+                      <div className="fee-facility-cards" style={{ marginTop: 4 }}>
+                        <div className="fee-form-grid">
+                          <AmountField
+                            label="Tuition / Academic Fee (₹)"
+                            value={tuitionVal}
+                            onChange={(v) => updateBreakdown({ tuitionFee: v })}
                           />
-                        </label>
-                        <label className="field">
-                          Note (optional)
-                          <input
-                            value={r.reason}
-                            maxLength={300}
-                            onChange={(e) => update(r.studentId, { reason: e.target.value })}
+                          <AmountField
+                            label="Already paid before onboarding (₹)"
+                            value={r.openingPaid}
+                            onChange={(v) =>
+                              update(r.studentId, { openingPaid: v, asOf: r.asOf || asOf })
+                            }
                           />
-                        </label>
+                          <label className="field">
+                            Balance recorded on
+                            <CalendarDateInput
+                              value={r.asOf}
+                              max={context.today}
+                              onChange={(e) => update(r.studentId, { asOf: e.target.value })}
+                            />
+                          </label>
+                          <label className="field">
+                            Note (optional)
+                            <input
+                              value={r.reason}
+                              maxLength={300}
+                              onChange={(e) => update(r.studentId, { reason: e.target.value })}
+                            />
+                          </label>
+                        </div>
+
+                        {/* BUS SERVICE */}
+                        <div className={`fee-facility-card ${r.transportActive ? 'active' : ''}`}>
+                          <label className="fee-facility-toggle">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(r.transportActive)}
+                              onChange={(e) =>
+                                updateBreakdown({
+                                  transportActive: e.target.checked,
+                                  transportMonths: r.transportMonths || 12,
+                                })
+                              }
+                            />
+                            <Bus size={16} />
+                            <span>School Bus / Transport Service</span>
+                          </label>
+                          {r.transportActive && (
+                            <div className="fee-facility-fields">
+                              <AmountField
+                                label="Bus fee for active months (₹)"
+                                value={r.transportFee ?? 0}
+                                onChange={(v) => updateBreakdown({ transportFee: v })}
+                              />
+                              <label className="field">
+                                Active months (Reduce if student stops bus mid-year)
+                                <select
+                                  value={r.transportMonths || 12}
+                                  onChange={(e) => {
+                                    const m = Number(e.target.value);
+                                    const oldM = r.transportMonths || 12;
+                                    const currentBus = r.transportFee ?? 0;
+                                    const prorated =
+                                      currentBus > 0 && oldM > 0
+                                        ? Math.round((currentBus * m) / oldM / 100) * 100
+                                        : currentBus;
+                                    updateBreakdown({
+                                      transportMonths: m,
+                                      transportFee: prorated,
+                                    });
+                                  }}
+                                >
+                                  {Array.from({ length: 12 }, (_, i) => 12 - i).map((m) => (
+                                    <option key={m} value={m}>
+                                      {m === 12
+                                        ? 'Full year (12 months)'
+                                        : `${m} month${m > 1 ? 's' : ''} (Mid-year / Partial)`}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="field">
+                                Bus route / stop (optional)
+                                <input
+                                  value={r.transportRoute ?? ''}
+                                  maxLength={120}
+                                  placeholder="e.g. Route 3"
+                                  onChange={(e) =>
+                                    update(r.studentId, { transportRoute: e.target.value })
+                                  }
+                                />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* HOSTEL SERVICE */}
+                        <div className={`fee-facility-card ${r.hostelActive ? 'active' : ''}`}>
+                          <label className="fee-facility-toggle">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(r.hostelActive)}
+                              onChange={(e) =>
+                                updateBreakdown({
+                                  hostelActive: e.target.checked,
+                                  hostelMonths: r.hostelMonths || 12,
+                                })
+                              }
+                            />
+                            <Building2 size={16} />
+                            <span>Hostel Facility</span>
+                          </label>
+                          {r.hostelActive && (
+                            <div className="fee-facility-fields">
+                              <AmountField
+                                label="Hostel fee for active months (₹)"
+                                value={r.hostelFee ?? 0}
+                                onChange={(v) => updateBreakdown({ hostelFee: v })}
+                              />
+                              <label className="field">
+                                Active months (Reduce if student leaves hostel mid-year)
+                                <select
+                                  value={r.hostelMonths || 12}
+                                  onChange={(e) => {
+                                    const m = Number(e.target.value);
+                                    const oldM = r.hostelMonths || 12;
+                                    const currentHostel = r.hostelFee ?? 0;
+                                    const prorated =
+                                      currentHostel > 0 && oldM > 0
+                                        ? Math.round((currentHostel * m) / oldM / 100) * 100
+                                        : currentHostel;
+                                    updateBreakdown({
+                                      hostelMonths: m,
+                                      hostelFee: prorated,
+                                    });
+                                  }}
+                                >
+                                  {Array.from({ length: 12 }, (_, i) => 12 - i).map((m) => (
+                                    <option key={m} value={m}>
+                                      {m === 12
+                                        ? 'Full year (12 months)'
+                                        : `${m} month${m > 1 ? 's' : ''} (Mid-year / Partial)`}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="field">
+                                Room / block (optional)
+                                <input
+                                  value={r.hostelRoom ?? ''}
+                                  maxLength={120}
+                                  placeholder="e.g. Room 204"
+                                  onChange={(e) =>
+                                    update(r.studentId, { hostelRoom: e.target.value })
+                                  }
+                                />
+                              </label>
+                            </div>
+                          )}
+                        </div>
                       </div>
+
                       <p>
                         Already paid means money received before using this app. It will not appear
                         as a collection received today.
                       </p>
-                      {r.installments.map((i, index) => (
-                        <div className="fee-installment-row" key={i.id}>
-                          <span>
-                            {r.installments.length === 1
-                              ? 'Single balance'
-                              : `Installment ${index + 1}`}
-                          </span>
-                          <label className="field">
-                            Due date
-                            <CalendarDateInput
-                              required
-                              value={i.dueDate}
-                              onChange={(e) =>
+
+                      {schedTotal !== targetNet && (
+                        <div className="fee-inline">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => updateWithRebalance(r.studentId, {})}
+                          >
+                            <Sparkles size={15} /> Auto-balance unpaid installments ({money(targetNet)})
+                          </Button>
+                        </div>
+                      )}
+
+                      {r.installments.map((i, index) => {
+                        const prevInst = student.account?.installments.find((old) => old.id === i.id);
+                        const settled = (prevInst?.paid ?? 0) + (prevInst?.openingPaid ?? 0);
+                        return (
+                          <div className="fee-installment-row" key={i.id}>
+                            <span>
+                              {r.installments.length === 1
+                                ? 'Single balance'
+                                : `Installment ${index + 1}`}
+                              {settled > 0 && (
+                                <small style={{ color: 'var(--green)' }}>
+                                  Paid {money(settled)}
+                                </small>
+                              )}
+                            </span>
+                            <label className="field">
+                              Due date
+                              <CalendarDateInput
+                                required
+                                value={i.dueDate}
+                                onChange={(e) =>
+                                  update(r.studentId, {
+                                    installments: r.installments.map((v) =>
+                                      v.id === i.id ? { ...v, dueDate: e.target.value } : v,
+                                    ),
+                                  })
+                                }
+                              />
+                            </label>
+                            <AmountField
+                              label={`Installment ${index + 1} amount (₹)`}
+                              value={i.amount}
+                              onChange={(amount) =>
                                 update(r.studentId, {
                                   installments: r.installments.map((v) =>
-                                    v.id === i.id ? { ...v, dueDate: e.target.value } : v,
+                                    v.id === i.id ? { ...v, amount } : v,
                                   ),
                                 })
                               }
                             />
-                          </label>
-                          <AmountField
-                            label={`Installment ${index + 1} amount (₹)`}
-                            value={i.amount}
-                            onChange={(amount) =>
-                              update(r.studentId, {
-                                installments: r.installments.map((v) =>
-                                  v.id === i.id ? { ...v, amount } : v,
-                                ),
-                              })
-                            }
-                          />
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            disabled={r.installments.length === 1}
-                            onClick={() =>
-                              update(r.studentId, {
-                                installments: r.installments.filter((v) => v.id !== i.id),
-                              })
-                            }
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ))}
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              disabled={r.installments.length === 1 || settled > 0}
+                              onClick={() =>
+                                update(r.studentId, {
+                                  installments: r.installments.filter((v) => v.id !== i.id),
+                                })
+                              }
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        );
+                      })}
                       <Button
                         type="button"
                         variant="secondary"
@@ -505,8 +846,7 @@ export default function FeeSetupDialog({
                         Add installment
                       </Button>
                       <p role="status">
-                        Schedule total: {money(r.installments.reduce((s, i) => s + i.amount, 0))} /{' '}
-                        {money(r.baseFee - r.concession - r.scholarship)}
+                        Schedule total: {money(schedTotal)} / {money(targetNet)}
                       </p>
                     </section>
                   );
