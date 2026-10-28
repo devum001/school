@@ -3,7 +3,7 @@ import { autoCapitalizeName, titleCase } from '../../lib/displayFormat';
 import { AppIcon } from '../../components/ui/Primitives';
 import StaffDepartmentOptions from '../hr/StaffDepartmentOptions';
 import LiveHrWorkspace from '../hr/HrWorkspace';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Avatar,
@@ -16,7 +16,8 @@ import {
   LoadingOverlay,
 } from '../../components/ui/Primitives';
 import type { SchoolAccess } from '../../services/schoolAccessService';
-import { onboardingApi, type Person } from '../../services/onboardingService';
+import { onboardingApi, type Person, type Relation } from '../../services/onboardingService';
+import LiveStaffImport from './LiveStaffImport';
 import { productApi } from '../../services/productService';
 import { useSetupList } from '../setup/useSetupList';
 import { LoadState, Paging, ConfirmAction } from '../setup/SetupControls';
@@ -57,7 +58,68 @@ export default function LiveStaff({
       person: Person;
       nextStatus: 'active' | 'inactive' | 'archived';
     } | null>(null),
-    [importing, setImporting] = useState(false);
+    [importing, setImporting] = useState(false),
+    [selectedClass, setSelectedClass] = useState(''),
+    [selectedSection, setSelectedSection] = useState(''),
+    [structure, setStructure] = useState<{
+      classes: { id: string; name: string }[];
+      children: { id: string; classId: string; name: string }[];
+    }>({ classes: [], children: [] }),
+    [assignments, setAssignments] = useState<Relation[]>([]);
+
+  useEffect(() => {
+    if (!yearId) return;
+    let active = true;
+    Promise.all([
+      onboardingApi.structure(access.schoolId, yearId, 'sections').catch(() => null),
+      onboardingApi.relations(access.schoolId, yearId, 'teaching-assignments').catch(() => null),
+    ]).then(([struct, rels]) => {
+      if (!active) return;
+      if (struct) {
+        setStructure({
+          classes: struct.classes || [],
+          children: struct.children || [],
+        });
+      }
+      if (rels) {
+        setAssignments(rels.items || []);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [access.schoolId, yearId]);
+
+  const classList = useMemo(() => {
+    const list = [...structure.classes];
+    for (const a of assignments) {
+      if (a.className && !list.some((c) => c.name.toLowerCase() === a.className.toLowerCase())) {
+        list.push({ id: a.className, name: a.className });
+      }
+    }
+    return list;
+  }, [structure.classes, assignments]);
+
+  const sectionList = useMemo(() => {
+    if (!selectedClass) return [];
+    const matchedClass = classList.find(
+      (c) => c.name.toLowerCase() === selectedClass.toLowerCase(),
+    );
+    const list = structure.children
+      .filter((s) => !matchedClass || s.classId === matchedClass.id)
+      .map((s) => ({ id: s.id, name: s.name }));
+    for (const a of assignments) {
+      if (
+        a.className.toLowerCase() === selectedClass.toLowerCase() &&
+        a.sectionName &&
+        !list.some((s) => s.name.toLowerCase() === a.sectionName.toLowerCase())
+      ) {
+        list.push({ id: a.sectionName, name: a.sectionName });
+      }
+    }
+    return list;
+  }, [selectedClass, classList, structure.children, assignments]);
+
   const manage = access.permissions.includes('staff.manage'),
     requested = params.get('section');
   const items = [
@@ -76,6 +138,23 @@ export default function LiveStaff({
     [access.schoolId, query, teachersOnly],
   );
   const state = useSetupList(load);
+
+  const filteredStaff = useMemo(() => {
+    const items = state.data?.items ?? [];
+    if (!selectedClass) return items;
+    const matchingIds = new Set(
+      assignments
+        .filter((a) => a.status === 'active')
+        .filter(
+          (a) =>
+            a.className.trim().toLowerCase() === selectedClass.trim().toLowerCase() &&
+            (!selectedSection ||
+              a.sectionName.trim().toLowerCase() === selectedSection.trim().toLowerCase()),
+        )
+        .map((a) => a.personId),
+    );
+    return items.filter((p) => matchingIds.has(p.id));
+  }, [state.data?.items, selectedClass, selectedSection, assignments]);
   const loadingLabel = teachersOnly ? 'Loading teachers…' : 'Loading staff & HR…';
   return (
     <div className="ledger-stack">
@@ -125,6 +204,37 @@ export default function LiveStaff({
             title={teachersOnly ? 'Teachers' : 'Staff & HR'}
             action={
               <div className="panel-header-actions staff-header-toolbar">
+                <div className="staff-filters-row">
+                  <select
+                    className="staff-select-filter"
+                    aria-label="Filter by class"
+                    value={selectedClass}
+                    onChange={(e) => {
+                      setSelectedClass(e.target.value);
+                      setSelectedSection('');
+                    }}
+                  >
+                    <option value="">All classes</option>
+                    {classList.map((c) => (
+                      <option key={c.id || c.name} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="staff-select-filter"
+                    aria-label="Filter by section"
+                    value={selectedSection}
+                    onChange={(e) => setSelectedSection(e.target.value)}
+                  >
+                    <option value="">All sections</option>
+                    {sectionList.map((s) => (
+                      <option key={s.id || s.name} value={s.name}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="staff-search-input">
                   <SearchInput
                     value={query}
@@ -166,7 +276,21 @@ export default function LiveStaff({
                       </tr>
                     </thead>
                     <tbody>
-                      {(state.data?.items ?? []).map((p) => (
+                      {filteredStaff.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', padding: '36px' }}>
+                            <EmptyState
+                              title={teachersOnly ? 'No teachers found' : 'No staff members found'}
+                              description={
+                                selectedClass
+                                  ? `No ${teachersOnly ? 'teachers' : 'staff members'} assigned to ${selectedClass}${selectedSection ? ` - ${selectedSection}` : ''}.`
+                                  : 'No matching records found.'
+                              }
+                            />
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredStaff.map((p) => (
                         <tr key={p.id}>
                           <td>
                             <div className="person">
@@ -284,7 +408,7 @@ export default function LiveStaff({
                             )}
                           </td>
                         </tr>
-                      ))}
+                      )))}
                     </tbody>
                   </table>
                 </div>
@@ -305,20 +429,15 @@ export default function LiveStaff({
         </LoadingOverlay>
       )}
       {importing && (
-        <Modal
-          open
-          wide
-          title="Import staff from Excel"
-          description="Upload an Excel workbook to batch import staff records."
-          onClose={() => {
+        <LiveStaffImport
+          access={access}
+          yearId={yearId}
+          teachersOnly={teachersOnly}
+          close={() => {
             setImporting(false);
             state.reload();
           }}
-        >
-          <div style={{ padding: '0 20px 20px' }}>
-            <RosterWorkspace access={access} kind="staff" yearId={yearId} />
-          </div>
-        </Modal>
+        />
       )}
       {editing && (
         <StaffEditor

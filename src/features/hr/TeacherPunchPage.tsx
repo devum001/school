@@ -138,7 +138,7 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
             School hours {data ? `${data.schedule.start} – ${data.schedule.end}` : '—'}
           </p>
         </div>
-        <div className="punch-clock-action">
+        <div className={`punch-clock-action ${data?.state.code === 'HR_ON_LEAVE' ? 'on-leave' : ''}`}>
           <div className="punch-action-symbol">
             {data?.punchOut ? (
               <CheckCircle2 size={34} />
@@ -186,7 +186,9 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
               {data?.active ? <LogOut size={18} /> : <LogIn size={18} />}
             </Button>
           )}
-          {data?.state.reason && <p className="punch-rule-note">{data.state.reason}</p>}
+          {data?.state.code !== 'HR_ON_LEAVE' && data?.state.reason && (
+            <p className="punch-rule-note">{data.state.reason}</p>
+          )}
           <button className="punch-refresh" disabled={!!busy} onClick={() => void refresh()}>
             <RefreshCw size={14} />
             Refresh status

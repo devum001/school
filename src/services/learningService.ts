@@ -127,7 +127,9 @@ export const snapshotSchema = z.object({
       pendingRequests: z.number(),
     })
     .optional(),
-  attendanceGate: z.object({ required: z.boolean(), active: z.boolean() }).optional(),
+  attendanceGate: z
+    .object({ required: z.boolean(), active: z.boolean(), onLeave: z.boolean().optional() })
+    .optional(),
   state: stateSchema,
   today: z.string(),
   timezone: z.string(),

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bus, Building2, Check, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { Bus, Building2, ChevronDown, Search } from 'lucide-react';
 import { useFeedback } from '../../../app/useFeedback';
 import {
   Button,
@@ -489,111 +489,130 @@ export default function FeeOnboardingWorkspace({
 
   return (
     <div className="fee-onboarding-workspace">
-      <Panel
-        title="School fee, bus & hostel setup (Single & Bulk)"
-        subtitle="Select a class or students to apply common fees in bulk, or edit any student's Tuition, Bus (including mid-year stop), Hostel, Concession, and Previous Dues directly below."
-      >
-        <div className="fee-setup-top-stack">
-          <div className="fee-filter-bar">
-            <label className="field">
+      <div>
+        <h2 className="fee-setup-main-title">
+          School fee, bus &amp; hostel setup (Single &amp; Bulk)
+        </h2>
+
+        <div className="fee-setup-filter-card">
+          <div className="fee-setup-filter-grid">
+            <label className="fee-setup-field">
               <span>Class</span>
-              <select
-                aria-label="Class"
-                value={classId}
-                onChange={(e) => {
-                  setClassId(e.target.value);
-                  setSectionId('');
-                  setPage(1);
-                }}
-              >
-                <option value="">All classes</option>
-                {sortedClasses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Section</span>
-              <select
-                aria-label="Section"
-                value={sectionId}
-                onChange={(e) => {
-                  setSectionId(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="">All sections</option>
-                {context.sections
-                  .filter((s) => !classId || s.classId === classId)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {sectionLabel(s.name)}
+              <div className="fee-setup-select-wrapper">
+                <select
+                  aria-label="Class"
+                  value={classId}
+                  onChange={(e) => {
+                    setClassId(e.target.value);
+                    setSectionId('');
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All classes</option>
+                  {sortedClasses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
                     </option>
                   ))}
-              </select>
+                </select>
+                <ChevronDown size={15} className="fee-setup-chevron" />
+              </div>
             </label>
-            <label className="field">
+            <label className="fee-setup-field">
+              <span>Section</span>
+              <div className="fee-setup-select-wrapper">
+                <select
+                  aria-label="Section"
+                  value={sectionId}
+                  onChange={(e) => {
+                    setSectionId(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All sections</option>
+                  {context.sections
+                    .filter((s) => !classId || s.classId === classId)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {sectionLabel(s.name)}
+                      </option>
+                    ))}
+                </select>
+                <ChevronDown size={15} className="fee-setup-chevron" />
+              </div>
+            </label>
+            <label className="fee-setup-field">
               <span>Filter students</span>
-              <select
-                aria-label="Show students"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-              >
-                <option value="all">All students ({orderedIds.length})</option>
-                <option value="unconfigured">Not configured yet</option>
-                <option value="configured">Already configured</option>
-                <option value="bus">Using school bus</option>
-                <option value="hostel">Staying in hostel</option>
-              </select>
+              <div className="fee-setup-select-wrapper">
+                <select
+                  aria-label="Show students"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+                >
+                  <option value="all">All students ({orderedIds.length})</option>
+                  <option value="unconfigured">Not configured yet</option>
+                  <option value="configured">Already configured</option>
+                  <option value="bus">Using school bus</option>
+                  <option value="hostel">Staying in hostel</option>
+                </select>
+                <ChevronDown size={15} className="fee-setup-chevron" />
+              </div>
             </label>
-            <label className="field">
+            <label className="fee-setup-field">
               <span>Search student</span>
-              <input
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Name or admission no."
-              />
+              <div className="fee-setup-search-wrapper">
+                <Search size={15} className="fee-setup-search-icon" />
+                <input
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Name or admission no."
+                />
+              </div>
             </label>
           </div>
+        </div>
 
-          <div className="fee-quick-bulk-box">
-            <div className="fee-quick-bulk-header">
-              <strong>
-                <SlidersHorizontal size={15} /> Quick Bulk Fill (Apply to{' '}
+        <div className="fee-setup-bulk-card">
+          <div className="fee-setup-bulk-header">
+            <div className="fee-setup-bulk-title">
+              <span className="fee-setup-green-dot" />
+              <strong>Quick Bulk Fill</strong>
+              <span className="fee-setup-bulk-count">
+                (Apply to{' '}
                 {selectedIds.length > 0
                   ? `${selectedIds.length} selected student${selectedIds.length === 1 ? '' : 's'}`
                   : `all ${visibleRows.length} shown student${visibleRows.length === 1 ? '' : 's'}`}
                 )
-              </strong>
-              <span>
-                Leave any box blank to keep each student&apos;s existing value unchanged.
               </span>
             </div>
+            <span className="fee-setup-bulk-hint">
+              Leave any box blank to keep each student&apos;s existing value unchanged.
+            </span>
+          </div>
 
-            <div className="fee-quick-bulk-grid">
-              <label className="field">
-                <span>Tuition Fee (₹)</span>
-                <input
-                  type="number"
-                  min={0}
-                  placeholder="e.g. 24000"
-                  value={bulkTuition}
-                  onChange={(e) => setBulkTuition(e.target.value)}
-                />
-              </label>
+          <div className="fee-setup-bulk-grid">
+            <label className="fee-setup-field">
+              <span>Tuition Fee (₹)</span>
+              <input
+                type="number"
+                min={0}
+                placeholder="e.g. 24000"
+                value={bulkTuition}
+                onChange={(e) => setBulkTuition(e.target.value)}
+              />
+            </label>
 
-              <label className="field">
-                <span>School Bus</span>
-                <div
-                  className={`fee-inline-pair ${
-                    bulkBusMode === 'enable' ? 'fee-inline-pair-expanded' : ''
-                  }`}
-                >
+            <label className="fee-setup-field">
+              <span>School Bus</span>
+              <div
+                className={`fee-inline-pair ${
+                  bulkBusMode === 'enable' ? 'fee-inline-pair-expanded' : ''
+                }`}
+              >
+                <div className="fee-setup-select-wrapper">
                   <select
                     aria-label="Bulk bus mode"
                     value={bulkBusMode}
@@ -605,16 +624,19 @@ export default function FeeOnboardingWorkspace({
                     <option value="enable">Bus Active</option>
                     <option value="disable">No Bus</option>
                   </select>
-                  {bulkBusMode === 'enable' && (
-                    <>
-                      <input
-                        aria-label="Bulk bus fee"
-                        type="number"
-                        min={0}
-                        placeholder="Bus Fee (₹)"
-                        value={bulkBusFee}
-                        onChange={(e) => setBulkBusFee(e.target.value)}
-                      />
+                  <ChevronDown size={15} className="fee-setup-chevron" />
+                </div>
+                {bulkBusMode === 'enable' && (
+                  <>
+                    <input
+                      aria-label="Bulk bus fee"
+                      type="number"
+                      min={0}
+                      placeholder="Bus Fee (₹)"
+                      value={bulkBusFee}
+                      onChange={(e) => setBulkBusFee(e.target.value)}
+                    />
+                    <div className="fee-setup-select-wrapper">
                       <select
                         aria-label="Bulk bus months"
                         value={bulkBusMonths}
@@ -626,18 +648,21 @@ export default function FeeOnboardingWorkspace({
                           </option>
                         ))}
                       </select>
-                    </>
-                  )}
-                </div>
-              </label>
+                      <ChevronDown size={15} className="fee-setup-chevron" />
+                    </div>
+                  </>
+                )}
+              </div>
+            </label>
 
-              <label className="field">
-                <span>Hostel Facility</span>
-                <div
-                  className={`fee-inline-pair ${
-                    bulkHostelMode === 'enable' ? 'fee-inline-pair-expanded' : ''
-                  }`}
-                >
+            <label className="fee-setup-field">
+              <span>Hostel Facility</span>
+              <div
+                className={`fee-inline-pair ${
+                  bulkHostelMode === 'enable' ? 'fee-inline-pair-expanded' : ''
+                }`}
+              >
+                <div className="fee-setup-select-wrapper">
                   <select
                     aria-label="Bulk hostel mode"
                     value={bulkHostelMode}
@@ -649,16 +674,19 @@ export default function FeeOnboardingWorkspace({
                     <option value="enable">Hostel Active</option>
                     <option value="disable">No Hostel</option>
                   </select>
-                  {bulkHostelMode === 'enable' && (
-                    <>
-                      <input
-                        aria-label="Bulk hostel fee"
-                        type="number"
-                        min={0}
-                        placeholder="Hostel Fee (₹)"
-                        value={bulkHostelFee}
-                        onChange={(e) => setBulkHostelFee(e.target.value)}
-                      />
+                  <ChevronDown size={15} className="fee-setup-chevron" />
+                </div>
+                {bulkHostelMode === 'enable' && (
+                  <>
+                    <input
+                      aria-label="Bulk hostel fee"
+                      type="number"
+                      min={0}
+                      placeholder="Hostel Fee (₹)"
+                      value={bulkHostelFee}
+                      onChange={(e) => setBulkHostelFee(e.target.value)}
+                    />
+                    <div className="fee-setup-select-wrapper">
                       <select
                         aria-label="Bulk hostel months"
                         value={bulkHostelMonths}
@@ -670,25 +698,28 @@ export default function FeeOnboardingWorkspace({
                           </option>
                         ))}
                       </select>
-                    </>
-                  )}
-                </div>
-              </label>
+                      <ChevronDown size={15} className="fee-setup-chevron" />
+                    </div>
+                  </>
+                )}
+              </div>
+            </label>
 
-              <label className="field">
-                <span>Concession (₹)</span>
-                <input
-                  type="number"
-                  min={0}
-                  placeholder="0"
-                  disabled={!canApprove}
-                  value={bulkDiscount}
-                  onChange={(e) => setBulkDiscount(e.target.value)}
-                />
-              </label>
+            <label className="fee-setup-field">
+              <span>Concession (₹)</span>
+              <input
+                type="number"
+                min={0}
+                placeholder="0"
+                disabled={!canApprove}
+                value={bulkDiscount}
+                onChange={(e) => setBulkDiscount(e.target.value)}
+              />
+            </label>
 
-              <label className="field">
-                <span>Installments</span>
+            <label className="fee-setup-field">
+              <span>Installments</span>
+              <div className="fee-setup-select-wrapper">
                 <select
                   value={bulkInstallments}
                   onChange={(e) => {
@@ -706,70 +737,66 @@ export default function FeeOnboardingWorkspace({
                   <option value={6}>6 Installments</option>
                   <option value={12}>12 Installments (Monthly)</option>
                 </select>
-              </label>
+                <ChevronDown size={15} className="fee-setup-chevron" />
+              </div>
+            </label>
 
-              {bulkInstallments === 1 && (
-                <label className="field">
-                  <span>Paid Now / Partial (₹)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="Optional partial paid"
-                    value={bulkOpeningPaid}
-                    onChange={(e) => setBulkOpeningPaid(e.target.value)}
-                  />
-                </label>
-              )}
+            <label className="fee-setup-field">
+              <span>Paid Now / Partial (₹)</span>
+              <input
+                type="number"
+                min={0}
+                placeholder="Optional partial paid"
+                value={bulkOpeningPaid}
+                onChange={(e) => setBulkOpeningPaid(e.target.value)}
+              />
+            </label>
 
-              <div className="fee-quick-bulk-actions">
-                <Button type="button" variant="secondary" onClick={applyBulkToTargets}>
-                  <Sparkles size={15} /> Fill{' '}
-                  {selectedIds.length > 0
-                    ? `Selected (${selectedIds.length})`
-                    : `Shown (${visibleRows.length})`}
-                </Button>
-                {dirtyRows.length > 0 && (
-                  <Button type="button" disabled={saving} onClick={() => void saveAllDirtyRows()}>
-                    <Check size={15} />{' '}
-                    {saving ? 'Saving...' : `Save All Changes (${dirtyRows.length})`}
-                  </Button>
-                )}
+            <div className="fee-setup-field-spacer" />
+
+            <div className="fee-setup-fill-btn-wrapper">
+              <button
+                type="button"
+                className="fee-setup-fill-btn"
+                onClick={applyBulkToTargets}
+              >
+                Fill {selectedIds.length > 0 ? `Selected (${selectedIds.length} Students)` : `Shown (${visibleRows.length} Students)`}
+              </button>
+            </div>
+          </div>
+
+          {bulkInstallments > 1 && (
+            <div className="fee-bulk-due-dates-bar" style={{ marginTop: 16 }}>
+              <span className="fee-bulk-due-dates-title">
+                Each Installment Due Date ({bulkInstallments} parts):
+              </span>
+              <div className="fee-bulk-due-dates-grid">
+                {Array.from({ length: bulkInstallments }, (_, idx) => (
+                  <label key={idx} className="field">
+                    <span>Installment {idx + 1} Due</span>
+                    <PickerInput
+                      aria-label={`Bulk installment ${idx + 1} due date`}
+                      type="date"
+                      value={bulkDueDates[idx] ?? defaultDueDate}
+                      onChange={(e) =>
+                        setBulkDueDates((prev) => {
+                          const next = defaultDueDatesForCount(
+                            bulkInstallments,
+                            prev[0] || defaultDueDate,
+                            prev,
+                          );
+                          next[idx] = e.target.value;
+                          return next;
+                        })
+                      }
+                    />
+                  </label>
+                ))}
               </div>
             </div>
-
-            {bulkInstallments > 1 && (
-              <div className="fee-bulk-due-dates-bar">
-                <span className="fee-bulk-due-dates-title">
-                  Each Installment Due Date ({bulkInstallments} parts):
-                </span>
-                <div className="fee-bulk-due-dates-grid">
-                  {Array.from({ length: bulkInstallments }, (_, idx) => (
-                    <label key={idx} className="field">
-                      <span>Installment {idx + 1} Due</span>
-                      <PickerInput
-                        aria-label={`Bulk installment ${idx + 1} due date`}
-                        type="date"
-                        value={bulkDueDates[idx] ?? defaultDueDate}
-                        onChange={(e) =>
-                          setBulkDueDates((prev) => {
-                            const next = defaultDueDatesForCount(
-                              bulkInstallments,
-                              prev[0] || defaultDueDate,
-                              prev,
-                            );
-                            next[idx] = e.target.value;
-                            return next;
-                          })
-                        }
-                      />
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
-      </Panel>
+      </div>
 
       {error && (
         <p className="form-error" role="alert">
@@ -778,12 +805,14 @@ export default function FeeOnboardingWorkspace({
       )}
 
       <Panel
+        className="fee-register-panel"
         title={`Student fee structure register (${visibleRows.length})`}
         subtitle="Edit any student's Tuition, Bus (toggle or reduce months if they leave mid-year), Hostel, Concession, or Previous Year Pending directly below."
         action={
           dirtyRows.length > 0 ? (
-            <div className="fee-inline">
-              <span className="panel-note">
+            <div className="fee-register-header-actions">
+              <span className="fee-unsaved-badge">
+                <span className="fee-unsaved-dot"></span>
                 <strong>{dirtyRows.length}</strong> unsaved student change
                 {dirtyRows.length === 1 ? '' : 's'}
               </span>
@@ -795,9 +824,14 @@ export default function FeeOnboardingWorkspace({
               >
                 Discard edits
               </Button>
-              <Button type="button" disabled={saving} onClick={() => void saveAllDirtyRows()}>
+              <button
+                type="button"
+                className="fee-save-all-btn"
+                disabled={saving}
+                onClick={() => void saveAllDirtyRows()}
+              >
                 {saving ? 'Saving...' : `Save All Changes (${dirtyRows.length})`}
-              </Button>
+              </button>
             </div>
           ) : undefined
         }
@@ -860,15 +894,6 @@ export default function FeeOnboardingWorkspace({
                         0,
                         tuitionP + busP + hostelP - discountP - scholP,
                       );
-                      const settledPaise = row.student.paid;
-                      const stateLabel = !row.student.configured
-                        ? 'Not configured'
-                        : row.student.overdue > 0
-                          ? 'Overdue'
-                          : row.student.outstanding === 0
-                            ? 'Paid'
-                            : 'Pending';
-
                       return (
                         <tr key={id} className={row.dirty ? 'fee-row-dirty' : ''}>
                           <td>
@@ -892,24 +917,6 @@ export default function FeeOnboardingWorkspace({
                               {classNameFor(row.student.enrollment?.classId)}{' '}
                               {sectionNameFor(row.student.enrollment?.sectionId)}
                             </small>
-                            <div
-                              style={{ marginTop: 4, display: 'flex', gap: 6, flexWrap: 'wrap' }}
-                            >
-                              <span
-                                className={`fee-status ${
-                                  stateLabel === 'Paid'
-                                    ? 'paid'
-                                    : stateLabel === 'Overdue'
-                                      ? 'overdue'
-                                      : 'pending'
-                                }`}
-                              >
-                                {stateLabel}
-                              </span>
-                              {settledPaise > 0 && (
-                                <span className="fee-status paid">Paid {money(settledPaise)}</span>
-                              )}
-                            </div>
                           </th>
 
                           <td>

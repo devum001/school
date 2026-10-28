@@ -70,6 +70,12 @@ export default function LiveStudentProfile({ yearId }: { yearId: string | null }
         value={{
           ...data.capabilities,
           feeSummary: data.feeSummary,
+          facilities: data.facilities ?? (data.feeSummary ? {
+            bus: Boolean(data.feeSummary.transportActive),
+            busRoute: data.feeSummary.transportRoute,
+            hostel: Boolean(data.feeSummary.hostelActive),
+            hostelRoom: data.feeSummary.hostelRoom,
+          } : undefined),
           edit: () => setEditing(true),
           remove: () => setDeleting(true),
           feeContent: (

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AlertCircle, Clock, UserCheck, Users, UserX } from 'lucide-react';
 import '../../styles/ledgers.css';
 import AttendanceTabs from '../../components/shared/AttendanceTabs';
 import { attendanceSummary } from '../../lib/selectors';
@@ -17,6 +18,7 @@ import {
   PageHeading,
   Panel,
   AppIcon,
+  StatCard,
 } from '../../components/ui/Primitives';
 import { useDraftGuard } from '../academics/useDraftGuard';
 import { defaultStaffPayroll } from '../../lib/settings';
@@ -197,19 +199,42 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
             </div>
           </div>
         </Panel>
-        <div className="attendance-summary">
-          {[
-            ['Staff', summary.total, ''],
-            ['Present', summary.present + summary.late, 'green'],
-            ['Absent', summary.absent, 'red'],
-            ['Late / half day', `${summary.late} / ${summary['half-day']}`, 'amber'],
-            ['Not marked', summary.unmarked, 'neutral'],
-          ].map(([label, value, tone]) => (
-            <div className="panel" key={label}>
-              <span>{label}</span>
-              <strong className={`text-${tone}`}>{value}</strong>
-            </div>
-          ))}
+        <div className="attendance-summary stats-grid">
+          <StatCard
+            label="Total Staff"
+            value={summary.total}
+            detail="Active staff members"
+            tone="blue"
+            icon={<Users size={16} />}
+          />
+          <StatCard
+            label="Present"
+            value={summary.present + summary.late}
+            detail={summary.total ? `${Math.round(((summary.present + summary.late) / summary.total) * 100)}% on duty` : '0%'}
+            tone="green"
+            icon={<UserCheck size={16} />}
+          />
+          <StatCard
+            label="Absent"
+            value={summary.absent}
+            detail={summary.absent > 0 ? `${summary.absent} absent today` : 'No absentees'}
+            tone="red"
+            icon={<UserX size={16} />}
+          />
+          <StatCard
+            label="Late / Half day"
+            value={`${summary.late} / ${summary['half-day']}`}
+            detail={`${summary.late} late · ${summary['half-day']} half-day`}
+            tone="amber"
+            icon={<Clock size={16} />}
+          />
+          <StatCard
+            label="Not Marked"
+            value={summary.unmarked}
+            detail={summary.unmarked > 0 ? 'Pending punch / mark' : 'All recorded'}
+            tone="neutral"
+            icon={<AlertCircle size={16} />}
+          />
         </div>
         <Panel
           title="Staff attendance"

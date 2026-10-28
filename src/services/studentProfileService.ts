@@ -22,8 +22,20 @@ const schema = z.object({
       paid: z.number(),
       paymentCount: z.number(),
       configured: z.boolean(),
+      transportActive: z.boolean().optional(),
+      transportRoute: z.string().optional(),
+      hostelActive: z.boolean().optional(),
+      hostelRoom: z.string().optional(),
     })
     .nullable(),
+  facilities: z
+    .object({
+      bus: z.boolean(),
+      busRoute: z.string().optional(),
+      hostel: z.boolean(),
+      hostelRoom: z.string().optional(),
+    })
+    .optional(),
 });
 export type StudentProfile = z.infer<typeof schema>;
 const documentsSchema = z.object({

@@ -18,6 +18,7 @@ import {
   PickerInput,
 } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
+import { CalendarDays } from 'lucide-react';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import type { IconName } from '../../components/ui/Primitives';
 const HR_NAV_ICONS: Record<string, IconName> = {
@@ -502,7 +503,15 @@ function HrContent({
         className="hr-content"
         subtitle={
           tab === 'self'
-            ? 'Record your attendance, request leave and view your salary.'
+            ? selfView === 'requests'
+              ? 'Request corrections by selecting a half-day or invalid date in your attendance calendar.'
+              : selfView === 'leave'
+                ? 'Apply for leaves, track approval status, and view remaining paid leave allowance.'
+                : selfView === 'salary'
+                  ? 'View your monthly salary statement and payment history.'
+                  : selfView === 'profile'
+                    ? 'Your personal and school employment details.'
+                    : 'Record your attendance and review your monthly attendance calendar.'
             : tab === 'salary'
               ? 'Set up salary → prepare a draft → review and approve → record payment.'
               : tab === 'attendance'
@@ -511,7 +520,15 @@ function HrContent({
         }
         title={
           tab === 'self'
-            ? 'My attendance & salary'
+            ? selfView === 'requests'
+              ? 'Attendance requests (ARS)'
+              : selfView === 'leave'
+                ? 'Leave requests'
+                : selfView === 'salary'
+                  ? 'My salary'
+                  : selfView === 'profile'
+                    ? 'My profile'
+                    : 'My attendance'
             : tab === 'attendance'
               ? 'Staff attendance'
               : tab === 'leave'
@@ -519,7 +536,17 @@ function HrContent({
                 : 'Salary Expenses'
         }
         action={
-          tab !== 'self' ? (
+          tab === 'self' ? (
+            selfView === 'requests' ? (
+              <Button variant="secondary" onClick={reload}>
+                Refresh requests
+              </Button>
+            ) : selfView === 'leave' ? (
+              <Button onClick={() => setAction({ kind: 'leave' })}>
+                Request leave
+              </Button>
+            ) : undefined
+          ) : (
             <div className="hr-header-filters">
               <label className="field hr-inline-filter">
                 <span>Department</span>
@@ -557,7 +584,7 @@ function HrContent({
                 </label>
               )}
             </div>
-          ) : undefined
+          )
         }
       >
         {error && (
@@ -870,82 +897,128 @@ function HrContent({
         )}
         {(tab === 'leave' || (tab === 'self' && selfView === 'leave')) && (
           <>
-            <h3>Leave requests</h3>
-            {tab === 'self' && (
-              <Button onClick={() => setAction({ kind: 'leave' })}>Request leave</Button>
+            {tab !== 'self' && <h3>Leave requests</h3>}
+            {tab === 'self' ? (
+              <div className="hr-leave-balance-card">
+                <div className="hr-leave-stat-pill">
+                  <span className="hr-leave-stat-num">
+                    {Math.max(
+                      0,
+                      data.settings.paidLeaveDays -
+                        (data.leaveUsage?.find((l) => staff.some((p) => p.id === l.staffId))?.used ?? 0),
+                    )}
+                  </span>
+                  <span className="hr-leave-stat-label">Paid days remaining</span>
+                </div>
+                <div className="hr-leave-info-text">
+                  <strong>Annual Paid Leave Allowance: {data.settings.paidLeaveDays} days ({month.slice(0, 4)})</strong>
+                  <p>Pending requests from every month are shown. Decided requests follow the selected month.</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p>
+                  Pending requests from every month are shown. Decided requests follow the selected
+                  month. Paid leave allowance for {month.slice(0, 4)}: {data.settings.paidLeaveDays}{' '}
+                  days per staff member.
+                </p>
+                {staff.map((p) => (
+                  <p key={p.id}>
+                    {p.name}:{' '}
+                    {Math.max(
+                      0,
+                      data.settings.paidLeaveDays -
+                        (data.leaveUsage?.find((l) => l.staffId === p.id)?.used ?? 0),
+                    )}{' '}
+                    paid days remaining
+                  </p>
+                ))}
+              </>
             )}
-            <p>
-              Pending requests from every month are shown. Decided requests follow the selected
-              month. Paid leave allowance for {month.slice(0, 4)}: {data.settings.paidLeaveDays}{' '}
-              days per staff member.
-            </p>
-            {staff.map((p) => (
-              <p key={p.id}>
-                {p.name}:{' '}
-                {Math.max(
-                  0,
-                  data.settings.paidLeaveDays -
-                    (data.leaveUsage?.find((l) => l.staffId === p.id)?.used ?? 0),
-                )}{' '}
-                paid days remaining
-              </p>
-            ))}
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Staff</th>
-                    <th>Dates</th>
-                    <th>Reason</th>
-                    <th>Status</th>
-                    <th>Decision</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...data.leaves]
-                    .sort(
-                      (a, b) =>
-                        Number(b.status === 'pending') - Number(a.status === 'pending') ||
-                        a.start.localeCompare(b.start),
-                    )
-                    .filter((l) => staff.some((p) => p.id === l.staffId))
-                    .map((l) => (
-                      <tr key={l.id}>
-                        <td>{data.staff.find((p) => p.id === l.staffId)?.name}</td>
-                        <td>
-                          {formatCalendarDate(l.start)}–{formatCalendarDate(l.end)}
-                        </td>
-                        <td>{l.reason}</td>
-                        <td>
-                          {l.status}{' '}
-                          {l.status === 'approved' ? (l.paid ? '· Paid' : '· Unpaid') : ''}
-                        </td>
-                        <td>
-                          {l.status === 'pending' && tab !== 'self' && can('attendance.manage') ? (
-                            <Button onClick={() => setAction({ kind: 'leave', leave: l })}>
-                              Review
-                            </Button>
-                          ) : (
-                            <>
-                              {l.reviewNote || '—'}
-                              {tab === 'self' &&
-                                (l.status === 'pending' || l.status === 'approved') &&
-                                l.end >= data.today && (
-                                  <Button
-                                    variant="ghost"
-                                    onClick={() => setAction({ kind: 'cancelLeave', leave: l })}
-                                  >
-                                    {l.status === 'approved' ? 'Cancel leave' : 'Cancel request'}
-                                  </Button>
-                                )}
-                            </>
-                          )}
-                        </td>
+            {(() => {
+              const userLeaves = [...data.leaves]
+                .sort(
+                  (a, b) =>
+                    Number(b.status === 'pending') - Number(a.status === 'pending') ||
+                    a.start.localeCompare(b.start),
+                )
+                .filter((l) => staff.some((p) => p.id === l.staffId));
+              if (userLeaves.length === 0) {
+                return (
+                  <div className="hr-empty-box">
+                    <CalendarDays size={36} className="hr-empty-icon" />
+                    <p className="hr-empty-title">No leave requests found</p>
+                    <span className="hr-empty-desc">
+                      {tab === 'self'
+                        ? 'You haven\'t submitted any leave requests. Click "Request leave" above to apply for time off.'
+                        : 'No staff leave requests found for this month.'}
+                    </span>
+                  </div>
+                );
+              }
+              return (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        {tab !== 'self' && <th>Staff</th>}
+                        <th>Dates</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th>Decision</th>
                       </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {userLeaves.map((l) => (
+                        <tr key={l.id}>
+                          {tab !== 'self' && <td>{data.staff.find((p) => p.id === l.staffId)?.name}</td>}
+                          <td>
+                            <strong>{formatCalendarDate(l.start)}</strong>
+                            {l.start !== l.end && <> to <strong>{formatCalendarDate(l.end)}</strong></>}
+                          </td>
+                          <td>{l.reason}</td>
+                          <td>
+                            <Badge
+                              tone={
+                                l.status === 'approved'
+                                  ? 'green'
+                                  : l.status === 'rejected'
+                                    ? 'red'
+                                    : 'amber'
+                              }
+                            >
+                              {titleCase(l.status)}{' '}
+                              {l.status === 'approved' ? (l.paid ? '· Paid' : '· Unpaid') : ''}
+                            </Badge>
+                          </td>
+                          <td>
+                            {l.status === 'pending' && tab !== 'self' && can('attendance.manage') ? (
+                              <Button onClick={() => setAction({ kind: 'leave', leave: l })}>
+                                Review
+                              </Button>
+                            ) : (
+                              <>
+                                {l.reviewNote || '—'}
+                                {tab === 'self' &&
+                                  (l.status === 'pending' || l.status === 'approved') &&
+                                  l.end >= data.today && (
+                                    <Button
+                                      variant="ghost"
+                                      onClick={() => setAction({ kind: 'cancelLeave', leave: l })}
+                                    >
+                                      {l.status === 'approved' ? 'Cancel leave' : 'Cancel request'}
+                                    </Button>
+                                  )}
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </>
         )}
         {!staff.length && (

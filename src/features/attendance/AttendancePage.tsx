@@ -1,7 +1,7 @@
 import { useToday } from '../../app/useToday';
 import { useEffect, useState } from 'react';
 import { Link, useBlocker, useSearchParams } from 'react-router-dom';
-import { CircleAlert } from 'lucide-react';
+import { AlertCircle, CircleAlert, Clock, UserCheck, Users, UserX } from 'lucide-react';
 import StudentRecordLink from '../../components/shared/StudentRecordLink';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
@@ -14,6 +14,7 @@ import {
   PageHeading,
   Panel,
   AppIcon,
+  StatCard,
 } from '../../components/ui/Primitives';
 import { ClassFilters } from '../../components/shared/ClassFilters';
 import { attendanceSummary, roster, statusFor } from '../../lib/selectors';
@@ -37,7 +38,8 @@ function AttendanceRegister() {
   const state = useSchool();
   const feature = useSchoolFeature(),
     data = feature ?? repository,
-    canManage = feature?.canManage ?? true;
+    isTeacherOnLeave = Boolean(feature?.attendanceGate?.onLeave),
+    canManage = (feature?.canManage ?? true) && !isTeacherOnLeave;
   const [saving, setSaving] = useState(false);
   const today = useToday();
   const notify = useFeedback();
@@ -72,7 +74,7 @@ function AttendanceRegister() {
     statusIndex: number,
     enrollmentId: string,
   ) => {
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || isTeacherOnLeave || !canManage) return;
     const table = e.currentTarget.closest('table');
     if (!table) return;
     const tableRows = Array.from(table.querySelectorAll('tbody tr'));
@@ -210,7 +212,27 @@ function AttendanceRegister() {
         )
       ) : (
         <>
-          {feature?.attendanceGate?.required && !feature.attendanceGate.active && (
+          {isTeacherOnLeave ? (
+            <Panel title="On approved leave today">
+              <div
+                className="info-banner"
+                style={{
+                  borderLeft: '4px solid #e11d48',
+                  background: '#fff1f2',
+                  color: '#9f1239',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
+                <CircleAlert size={18} style={{ color: '#e11d48', flexShrink: 0 }} />
+                <span>
+                  <strong>You are on approved leave today.</strong> Student attendance marking and
+                  editing are disabled for your account while on leave.
+                </span>
+              </div>
+            </Panel>
+          ) : feature?.attendanceGate?.required && !feature.attendanceGate.active ? (
             <Panel title="Punch in before taking attendance">
               <p className="panel-note">
                 Open Punch in & out from the sidebar when you arrive at school. You can review your
@@ -220,7 +242,7 @@ function AttendanceRegister() {
                 Open Punch in & out
               </Link>
             </Panel>
-          )}
+          ) : null}
           {feature && !state.classes.length && (
             <p className="panel-note">
               No classes are assigned to you yet. Your school administrator can assign classes and
@@ -283,23 +305,42 @@ function AttendanceRegister() {
             )}
           </div>
         </Panel>
-        <div className="attendance-summary">
-          {[
-            { label: 'Students', value: summary.total, tone: '' },
-            { label: 'Present', value: summary.present, tone: 'green' },
-            { label: 'Absent', value: summary.absent, tone: 'red' },
-            {
-              label: 'Late / half day',
-              value: `${summary.late} / ${summary['half-day']}`,
-              tone: 'amber',
-            },
-            { label: 'Not marked', value: summary.unmarked, tone: 'neutral' },
-          ].map((s) => (
-            <div className="panel" key={s.label}>
-              <span>{s.label}</span>
-              <strong className={`text-${s.tone}`}>{s.value}</strong>
-            </div>
-          ))}
+        <div className="attendance-summary stats-grid">
+          <StatCard
+            label="Total Students"
+            value={summary.total}
+            detail="Enrolled in section"
+            tone="blue"
+            icon={<Users size={16} />}
+          />
+          <StatCard
+            label="Present"
+            value={summary.present}
+            detail={summary.total ? `${Math.round((summary.present / summary.total) * 100)}% present` : '0%'}
+            tone="green"
+            icon={<UserCheck size={16} />}
+          />
+          <StatCard
+            label="Absent"
+            value={summary.absent}
+            detail={summary.absent > 0 ? `${summary.absent} absent` : 'No absentees'}
+            tone="red"
+            icon={<UserX size={16} />}
+          />
+          <StatCard
+            label="Late / Half day"
+            value={`${summary.late} / ${summary['half-day']}`}
+            detail={`${summary.late} late · ${summary['half-day']} half-day`}
+            tone="amber"
+            icon={<Clock size={16} />}
+          />
+          <StatCard
+            label="Not Marked"
+            value={summary.unmarked}
+            detail={summary.unmarked > 0 ? 'Pending recording' : 'All recorded'}
+            tone="neutral"
+            icon={<AlertCircle size={16} />}
+          />
         </div>
         <Panel
           title={`${state.classes.find((c) => c.id === classId)?.name ?? 'Class'}${sectionId ? ` · Section ${sections.find((s) => s.id === sectionId)?.name}` : ' · Whole class'}`}

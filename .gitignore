@@ -6,3 +6,6 @@ dist/
 playwright-report/
 test-results/
 *.tsbuildinfo
+
+# Antigravity ECC Agent Harness
+.agents/

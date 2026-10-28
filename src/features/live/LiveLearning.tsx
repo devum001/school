@@ -335,6 +335,7 @@ function LearningContent({
       routeAllowed: portalAccess(permissions, { teacherScoped: effective.teacherScoped }).allowed,
       canMarkAttendance:
         (!effective.attendanceGate?.required || effective.attendanceGate.active) &&
+        !effective.attendanceGate?.onLeave &&
         (permissions.includes('student-attendance.manage') ||
           permissions.includes('student-attendance.assigned')),
       canViewStudentProfiles: permissions.includes('students.view'),

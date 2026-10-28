@@ -6,11 +6,21 @@ export interface StudentProfileBridgeValue {
   fees: boolean;
   manage: boolean;
   manageMarks: boolean;
+  facilities?: {
+    bus: boolean;
+    busRoute?: string;
+    hostel: boolean;
+    hostelRoom?: string;
+  };
   feeSummary: {
     outstanding: number;
     paid: number;
     paymentCount: number;
     configured: boolean;
+    transportActive?: boolean;
+    transportRoute?: string;
+    hostelActive?: boolean;
+    hostelRoom?: string;
   } | null;
   feeContent: ReactNode;
   documentContent: ReactNode;

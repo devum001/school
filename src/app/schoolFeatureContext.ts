@@ -20,7 +20,7 @@ export interface SchoolFeatureData {
     invalid: number;
     pendingRequests: number;
   };
-  attendanceGate?: { required: boolean; active: boolean };
+  attendanceGate?: { required: boolean; active: boolean; onLeave?: boolean };
   canEditTest?: (id: string) => boolean;
   canMarkSubject?: (
     classId: string,

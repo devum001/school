@@ -5,7 +5,7 @@ import StudentDialog from './StudentDialog';
 import DeleteStudentDialog from './DeleteStudentDialog';
 import { useToday } from '../../app/useToday';
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Users, CalendarDays, ArrowUpRight } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, CalendarDays, ArrowUpRight, Bus, Building2 } from 'lucide-react';
 import { useSchool } from '../../app/useSchool';
 import {
   Avatar,
@@ -95,6 +95,13 @@ export default function StudentProfilePage() {
       r.examId === latestExam?.id,
   );
   const academic = result ? resultSummary(result) : null;
+  const localAccount = (state as unknown as { feeAccounts?: Array<{ studentId: string; transportActive?: boolean; transportFee?: number; transportRoute?: string; hostelActive?: boolean; hostelFee?: number; hostelRoom?: string }> }).feeAccounts?.find?.((a) => a.studentId === student.id);
+  const facilities = bridge?.facilities ?? {
+    bus: Boolean(localAccount?.transportActive || (localAccount?.transportFee ?? 0) > 0),
+    busRoute: localAccount?.transportRoute || '',
+    hostel: Boolean(localAccount?.hostelActive || (localAccount?.hostelFee ?? 0) > 0),
+    hostelRoom: localAccount?.hostelRoom || '',
+  };
   return (
     <>
       <Link to="/students" className="back-link">
@@ -109,6 +116,18 @@ export default function StudentProfilePage() {
             <Badge tone={student.status === 'active' ? 'green' : 'neutral'}>
               {student.status === 'active' ? 'Active student' : 'Inactive student'}
             </Badge>
+            {facilities?.bus && (
+              <Badge tone="blue">
+                <Bus size={13} style={{ marginRight: 5, verticalAlign: '-1px' }} />
+                Bus Allocated {facilities.busRoute ? `(${facilities.busRoute})` : ''}
+              </Badge>
+            )}
+            {facilities?.hostel && (
+              <Badge tone="purple">
+                <Building2 size={13} style={{ marginRight: 5, verticalAlign: '-1px' }} />
+                Hostel Allocated {facilities.hostelRoom ? `(${facilities.hostelRoom})` : ''}
+              </Badge>
+            )}
           </div>
           <p>
             {student.admissionNumber}
@@ -256,6 +275,28 @@ export default function StudentProfilePage() {
                     </dt>
                     <dd>{student.address}</dd>
                   </div>
+                  {facilities?.bus && (
+                    <div>
+                      <dt>
+                        <Bus size={14} />
+                        Bus service
+                      </dt>
+                      <dd>
+                        Allocated {facilities.busRoute ? `(Route: ${facilities.busRoute})` : ''}
+                      </dd>
+                    </div>
+                  )}
+                  {facilities?.hostel && (
+                    <div>
+                      <dt>
+                        <Building2 size={14} />
+                        Hostel facility
+                      </dt>
+                      <dd>
+                        Allocated {facilities.hostelRoom ? `(Room/Block: ${facilities.hostelRoom})` : ''}
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               </Panel>
               <Panel title="Family connection" subtitle="Parent & guardian information">

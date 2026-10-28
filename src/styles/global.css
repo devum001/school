@@ -1500,18 +1500,24 @@ tfoot td {
   gap: 15px;
   margin: 20px 0;
 }
-.attendance-summary > .panel {
+.attendance-summary.stats-grid {
+  gap: 14px;
+}
+.attendance-summary.stats-grid .stat-card {
+  padding: 18px 20px;
+}
+.attendance-summary:not(.stats-grid) > .panel {
   padding: 16px 20px;
 }
-.attendance-summary > .panel + .panel {
+.attendance-summary:not(.stats-grid) > .panel + .panel {
   margin: 0;
 }
-.attendance-summary span {
+.attendance-summary:not(.stats-grid) span {
   font-size: 11px;
   display: block;
   color: #5c6570;
 }
-.attendance-summary strong {
+.attendance-summary:not(.stats-grid) strong {
   font-size: 24px;
   display: block;
   letter-spacing: -0.5px;

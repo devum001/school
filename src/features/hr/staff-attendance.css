@@ -1,6 +1,10 @@
 .attendance-requests {
   display: grid;
   gap: 16px;
+  padding: 20px 24px;
+}
+.attendance-requests .section-navigation {
+  margin-bottom: 16px;
 }
 .attendance-requests-heading,
 .staff-attendance-tools {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Clock } from 'lucide-react';
 import { Button, Badge } from '../../components/ui/Primitives';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { HrForm, TextField } from './HrForms';
@@ -30,19 +31,19 @@ export default function AttendanceRequests({
     .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
   return (
     <section className="attendance-requests" aria-label="Attendance requests">
-      <div className="attendance-requests-heading">
-        <div>
-          <h3>Attendance requests (ARS)</h3>
-          <p>
-            {self
-              ? 'Request corrections by selecting a half-day or invalid date in your attendance calendar.'
-              : 'Review the requested attendance period. Approval updates the day and its working hours.'}
-          </p>
+      {!self && (
+        <div className="attendance-requests-heading">
+          <div>
+            <h3>Attendance requests (ARS)</h3>
+            <p>
+              Review the requested attendance period. Approval updates the day and its working hours.
+            </p>
+          </div>
+          <Button variant="secondary" onClick={saved}>
+            Refresh requests
+          </Button>
         </div>
-        <Button variant="secondary" onClick={saved}>
-          Refresh requests
-        </Button>
-      </div>
+      )}
       <SectionNavigation
         variant="secondary"
         label="ARS history"
@@ -54,11 +55,19 @@ export default function AttendanceRequests({
         onChange={setTab}
       />
       {!sorted.length ? (
-        <p className="panel-note">
-          {tab === 'pending'
-            ? 'No pending attendance requests.'
-            : 'No past requests in the selected month.'}
-        </p>
+        <div className="hr-empty-box">
+          <Clock size={36} className="hr-empty-icon" />
+          <p className="hr-empty-title">
+            {tab === 'pending'
+              ? 'No pending attendance requests'
+              : 'No past requests in the selected month'}
+          </p>
+          <span className="hr-empty-desc">
+            {tab === 'pending'
+              ? 'Select any half-day or marked date in your attendance calendar to request a punch adjustment.'
+              : 'Decided attendance requests will appear here.'}
+          </span>
+        </div>
       ) : (
         <div className="table-wrap">
           <table className="attendance-requests-table">

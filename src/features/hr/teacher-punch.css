@@ -92,6 +92,25 @@
   text-align: center;
   padding: 32px;
 }
+.punch-clock-action.on-leave {
+  padding: 36px 24px;
+}
+.punch-clock-action.on-leave .punch-action-symbol {
+  background: #fef2f2;
+  color: #dc2626;
+  margin-bottom: 18px;
+}
+.punch-clock-action.on-leave h2 {
+  font-size: 22px;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+.punch-clock-action.on-leave > p {
+  max-width: 380px;
+  margin-bottom: 24px;
+  color: #64748b;
+  font-size: 13.5px;
+}
 .punch-action-symbol {
   width: 64px;
   height: 64px;
