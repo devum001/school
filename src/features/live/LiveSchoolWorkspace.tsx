@@ -210,7 +210,15 @@ function SessionControls({ context }: { context: SchoolContextValue }) {
   return (
     <>
       {context.access.permissions.includes('academic-years.view') && (
-        <TopbarControls academicYear={context.profile?.academicYear} showNotifications={false} />
+        <TopbarControls
+          academicYear={context.profile?.academicYear}
+          showNotifications={
+            context.access.owner ||
+            (!context.status.selfTeaching &&
+              (context.access.permissions.includes('overview.view') ||
+                context.access.permissions.includes('school.profile.view')))
+          }
+        />
       )}
       <Button
         variant="secondary"

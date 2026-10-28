@@ -175,7 +175,7 @@ function AttendanceRegister() {
         title="Attendance register"
         actions={
           <>
-            {!feature && (
+            {(!feature || feature.routeAllowed?.('/notifications')) && (
               <Link
                 className="button secondary"
                 to={`/notifications?date=${date}&class=${classId}&section=${sectionId}&event=Student+Absent&focus=pending`}

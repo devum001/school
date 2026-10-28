@@ -44,6 +44,7 @@ type EditableRow = {
   hasExistingPreviousDue: boolean;
   installmentCount: number;
   firstDueDate: string;
+  installmentDueDates: string[];
   dirty: boolean;
 };
 
@@ -55,6 +56,23 @@ const toPaise = (value: string) => {
   const num = Number(cleaned);
   return Number.isFinite(num) && num >= 0 ? Math.round(num * 100) : 0;
 };
+
+function defaultDueDatesForCount(
+  count: number,
+  startDate: string,
+  existingDates: string[] = [],
+): string[] {
+  const safeCount = Math.max(1, count || 1);
+  const generated = makeInstallments(
+    Math.max(safeCount * 100, 100),
+    safeCount,
+    startDate,
+    safeCount <= 4 ? 3 : 1,
+  );
+  return Array.from({ length: safeCount }, (_, idx) => {
+    return existingDates[idx] || generated[idx]?.dueDate || startDate;
+  });
+}
 
 function createRowFromStudent(item: FeeStudentRow, defaultDueDate: string): EditableRow {
   const acc = item.account;
@@ -69,6 +87,13 @@ function createRowFromStudent(item: FeeStudentRow, defaultDueDate: string): Edit
   const tMonths = acc?.transportMonths || 12;
   const hMonths = acc?.hostelMonths || 12;
   const openingPaise = acc?.installments.reduce((s, i) => s + i.openingPaid, 0) ?? 0;
+  const count = Math.max(1, acc?.installments.length || 1);
+  const firstDue = acc?.installments[0]?.dueDate || item.nextDue || defaultDueDate;
+  const dueDates = defaultDueDatesForCount(
+    count,
+    firstDue,
+    acc?.installments.map((i) => i.dueDate) ?? [],
+  );
 
   return {
     student: item,
@@ -93,8 +118,9 @@ function createRowFromStudent(item: FeeStudentRow, defaultDueDate: string): Edit
     openingPaid: openingPaise > 0 ? String(openingPaise / 100) : '',
     previousDueAmount: item.oldDues > 0 ? String(item.oldDues / 100) : '',
     hasExistingPreviousDue: item.oldDues > 0,
-    installmentCount: Math.max(1, acc?.installments.length || 1),
-    firstDueDate: acc?.installments[0]?.dueDate || item.nextDue || defaultDueDate,
+    installmentCount: count,
+    firstDueDate: firstDue,
+    installmentDueDates: dueDates,
     dirty: false,
   };
 }
@@ -113,21 +139,38 @@ function buildAgreementForRow(row: EditableRow, defaultDueDate: string): FeeAgre
   );
   const netPaise = Math.max(0, grossPaise - concessionPaise - scholarshipPaise);
   const openingPaise = Math.min(netPaise, toPaise(row.openingPaid));
-  const dueStart = row.firstDueDate || defaultDueDate;
   const count = Math.max(1, row.installmentCount || 1);
+  const dueDates = defaultDueDatesForCount(
+    count,
+    row.firstDueDate || defaultDueDate,
+    row.installmentDueDates,
+  );
+  const dueStart = dueDates[0] || defaultDueDate;
   const existingInst = row.student.account?.installments ?? [];
 
-  const seedInstallments =
+  const baseInstallments =
     existingInst.length === count
-      ? existingInst.map((i) => ({ id: i.id, amount: i.amount, dueDate: i.dueDate }))
-      : makeInstallments(Math.max(netPaise, 100), count, dueStart, count <= 4 ? 3 : 1);
+      ? existingInst.map((i, idx) => ({
+          id: i.id,
+          amount: i.amount,
+          dueDate: dueDates[idx] || i.dueDate || dueStart,
+        }))
+      : makeInstallments(Math.max(netPaise, 100), count, dueStart, count <= 4 ? 3 : 1).map(
+          (g, idx) => ({
+            ...g,
+            dueDate: dueDates[idx] || g.dueDate,
+          }),
+        );
 
   const installments = rebalanceInstallments(
     netPaise,
-    seedInstallments,
+    baseInstallments,
     existingInst,
     dueStart,
-  );
+  ).map((inst, idx) => ({
+    ...inst,
+    dueDate: dueDates[idx] || inst.dueDate,
+  }));
 
   return {
     studentId: row.student.id,
@@ -208,8 +251,11 @@ export default function FeeOnboardingWorkspace({
   const [bulkHostelFee, setBulkHostelFee] = useState('');
   const [bulkHostelMonths, setBulkHostelMonths] = useState(12);
   const [bulkDiscount, setBulkDiscount] = useState('');
+  const [bulkOpeningPaid, setBulkOpeningPaid] = useState('');
   const [bulkInstallments, setBulkInstallments] = useState(1);
-  const [bulkFirstDue, setBulkFirstDue] = useState(defaultDueDate);
+  const [bulkDueDates, setBulkDueDates] = useState<string[]>(() =>
+    defaultDueDatesForCount(1, defaultDueDate),
+  );
 
   const [detailStudent, setDetailStudent] = useState<FeeStudentRow | null>(null);
 
@@ -326,11 +372,17 @@ export default function FeeOnboardingWorkspace({
         if (bulkDiscount.trim() !== '' && canApprove) {
           updated.discountAmount = bulkDiscount.trim();
         }
+        if (bulkOpeningPaid.trim() !== '') {
+          updated.openingPaid = bulkOpeningPaid.trim();
+        }
         if (bulkInstallments >= 1) {
           updated.installmentCount = bulkInstallments;
-        }
-        if (bulkFirstDue) {
-          updated.firstDueDate = bulkFirstDue;
+          updated.installmentDueDates = defaultDueDatesForCount(
+            bulkInstallments,
+            bulkDueDates[0] || defaultDueDate,
+            bulkDueDates,
+          );
+          updated.firstDueDate = updated.installmentDueDates[0] || defaultDueDate;
         }
         next[id] = updated;
       }
@@ -631,7 +683,13 @@ export default function FeeOnboardingWorkspace({
                 <span>Installments</span>
                 <select
                   value={bulkInstallments}
-                  onChange={(e) => setBulkInstallments(Number(e.target.value))}
+                  onChange={(e) => {
+                    const nextCount = Number(e.target.value);
+                    setBulkInstallments(nextCount);
+                    setBulkDueDates((prev) =>
+                      defaultDueDatesForCount(nextCount, prev[0] || defaultDueDate, prev),
+                    );
+                  }}
                 >
                   <option value={1}>One Time (1)</option>
                   <option value={2}>2 Installments</option>
@@ -642,14 +700,18 @@ export default function FeeOnboardingWorkspace({
                 </select>
               </label>
 
-              <label className="field">
-                <span>First Due Date</span>
-                <PickerInput
-                  type="date"
-                  value={bulkFirstDue}
-                  onChange={(e) => setBulkFirstDue(e.target.value)}
-                />
-              </label>
+              {bulkInstallments === 1 && (
+                <label className="field">
+                  <span>Paid Now / Partial (₹)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Optional partial paid"
+                    value={bulkOpeningPaid}
+                    onChange={(e) => setBulkOpeningPaid(e.target.value)}
+                  />
+                </label>
+              )}
 
               <div className="fee-quick-bulk-actions">
                 <Button type="button" variant="secondary" onClick={applyBulkToTargets}>
@@ -666,6 +728,37 @@ export default function FeeOnboardingWorkspace({
                 )}
               </div>
             </div>
+
+            {bulkInstallments > 1 && (
+              <div className="fee-bulk-due-dates-bar">
+                <span className="fee-bulk-due-dates-title">
+                  Each Installment Due Date ({bulkInstallments} parts):
+                </span>
+                <div className="fee-bulk-due-dates-grid">
+                  {Array.from({ length: bulkInstallments }, (_, idx) => (
+                    <label key={idx} className="field">
+                      <span>Installment {idx + 1} Due</span>
+                      <PickerInput
+                        aria-label={`Bulk installment ${idx + 1} due date`}
+                        type="date"
+                        value={bulkDueDates[idx] ?? defaultDueDate}
+                        onChange={(e) =>
+                          setBulkDueDates((prev) => {
+                            const next = defaultDueDatesForCount(
+                              bulkInstallments,
+                              prev[0] || defaultDueDate,
+                              prev,
+                            );
+                            next[idx] = e.target.value;
+                            return next;
+                          })
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </Panel>
@@ -742,7 +835,7 @@ export default function FeeOnboardingWorkspace({
                       </th>
                       <th>Concession (₹)</th>
                       <th>Old Pending (₹)</th>
-                      <th>Schedule</th>
+                      <th>Schedule &amp; Due Dates</th>
                       <th className="currency-cell">Final Fee</th>
                       <th>Actions</th>
                     </tr>
@@ -1001,23 +1094,90 @@ export default function FeeOnboardingWorkspace({
                           </td>
 
                           <td>
-                            <select
-                              aria-label={`Installments for ${row.student.name}`}
-                              value={row.installmentCount}
-                              onChange={(e) =>
-                                updateRow(id, (r) => ({
-                                  ...r,
-                                  installmentCount: Number(e.target.value),
-                                }))
-                              }
-                            >
-                              <option value={1}>One Time (1)</option>
-                              <option value={2}>2 Parts</option>
-                              <option value={3}>3 Parts</option>
-                              <option value={4}>4 Parts</option>
-                              <option value={6}>6 Parts</option>
-                              <option value={12}>12 Parts</option>
-                            </select>
+                            <div className="fee-cell-schedule">
+                              <select
+                                aria-label={`Installments for ${row.student.name}`}
+                                value={row.installmentCount}
+                                onChange={(e) => {
+                                  const nextCount = Number(e.target.value);
+                                  updateRow(id, (r) => {
+                                    const nextDates = defaultDueDatesForCount(
+                                      nextCount,
+                                      r.firstDueDate || defaultDueDate,
+                                      r.installmentDueDates,
+                                    );
+                                    return {
+                                      ...r,
+                                      installmentCount: nextCount,
+                                      installmentDueDates: nextDates,
+                                      firstDueDate: nextDates[0] || defaultDueDate,
+                                    };
+                                  });
+                                }}
+                              >
+                                <option value={1}>One Time (1)</option>
+                                <option value={2}>2 Parts</option>
+                                <option value={3}>3 Parts</option>
+                                <option value={4}>4 Parts</option>
+                                <option value={6}>6 Parts</option>
+                                <option value={12}>12 Parts</option>
+                              </select>
+
+                              {row.installmentCount === 1 ? (
+                                <div className="fee-cell-onetime-partial">
+                                  <input
+                                    aria-label={`One time paid now for ${row.student.name}`}
+                                    type="number"
+                                    min={0}
+                                    placeholder="Paid now ₹ (opt)"
+                                    title="Optional: enter amount paid now if student leaves a remaining balance on One Time fee"
+                                    value={row.openingPaid}
+                                    onChange={(e) =>
+                                      updateRow(id, (r) => ({ ...r, openingPaid: e.target.value }))
+                                    }
+                                  />
+                                  {finalNetPaise > 0 &&
+                                    toPaise(row.openingPaid) > 0 &&
+                                    toPaise(row.openingPaid) < finalNetPaise && (
+                                      <small className="fee-partial-rem-note">
+                                        Pending: {money(finalNetPaise - toPaise(row.openingPaid))}
+                                      </small>
+                                    )}
+                                </div>
+                              ) : (
+                                <div className="fee-cell-due-list">
+                                  {Array.from({ length: row.installmentCount }, (_, idx) => (
+                                    <label key={idx} className="fee-cell-due-item">
+                                      <span>#{idx + 1}</span>
+                                      <PickerInput
+                                        aria-label={`Installment ${idx + 1} due date for ${row.student.name}`}
+                                        type="date"
+                                        value={
+                                          row.installmentDueDates[idx] ||
+                                          row.firstDueDate ||
+                                          defaultDueDate
+                                        }
+                                        onChange={(e) =>
+                                          updateRow(id, (r) => {
+                                            const nextDates = defaultDueDatesForCount(
+                                              r.installmentCount,
+                                              r.firstDueDate || defaultDueDate,
+                                              r.installmentDueDates,
+                                            );
+                                            nextDates[idx] = e.target.value;
+                                            return {
+                                              ...r,
+                                              installmentDueDates: nextDates,
+                                              firstDueDate: nextDates[0] || r.firstDueDate,
+                                            };
+                                          })
+                                        }
+                                      />
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </td>
 
                           <td className="currency-cell">

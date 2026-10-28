@@ -1,5 +1,8 @@
 import { lazy, Suspense } from 'react';
 const LiveFinanceWorkspace = lazy(() => import('../features/fees/LiveFinanceWorkspace'));
+const LiveNotificationsWorkspace = lazy(
+  () => import('../features/notifications/LiveNotificationsWorkspace'),
+);
 import LiveLearning from '../features/live/LiveLearning';
 import TeacherPunchPage from '../features/hr/TeacherPunchPage';
 import LiveHrWorkspace from '../features/hr/HrWorkspace';
@@ -41,12 +44,17 @@ export const liveRouter = createBrowserRouter([
       },
       { path: 'staff/punch', element: <TeacherPunchPage /> },
       { path: 'staff/self', element: <LiveHrWorkspace section="self" /> },
-      ...[{ path: 'notifications', title: 'Notifications' }].map(({ path, title }) => ({
-        path,
-        element: <PendingSchoolRoute title={title} />,
-      })),
+      {
+        path: 'notifications',
+        element: (
+          <Suspense fallback={<p role="status">Loading notifications…</p>}>
+            <LiveNotificationsWorkspace />
+          </Suspense>
+        ),
+      },
       { path: 'platform', element: null },
       { path: '*', element: <PendingSchoolRoute title="Page not found" /> },
     ],
   },
 ]);
+

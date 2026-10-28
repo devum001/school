@@ -85,7 +85,10 @@ export default function TopbarControls({
       >
         <div className="topbar-alert-list">
           {!attention && (
-            <p>Notification delivery and attention counts are not connected in Phase 1.</p>
+            <p>
+              Review attendance alerts, fee installment reminders, and school notices in
+              Notifications.
+            </p>
           )}
           {attention?.pending.map((group) => (
             <Link

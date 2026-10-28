@@ -235,24 +235,6 @@ export default function FeePlanEditor({
           />
         </label>
 
-        {value.kind === 'One Time' && (
-          <label className="field">
-            Due Date
-            <PickerInput
-              aria-label="Fee due date"
-              required={required}
-              type="date"
-              value={value.installments[0]?.dueDate ?? ''}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  installments: [{ ...value.installments[0], dueDate: e.target.value }],
-                })
-              }
-            />
-          </label>
-        )}
-
         {showExtendedFields && (
           <label className="field">
             Concession / Discount (₹)
@@ -275,6 +257,55 @@ export default function FeePlanEditor({
             />
           </label>
         )}
+
+        {value.kind === 'One Time' && showExtendedFields && (
+          <label className="field">
+            Paid Now / Partial Paid (₹)
+            <input
+              aria-label="One time paid now (₹)"
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]+([.][0-9]{1,2})?"
+              placeholder={
+                netTargetPaise > 0
+                  ? `0 to ${Math.round(netTargetPaise / 100)} (optional if leaving balance)`
+                  : '0 (optional if paying partial now)'
+              }
+              value={value.openingPaid ?? ''}
+              onChange={(e) => onChange({ ...value, openingPaid: e.target.value })}
+            />
+            {netTargetPaise > 0 && Number(value.openingPaid || 0) > 0 && (
+              <small className="panel-note" style={{ marginTop: 4 }}>
+                {Math.round(Number(value.openingPaid || 0) * 100) >= netTargetPaise
+                  ? 'Full one-time fee marked as paid.'
+                  : `Remaining balance pending: ${money(
+                      Math.max(0, netTargetPaise - Math.round(Number(value.openingPaid || 0) * 100)),
+                    )}`}
+              </small>
+            )}
+          </label>
+        )}
+
+        {value.kind === 'One Time' &&
+          showExtendedFields &&
+          netTargetPaise > 0 &&
+          Number(value.openingPaid || 0) > 0 &&
+          Math.round(Number(value.openingPaid || 0) * 100) < netTargetPaise && (
+            <label className="field">
+              Remaining Balance Due Date (optional)
+              <PickerInput
+                aria-label="Remaining balance due date"
+                type="date"
+                value={value.installments[0]?.dueDate ?? ''}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    installments: [{ ...value.installments[0], dueDate: e.target.value }],
+                  })
+                }
+              />
+            </label>
+          )}
       </div>
 
       {showExtendedFields && (
@@ -465,43 +496,11 @@ export default function FeePlanEditor({
               </div>
             )}
           </div>
-
-          {/* PREVIOUS YEAR PENDING & OPENING PAID */}
-          <div className="form-grid" style={{ marginTop: 4 }}>
-            <label className="field">
-              Previous Year Pending Dues (₹)
-              <input
-                aria-label="Previous year pending (₹)"
-                type="text"
-                inputMode="decimal"
-                placeholder="0 (if any old balance is pending)"
-                disabled={Boolean(value.hasExistingPreviousDue)}
-                value={value.previousDueAmount ?? ''}
-                onChange={(e) => onChange({ ...value, previousDueAmount: e.target.value })}
-              />
-              {value.hasExistingPreviousDue && (
-                <small className="panel-note">
-                  Previous year balance is already recorded in student fee ledger.
-                </small>
-              )}
-            </label>
-            <label className="field">
-              Already Paid This Year (₹)
-              <input
-                aria-label="Already paid this year (₹)"
-                type="text"
-                inputMode="decimal"
-                placeholder="0 (optional opening paid)"
-                value={value.openingPaid ?? ''}
-                onChange={(e) => onChange({ ...value, openingPaid: e.target.value })}
-              />
-            </label>
-          </div>
         </div>
       )}
 
       {/* Breakdown Banner when facilities or discounts are active */}
-      {(hasFacilities || Number(value.previousDueAmount || 0) > 0) && (
+      {hasFacilities && (
         <div className="fee-breakdown-summary">
           <div className="fee-breakdown-items">
             <span>

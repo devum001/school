@@ -68,7 +68,7 @@ function RelationList({
       (permission) => access.permissions.includes(permission),
     );
   const loadingLabel = assignments
-    ? 'Loading teaching assignments…'
+    ? 'Loading staff assignments…'
     : 'Loading student enrollments…';
   return (
     <LoadingOverlay
@@ -78,10 +78,10 @@ function RelationList({
       message={loadingLabel}
     >
       <Panel
-        title={`${assignments ? 'Teaching assignments' : 'Student enrollments'}${year ? ` · ${year.name}` : ''}`}
+        title={`${assignments ? 'Staff assignments' : 'Student enrollments'}${year ? ` · ${year.name}` : ''}`}
         subtitle="Relationships belong to this academic year. Ending a relationship preserves its historical record."
         action={
-          assignments && canAssign && <Button onClick={() => setAdding(true)}>Assign teacher</Button>
+          assignments && canAssign && <Button onClick={() => setAdding(true)}>Assign staff</Button>
         }
       >
         <div className="live-content">

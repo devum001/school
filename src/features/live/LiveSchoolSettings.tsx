@@ -1,4 +1,5 @@
 import LiveHrWorkspace from '../hr/HrWorkspace';
+import LiveNotificationsWorkspace from '../notifications/LiveNotificationsWorkspace';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import SettingsPage from '../settings/SettingsPage';
 import LiveSchoolProfile from '../settings/LiveSchoolProfile';
@@ -76,6 +77,7 @@ export default function LiveSchoolSettings() {
               ...(can('school.profile.view') ? ['General'] : []),
               ...(can('classes.view') ? ['Classes, Sections & Grades'] : []),
               ...(can('payroll.view') && can('payroll.manage') ? ['Staff & Payroll'] : []),
+              ...(can('school.profile.view') || can('overview.view') ? ['Communication'] : []),
               ...(can('roles.view') || can('memberships.view') ? ['Roles & Permissions'] : []),
               'Data & Security',
               ...(can('academic-years.view') ? ['Preferences'] : []),
@@ -99,6 +101,12 @@ export default function LiveSchoolSettings() {
               access={access}
               yearId={status.currentAcademicYearId}
             />
+          ) : (
+            denied
+          );
+        if (tab === 'Communication')
+          return access.owner || can('school.profile.view') || can('overview.view') ? (
+            <LiveNotificationsWorkspace settingsMode />
           ) : (
             denied
           );

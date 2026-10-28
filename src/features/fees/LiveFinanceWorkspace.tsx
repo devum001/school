@@ -458,14 +458,17 @@ function FeeWorkspace({
                     </div>
                     <div className="fee-overview-grid">
                       <Panel
+                        className="fee-ready-panel"
                         title="Ready for collection"
                         subtitle="Set up the common fee arrangement, then adjust individual exceptions."
                       >
                         <div className="fee-dashboard-action">
-                          <strong>{data.summary.pending}</strong>
-                          <div>
-                            <h3>Students need fee setup</h3>
-                            <p>Unconfigured students are never shown as paid.</p>
+                          <div className="fee-dashboard-action-main">
+                            <strong>{data.summary.pending}</strong>
+                            <div>
+                              <h3>Students need fee setup</h3>
+                              <p>Unconfigured students are never shown as paid.</p>
+                            </div>
                           </div>
                           <Button
                             onClick={() => {
@@ -477,9 +480,10 @@ function FeeWorkspace({
                             Set up fees
                           </Button>
                         </div>
-                        <p className="panel-padding">
-                          Concessions & scholarships: <strong>{money(data.summary.concessions)}</strong>
-                        </p>
+                        <div className="fee-ready-footer">
+                          <span>Concessions & scholarships</span>
+                          <strong className="currency-cell">{money(data.summary.concessions)}</strong>
+                        </div>
                       </Panel>
                       <Panel title="Class-wise balances">
                         <div className="table-wrap">

@@ -16,6 +16,8 @@ export function portalAccess(
       return can('staff.view');
     if (path === '/fees') return can('fees.view') || can('payroll.view');
     if (path === '/attendance/staff') return !context.teacherScoped && can('attendance.manage');
+    if (path === '/notifications')
+      return !context.teacherScoped && (can('overview.view') || can('school.profile.view'));
     return path === '/settings';
   };
   const home =

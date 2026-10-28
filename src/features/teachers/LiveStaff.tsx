@@ -58,11 +58,11 @@ export default function LiveStaff({
     requested = params.get('section');
   const items = [
     { id: 'directory', label: teachersOnly ? 'Teachers' : 'All Staff' },
-    ...(access.permissions.includes('attendance.manage')
+    ...(!teachersOnly && access.permissions.includes('attendance.manage')
       ? [{ id: 'leave', label: 'Leave' }]
       : []),
-    ...(access.permissions.includes('assignments.view')
-      ? [{ id: 'assignments', label: 'Teaching assignments' }]
+    ...(!teachersOnly && access.permissions.includes('assignments.view')
+      ? [{ id: 'assignments', label: 'Staff assignments' }]
       : []),
   ];
   const section = items.find((i) => i.id === requested)?.id ?? 'directory';
@@ -84,19 +84,21 @@ export default function LiveStaff({
           saved={state.reload}
         />
       )}
-      <SectionNavigation
-        items={items.map((i) => ({ ...i, icon: STAFF_NAV_ICONS[i.id] || ('staff' as const) }))}
-        value={section}
-        onChange={(value) =>
-          setParams((previous) => {
-            const next = new URLSearchParams(previous);
-            next.set('section', value);
-            next.delete('import');
-            return next;
-          })
-        }
-        label={teachersOnly ? 'Teacher features' : 'Staff & HR'}
-      />
+      {items.length > 1 && (
+        <SectionNavigation
+          items={items.map((i) => ({ ...i, icon: STAFF_NAV_ICONS[i.id] || ('staff' as const) }))}
+          value={section}
+          onChange={(value) =>
+            setParams((previous) => {
+              const next = new URLSearchParams(previous);
+              next.set('section', value);
+              next.delete('import');
+              return next;
+            })
+          }
+          label={teachersOnly ? 'Teacher features' : 'Staff & HR'}
+        />
+      )}
       {['attendance', 'leave', 'salary', 'self'].includes(section) ? (
         <LiveHrWorkspace
           key={section}

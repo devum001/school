@@ -203,13 +203,14 @@ export function feePlanDraftFromLedger(
 }
 
 export function feePlanInput(draft: FeePlanDraft): FeePlanInput {
+  const fallbackDate = new Date().toISOString().slice(0, 10);
   return {
     kind: draft.kind,
     totalFee: Math.round(Number(draft.totalFee) * 100),
     installments: draft.installments.map((item) => ({
       id: item.id,
       amount: Math.round(Number(draft.kind === 'One Time' ? draft.totalFee : item.amount) * 100),
-      dueDate: item.dueDate,
+      dueDate: item.dueDate || fallbackDate,
     })),
   };
 }
