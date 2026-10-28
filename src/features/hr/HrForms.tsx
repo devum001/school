@@ -10,6 +10,7 @@ export function HrForm({
   submit,
   children,
   submitLabel = 'Save',
+  className,
 }: {
   title: string;
   description: string;
@@ -17,6 +18,7 @@ export function HrForm({
   submit: () => Promise<unknown>;
   children: ReactNode;
   submitLabel?: string;
+  className?: string;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -26,6 +28,7 @@ export function HrForm({
     <Modal
       open
       wide
+      className={className}
       title={guard.confirming ? 'Discard changes?' : title}
       description={description}
       onClose={() => {

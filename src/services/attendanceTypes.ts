@@ -1,0 +1,26 @@
+import { z } from 'zod';
+export const attendanceRequestSchema = z.object({
+  schoolId: z.string(),
+  staffId: z.string(),
+  dayId: z.string(),
+  date: z.string(),
+  revision: z.number(),
+  requestKey: z.string(),
+  requestedStatus: z.enum(['present', 'half-day']),
+  requestedPeriod: z.enum(['full-day', 'first-half', 'second-half']).optional(),
+  reasonCode: z.string().optional(),
+  effectivePunchIn: z.string().optional(),
+  effectivePunchOut: z.string().optional(),
+  reason: z.string(),
+  requestedAt: z.string(),
+  status: z.enum(['pending', 'approved', 'rejected']),
+  reviewNote: z.string(),
+  reviewedAt: z.string().optional(),
+  acceptedStatus: z.string().optional(),
+  decision: z.string().optional(),
+  unpaidUnits: z.number().optional(),
+  late: z.boolean(),
+  punchIn: z.string().optional(),
+  punchOut: z.string().optional(),
+});
+export type AttendanceRequest = z.infer<typeof attendanceRequestSchema>;

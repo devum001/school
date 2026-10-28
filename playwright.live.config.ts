@@ -19,7 +19,9 @@ export default defineConfig({
   webServer: [
     {
       command: './node_modules/.bin/ts-node src/test/phase3BrowserServer.ts',
-      cwd: '/home/devendra/scholl backend/type-ORM-backend-Node',
+      cwd:
+        process.env.SCHOOL_BACKEND_TEST_DIR ||
+        '/home/devendra/scholl backend/type-ORM-backend-Node',
       url: 'http://127.0.0.1:3107/health/ready',
       gracefulShutdown: { signal: 'SIGTERM', timeout: 20000 },
       reuseExistingServer: false,

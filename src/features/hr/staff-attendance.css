@@ -1,0 +1,205 @@
+.attendance-requests {
+  display: grid;
+  gap: 16px;
+}
+.attendance-requests-heading,
+.staff-attendance-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+.attendance-requests-heading > div {
+  flex: 1;
+  min-width: 220px;
+}
+.attendance-requests h3 {
+  margin: 0 0 8px;
+}
+.attendance-requests p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.attendance-request-sub {
+  display: block;
+  color: var(--muted);
+  margin-top: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 330px;
+}
+.staff-attendance-tools {
+  padding: 18px 20px;
+  background: #f4f8f6;
+  border-bottom: 1px solid var(--border);
+}
+.staff-attendance-views,
+.staff-punch-chips,
+.staff-attendance-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.staff-attendance-tools .field {
+  margin: 0;
+  min-width: 180px;
+}
+.punch-chip {
+  padding: 7px 11px;
+  border-radius: 20px;
+  border: 1px solid #d8e1de;
+  color: #627874;
+  background: #f4f7f5;
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.punch-chip.in {
+  color: #23664e;
+  background: #eaf4ee;
+  border-color: #bad7c9;
+}
+.punch-chip.out {
+  color: #355d7a;
+  background: #ecf3fa;
+  border-color: #c3d7e7;
+}
+.staff-attendance-register td {
+  vertical-align: middle;
+}
+.staff-attendance-register .button {
+  white-space: nowrap;
+}
+.staff-attendance-register {
+  min-width: 850px;
+}
+.staff-attendance-tools + .attendance-requests {
+  padding: 22px;
+}
+.punch-request-panel {
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface, #fff);
+}
+.punch-missed-notice {
+  padding: 18px 22px;
+  background: #fff6e7;
+  border: 1px solid #e3c893;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.punch-missed-notice p {
+  margin: 6px 0 0;
+}
+.staff-profile-hero {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.staff-profile-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+.staff-profile-details dt {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.staff-profile-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.staff-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 650px) {
+  .staff-profile-details,
+  .staff-profile-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .staff-attendance-tools {
+    padding: 14px;
+  }
+  .staff-attendance-tools .field {
+    width: 100%;
+  }
+}
+
+.staff-profile-card {
+  padding: 26px;
+}
+.staff-profile-hero {
+  margin-bottom: 24px;
+}
+.staff-profile-hero h2 {
+  margin: 0 0 6px;
+}
+.staff-profile-details {
+  margin-bottom: 0;
+}
+@media (max-width: 650px) {
+  .staff-profile-card {
+    padding: 20px;
+  }
+  .attendance-requests-table,
+  .attendance-requests-table tbody {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .attendance-requests-table thead {
+    display: none;
+  }
+  .attendance-requests-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+  }
+  .attendance-requests-table td {
+    display: block;
+    border: 0;
+    padding: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .attendance-requests-table td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+  .attendance-requests-table .request-reason {
+    grid-column: 1 / -1;
+  }
+}
+.ars-review-summary {
+  display: grid;
+  gap: 8px;
+  border-radius: 14px;
+  padding: 20px;
+  background: #edf5f2;
+  margin-bottom: 20px;
+}
+.ars-review-summary > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ars-review-summary > strong {
+  font-size: 20px;
+}
+.ars-review-summary p {
+  margin: 0;
+  font-size: 13px;
+}

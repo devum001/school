@@ -1,7 +1,7 @@
 /** Only connected live areas are navigable. API authorization remains authoritative. */
 export function portalAccess(
   permissions: readonly string[],
-  context: { selfLinked?: boolean } = {},
+  context: { selfLinked?: boolean; teacherScoped?: boolean } = {},
 ) {
   const can = (key: string) => permissions.includes(key);
   const own = (key: string) => context.selfLinked !== false && can(key);
@@ -10,28 +10,31 @@ export function portalAccess(
     if (path === '/classes') return can('classes.view') || own('teaching.self');
     if (path === '/academics') return can('academics.view') || own('academics.assigned.view');
     if (path === '/attendance') return can('student-attendance.view') || own('teaching.self');
-    if (path === '/staff/self') return own('attendance.self');
+    if (path === '/staff/self' || path === '/staff/punch') return own('attendance.self');
     if (path.startsWith('/students')) return can('students.view');
-    if (path.startsWith('/teachers') || path === '/staff') return can('staff.view');
+    if (path.startsWith('/teachers') || path === '/staff' || path.startsWith('/staff/'))
+      return can('staff.view');
     if (path === '/fees') return can('fees.view') || can('payroll.view');
-    if (path === '/attendance/staff') return can('attendance.manage');
+    if (path === '/attendance/staff') return !context.teacherScoped && can('attendance.manage');
     return path === '/settings';
   };
   const home =
-    can('overview.view') || own('teaching.self')
-      ? '/'
-      : can('school.profile.view')
-        ? '/settings'
-        : own('attendance.self')
-          ? '/staff/self'
-          : can('students.view')
-            ? '/students'
-            : can('staff.view')
-              ? '/staff'
-              : can('fees.view') || can('payroll.view')
-                ? '/fees'
-                : can('attendance.manage')
-                  ? '/attendance/staff'
-                  : '/settings';
+    context.teacherScoped && own('attendance.self')
+      ? '/staff/punch'
+      : can('overview.view') || own('teaching.self')
+        ? '/'
+        : can('school.profile.view')
+          ? '/settings'
+          : own('attendance.self')
+            ? '/staff/self'
+            : can('students.view')
+              ? '/students'
+              : can('staff.view')
+                ? '/staff'
+                : can('fees.view') || can('payroll.view')
+                  ? '/fees'
+                  : can('attendance.manage')
+                    ? '/attendance/staff'
+                    : '/settings';
   return { allowed, home };
 }

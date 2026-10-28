@@ -1,3 +1,4 @@
+import LiveStaffProfile from '../teachers/LiveStaffProfile';
 import LiveStudentProfile from '../students/LiveStudentProfile';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { PageHeading, Panel } from '../../components/ui/Primitives';
@@ -52,12 +53,16 @@ export function ExistingPeopleRoute() {
           denied
         )
       ) : can('staff.view') ? (
-        <LiveStaff
-          key={`${schoolId}:${pathname}`}
-          access={access}
-          yearId={year}
-          teachersOnly={pathname.startsWith('/teachers')}
-        />
+        /^\/(teachers|staff)\/[^/]+$/.test(pathname) ? (
+          <LiveStaffProfile />
+        ) : (
+          <LiveStaff
+            key={`${schoolId}:${pathname}`}
+            access={access}
+            yearId={year}
+            teachersOnly={pathname.startsWith('/teachers')}
+          />
+        )
       ) : (
         denied
       )}

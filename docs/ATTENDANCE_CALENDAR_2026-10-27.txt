@@ -1,0 +1,99 @@
+Teacher calendar and ARS refinement — 27 October 2026
+
+Delivered behavior
+- Personal attendance calendar shows date numbers only. The six legends are Late (yellow), On leave (pink), Absent (red), Half day (purple), School holiday (orange), and Invalid (black). Half-day leave uses the same purple appearance. Weekly holidays follow the school's configured working days and have no extra legend.
+- Selecting any date shows its punch-in, punch-out and working hours. Only an eligible Half day or Invalid attendance record opens ARS; pending requests cannot be duplicated. Future, absent, present, late-only and unmarked dates do not open the request form.
+- ARS contains the selected date/status/punch details, Full day / First half / Second half, and Forgot to punch out / Forgot to punch in / App issue / Network issue / Other reason. No free date picker or salary-treatment controls remain in the live attendance correction flow.
+- Pending and Past requests are separate tabs. Past requests follow the selected month; pending requests remain visible across months.
+- An unfinished physical punch becomes Invalid after the school's local midnight. Entering Punch in & out automatically asks for ARS for the oldest outstanding missed punch. Submission closes that unresolved punch and permits today's punch before approval, subject to normal location/workday checks. The previous day remains Invalid until approved. Multiple missed days must each be addressed.
+- Approval applies the requested period, not an unrelated status selected by the reviewer. A full day credits school start to end; halves split that interval at its midpoint. For 08:00–15:00, first half is 08:00–11:30 and second half is 11:30–15:00. Existing per-day work-rule snapshots take precedence over later setting changes.
+- Approved ARS replaces the displayed late classification. This supersedes the earlier attendance report's behavior that retained the late indicator after approval.
+- Administrators can correct local punch-in/out times with a reason; duration, late status and full/half-day classification recalculate. Original physical punches and correction history remain available for audit. Credited times/hours are clearly identified in the teacher's detail view.
+- Attendance approval does not ask about pay or create automatic salary deductions. Existing payroll, leave and payment workflows remain separate. Payroll locking, revision checks, no self-approval, tenant isolation, attendance permissions and CSRF enforcement are preserved.
+- Festival names are deferred as requested; the calendar currently displays School holiday for configured holiday dates.
+
+Implementation and API dependencies
+- Existing request and decision APIs now accept/store requestedPeriod and reasonCode. Legacy request fields remain accepted for compatibility.
+- Added PUT /api/v1/schools/:schoolId/hr/staff/:id/attendance-times (attendance.manage + CSRF), with date, revision, local punchIn/punchOut HH:mm, and reason.
+- Added optional embedded credited-time/correction fields to existing attendance records. No collection reset, index change, migration or initialization command is required.
+- Midnight status is derived on reads; there is no midnight write sweep. The punch page refreshes once on school-date rollover, rather than making API calls every second. Browser clocks do not authorize punches: server checks remain authoritative.
+- No environment, dependency, credential, production database, or school-record changes were made for this task. Runtime browser/database checks used disposable local MongoDB fixtures only.
+
+Changed frontend files for this refinement
+src/features/hr/AttendanceCalendar.tsx
+src/features/hr/attendanceCalendarModel.ts
+src/features/hr/attendanceCalendarModel.test.ts
+src/features/hr/AttendanceDayDetail.tsx (new)
+src/features/hr/ArsRequestDialog.tsx (new)
+src/features/hr/AttendanceTimeDialog.tsx (new)
+src/features/hr/AttendanceRequests.tsx
+src/features/hr/HrForms.tsx
+src/features/hr/HrWorkspace.tsx
+src/features/hr/StaffAttendancePanel.tsx
+src/features/hr/TeacherPunchPage.tsx
+src/features/hr/hr-personal-calendar.css
+src/features/hr/staff-attendance.css
+src/services/hrService.ts
+src/services/attendanceTypes.ts
+src/services/teacherPunchService.ts
+src/services/apiService.ts
+playwright.config.ts
+playwright.ars.config.ts (new)
+tests/attendance-ars-live.e2e.ts (new)
+tests/teacher-workspace-live.e2e.ts
+
+Changed backend files for this refinement
+src/test/attendanceAdjustments.integration.test.ts
+src/test/arsBrowserFixture.ts
+src/test/phase3BrowserRuntime.ts
+src/api/models/hr.models.ts
+src/api/controllers/hr.controller.ts
+src/api/services/attendanceTimes.service.ts
+src/api/services/learningRead.service.ts
+src/api/services/attendanceRequestRead.ts
+src/api/services/attendanceDayView.ts
+src/api/services/hrPayroll.service.ts
+src/api/services/attendanceTimeRules.ts
+src/api/services/hrAttendance.service.ts
+src/api/services/hrRead.service.ts
+src/api/services/learningSerialization.ts
+src/api/services/hrRules.ts
+src/api/services/hrCommon.ts
+src/api/services/attendanceAdjustment.service.ts
+src/api/services/attendanceTimeRules.test.ts
+src/api/controllers/requests/hr.request.ts
+
+Verification commands and results
+Frontend:
+- npm run typecheck: passed.
+- npm run lint: passed with four pre-existing react-refresh/only-export-components warnings in AppIcon, LoadingOverlay and Primitives.
+- VITE_APP_MODE=demo npm test: 57 files, 321 tests passed.
+- VITE_APP_MODE=live npm run build and VITE_APP_MODE=demo npm run build: passed. Existing live large-chunk warning and third-party Rollup annotation warning remain.
+- Playwright teacher workspace suite: 1 passed (campus/teacher scope, calendar ARS, approval, manual correction, staff profile).
+- Playwright ARS suite: 1 passed (automatic missed-punch request, next punch before approval, pending list, mobile layout and fully visible Submit button).
+- Playwright HR suite: 3 passed (salary/partial/full payments, teacher punching, departments and school-managed accounts).
+- Playwright demo preservation and monthly attendance suites: 2 passed.
+- Mobile screenshots inspected at 390px width. Demo and live routes remain separate.
+Browser commands used PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome and, for live suites, SCHOOL_BACKEND_TEST_DIR=/tmp/attendance-calendar-backend. Configurations: playwright.teacher.config.ts, playwright.ars.config.ts, playwright.hr.config.ts, and playwright.config.ts for the two demo tests.
+Backend:
+- npm run typecheck: passed.
+- npm run lint: passed.
+- tsc --project tsconfig.build.json --outDir /tmp/calendar-backend-dist: passed.
+- Focused attendance suites: 5 suites, 33 tests passed, covering eligibility, midnight, raw punch preservation, timezone conversion, requested halves, approval and manual correction/security.
+- The first full run passed 239 tests but failed the example-environment test because the isolated copy lacked .env.example. Copied the public example (not .env) and reran the full suite.
+- Sandbox-restricted attempts could not write the shared Jest cache/start local browser servers; successful runs used approved local test permissions and a /tmp cache.
+- All 19 backend files applied to the real repository were verified byte-for-byte against the tested copy. Concurrent-edit checks ran before copying; prior versions were backed up under /tmp/attendance-calendar-backup.
+- Full backend rerun: npm test -- --cacheDirectory=/tmp/calendar-jest-cache — 39 suites, 240 tests passed (295.558 seconds). The isolated setup issue is resolved.
+- git diff --check: passed in both repositories.
+
+Try the flow
+1. Restart backend and refresh the frontend in live mode. No database script is needed.
+2. Teacher: My attendance & salary > Attendance. Select a Half day or Invalid date, choose ARS type/reason and submit.
+3. Teacher: ARS > Pending. The old day remains Invalid until a reviewer approves it.
+4. Administrator: staff attendance > ARS requests. Review the requested period, enter a decision reason and approve or reject. Salary treatment is absent from this flow.
+5. Teacher: refresh attendance or reopen it. Approval shows the accepted period and approved hours, without a stale Late label. Past requests contains the decision.
+6. Administrator: use the attendance row's correction action to edit local punch times with a reason. Reopening the teacher calendar/profile reflects the recalculated values.
+7. A real unfinished punch from yesterday automatically opens ARS on today's Punch in & out page. Submitting it permits today's punch before approval; location checks still apply.
+
+Limits
+Holiday festival names remain deferred. No production/Atlas data or physical-device GPS was exercised; location flows used browser geolocation in disposable fixtures. Existing bundle-size and Fast Refresh warnings are unrelated to this change. Other pre-existing uncommitted work in both repositories was preserved.

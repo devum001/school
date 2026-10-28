@@ -1,0 +1,204 @@
+Teacher workspace, campus map and punch enforcement — 27-10-2026
+
+Implemented
+- Non-owner accounts linked to a teaching staff profile receive only their active
+  class/section assignments in Overview and Student Attendance, even if their role
+  includes school-wide overview.view or student-attendance view/manage permissions.
+  Section teacher designations also count as assignments. No assignments means an
+  empty workspace; there is no fallback to all classes or demo records.
+- Teacher overview reuses the existing dashboard and student charts, with staff
+  summary cards removed. Its API response omits staff profiles and staff attendance.
+- Student attendance preselects an allowed class/section. Other classes/sections
+  are absent from dropdowns. Staff Attendance is hidden and its direct UI route
+  redirects for non-owner teachers. School owners retain their existing access.
+- Student attendance writes require the teacher's open punch for the CURRENT school
+  date, checked inside the existing tenant transaction. Missing punches, previous-day
+  punches and completed punches cannot unlock saving. Global management permissions
+  do not bypass this check for a linked non-owner teacher. Existing date/revision,
+  assignment, tenant, CSRF and audit protections are retained.
+- Sidebar Punch in & out opens /staff/punch in the main content area. The page shows
+  school-local time, school hours, recorded arrival/departure and elapsed duration.
+  Location diagnostics explain distance, allowed radius, measured GPS accuracy and
+  required accuracy. The previous sidebar card was replaced, not kept as a second
+  punch control. Existing demo punching remains in the demo workspace.
+- Work & Leave location editor uses a draggable map pin, click-to-place, current
+  location, accuracy circle, visible allowed-radius circle, presets and slider.
+  Fine-tune coordinates remains available. Existing 25–1,000 metre limits and
+  server geofence/accuracy/leave/workday rules remain authoritative.
+- New GET /api/v1/schools/:schoolId/hr/punch-status requires attendance.self and an
+  active, unambiguous staff/account link. It returns only that person's punch status.
+  It includes the school timezone, current server time, school hours and campus rules.
+  It avoids downloading the payroll workspace. Status refreshes only while the punch
+  page is open (once per minute, on focus after 30 seconds, and after a punch).
+  Opening the page does not request GPS; only Check my location and Punch actions do.
+
+Try it locally
+1. Install frontend dependencies with npm ci (Leaflet 1.9.4 is now included), then
+   restart frontend and backend. Keep VITE_APP_MODE=live for this test.
+2. As school owner, open School settings > Staff & Payroll > Work & Leave, edit the
+   rules, add/edit the campus, use current location or move the pin, choose the
+   radius and save. Review device accuracy instead of assuming GPS is exact.
+3. Link a school login to the teacher profile and assign the teacher to the active
+   academic year's class/section (for example, class 10 / A). Grant Overview or
+   teaching.self, attendance.self, and student-attendance.assigned (or the relevant
+   view/manage permissions). Existing custom roles are not rewritten automatically.
+   If a saved employment attendance policy is manual/none, change it to punch for
+   the applicable month. A newly linked teacher otherwise uses the existing default.
+4. Sign in as the teacher in another browser/private window. Overview should show
+   only assigned students, with no staff cards. Attendance should show only Student
+   Attendance and the allowed class/section choices.
+5. Open Punch in & out from the sidebar. Before punching, marking and saving are disabled. Outside the campus, punching
+   is rejected. Inside the radius with sufficient GPS accuracy, Punch in enables
+   student attendance. Punch out disables it again. Open My attendance & salary
+   to verify the teacher's own calendar. On mobile, open navigation and choose Punch in & out.
+
+Deployment and configuration
+- Deploy both repositories together. No database initialization/migration script is
+  required for this change. No real database records, .env values or credentials
+  were changed, and no Atlas connection was made for verification.
+- The map defaults to OpenStreetMap HTTPS raster tiles with attribution. Optional
+  VITE_MAP_TILE_URL and VITE_MAP_ATTRIBUTION are documented in .env.example.
+  Production map service selection should follow the provider's usage policy:
+  https://operations.osmfoundation.org/policies/tiles/
+  Do not put secret provider keys in VITE_* variables, which are public client code.
+- Browser geolocation needs permission and HTTPS outside localhost. Device/location
+  accuracy varies; a browser cannot guarantee spoof-proof physical presence.
+- The test browser uses simulated coordinates; actual school GPS and real mobile
+  device permission behavior still need a field check. The dedicated map test mocks
+  tile images and verifies pin/radius controls and saving, not real-world map imagery.
+
+Initial implementation validation (before punch-page refinement)
+Passed:
+- Backend: npm run typecheck; npm run lint; npm run test:coverage.
+  36 suites / 226 tests passed (including 2 new teacher-scope integration tests).
+- Frontend: npm run typecheck; VITE_APP_MODE=demo npm test.
+  56 files / 316 tests passed, including the updated route-permission test.
+- Frontend: npm run lint passed with 0 errors and 4 existing Fast Refresh warnings
+  in AppIcon, LoadingOverlay and Primitives. The new files add no lint warnings.
+- Frontend: VITE_APP_MODE=demo npm run build and VITE_APP_MODE=live npm run build.
+  Both passed; live build reports a non-blocking large-bundle advisory (>500 kB).
+- Playwright: playwright.teacher.config.ts — 1 passed, covering assigned-only
+  overview/attendance, denied outside-campus punch, valid punch, personal calendar
+  refresh, attendance saving, punch-out locking, mobile sidebar, and map/radius save.
+- Playwright: playwright.hr.config.ts — 3 passed: salary/partial-payment workflow,
+  teacher punch/calendar workflow, departments and school-owned teacher login.
+- Playwright default config, tests/monthly-attendance.e2e.ts — 1 demo scenario passed.
+- Playwright: playwright.product-correction.config.ts — 4 passed, including the
+  original live dashboard, attendance, academic marks, teacher scope and leave flow
+  plus the three HR regressions.
+- git diff --check passed in both repositories.
+
+Commands for browser checks (from frontend):
+  PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome npx playwright test --config=playwright.teacher.config.ts
+  PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome npx playwright test --config=playwright.hr.config.ts
+  PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome npx playwright test --config=playwright.product-correction.config.ts
+  PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome npx playwright test tests/monthly-attendance.e2e.ts --workers=1
+The Chrome path is specific to this machine; omit it when using Playwright's installed browser.
+Run the live configs separately: each starts a fresh local fixture. Combining them
+under a single server initially produced an academic-year overlap in test data.
+Earlier browser attempts also found stale selectors for the removed Refresh button,
+old automatic salary popup and old default Finance tab. Tests now reload normally,
+open Salary Expenses explicitly and use the new location picker; all original
+business assertions remain. No salary/fee application screens were changed.
+
+Dependency check:
+- npm audit --json reports one high-severity finding in the EXISTING zod 4.6.5
+  dependency (also present in the starting lockfile). Leaflet adds no finding.
+  Advisory: https://github.com/advisories/GHSA-mrhx-c7xc-m3w5
+  This unrelated dependency upgrade remains outstanding; no npm audit fix was run.
+
+Scope and remaining limits
+- Fee application logic and screens were not changed.
+- Other explicitly granted areas retain their existing permissions. This change does
+  not redesign role administration or remove staff-management API capabilities from
+  administrators who were explicitly granted them.
+- Existing one punch-in/out pair per school day, leave approvals, manual corrections
+  and payroll policies remain unchanged. Owners/admins retain attendance management.
+- Browser tests are run with disposable local MongoDB replicas. They do not validate
+  your deployed server, Atlas connectivity, production latency or real school data.
+
+Initial implementation changed files (see refinement note below for moved files)
+Frontend
+  .env.example
+  docs/TEACHER_WORKSPACE_2026-10-27.txt
+  package-lock.json
+  package.json
+  playwright.config.ts
+  playwright.teacher.config.ts
+  src/app/schoolFeatureContext.ts
+  src/components/shared/AttendanceTabs.tsx
+  src/features/attendance/AttendancePage.tsx
+  src/features/dashboard/DashboardPage.tsx
+  src/features/hr/CampusLocationPicker.tsx
+  src/features/hr/HrSettingsPanel.tsx
+  src/features/hr/HrWorkspace.tsx
+  src/features/hr/TeacherPunchCard.tsx
+  src/features/hr/campus-location.css
+  src/features/hr/teacher-punch.css
+  src/features/live/LiveLearning.tsx
+  src/features/live/LiveSchoolWorkspace.tsx
+  src/features/live/portalAccess.test.ts
+  src/features/live/portalAccess.ts
+  src/services/apiService.ts
+  src/services/hrService.ts
+  src/services/learningService.ts
+  src/services/schoolSetupService.ts
+  src/services/teacherPunchService.ts
+  tests/product-correction-live.e2e.ts
+  tests/staff-payroll-live.e2e.ts
+  tests/teacher-workspace-live.e2e.ts
+Backend
+  src/api/controllers/academicYear.controller.ts
+  src/api/controllers/hr.controller.ts
+  src/api/services/hrRead.service.ts
+  src/api/services/hrRules.ts
+  src/api/services/learningRead.service.ts
+  src/api/services/learningScope.ts
+  src/api/services/studentAttendance.service.ts
+  src/security/learning.integration.test.ts
+  src/security/teacherScope.integration.test.ts
+
+Punch-page refinement — 27-10-2026
+- Removed TeacherPunchCard.tsx and replaced it with TeacherPunchPage.tsx,
+  useTeacherPunch.ts and punchLocationFeedback.ts; rewrote teacher-punch.css.
+- Updated live routing, sidebar links, route labels/permissions, attendance gate link
+  and personal attendance page link. Added focused location-diagnostic tests and
+  updated existing browser tests to navigate to the dedicated page.
+- Extended only the own punch-status API response and its integration assertions.
+  Server punch freshness/accuracy/radius enforcement remains unchanged.
+- A generic HR_LOCATION response alone cannot identify why this user's device failed.
+  The new page shows the current measurement and distinguishes stale, inaccurate,
+  outside-campus and boundary-overlap readings. If it appears valid but the server
+  rejects it, it suggests a fresh check, automatic device time and admin review.
+- No real-device GPS or real-school database diagnosis was performed. All location
+  verification used simulated browser coordinates and disposable local databases.
+Refinement validation:
+- Frontend typecheck and lint passed (four existing Fast Refresh warnings).
+- VITE_APP_MODE=demo npm test: 57 files / 318 tests passed.
+- VITE_APP_MODE=live npm run build and VITE_APP_MODE=demo npm run build passed.
+  Live build retains the non-blocking >500 kB chunk advisory.
+- Backend typecheck and lint passed.
+- npm test -- --runTestsByPath src/security/teacherScope.integration.test.ts
+  src/security/learning.integration.test.ts src/test/hr.integration.test.ts:
+  3 suites / 24 tests passed.
+- Playwright teacher config: 1 passed (new page, precise GPS diagnostics, punch times,
+  school name, assigned students, gate enforcement, mobile and campus map).
+- Playwright HR config: 3 passed (salary/payments, punching/calendar, teacher login).
+- git diff --check passed in both repositories.
+- Initial verification commands used a wrong HR test path and omitted demo mode
+  for demo-only unit tests. Corrected commands above passed; no application logic
+  was changed to work around those command mistakes.
+- No dependency, real database, environment or migration changes in this refinement.
+- Restart both servers to load the extended status response and new page.
+
+Additional files in this refinement:
+  src/app/liveRouter.tsx
+  src/components/layout/AppShell.tsx
+  src/features/hr/TeacherPunchPage.tsx
+  src/features/hr/useTeacherPunch.ts
+  src/features/hr/punchLocationFeedback.ts
+  src/features/hr/punchLocationFeedback.test.ts
+Existing modified files include the punch status service, sidebar/workspace,
+attendance links, role route checks, teacher/HR browser tests and backend own-status
+service/integration test. TeacherPunchCard.tsx was removed after moving its workflow
+into the page; no demo functionality was removed.

@@ -5,6 +5,7 @@ it('personal teacher access excludes staff directory and other salaries', () => 
   const access = portalAccess(['attendance.self']);
   expect(access.home).toBe('/staff/self');
   expect(access.allowed('/staff/self')).toBe(true);
+  expect(access.allowed('/staff/punch')).toBe(true);
   for (const route of [
     '/students',
     '/teachers',
@@ -67,7 +68,22 @@ it('an unlinked or archived staff account lands in account settings and cannot o
     selfLinked: false,
   });
   expect(access.home).toBe('/settings');
-  for (const path of ['/', '/classes', '/attendance', '/academics', '/staff/self'])
+  for (const path of ['/', '/classes', '/attendance', '/academics', '/staff/self', '/staff/punch'])
     expect(access.allowed(path)).toBe(false);
   expect(access.allowed('/settings')).toBe(true);
+});
+
+it('linked teacher navigation hides the staff attendance route even when the role has broad attendance permission', () => {
+  const permissions = [
+    'overview.view',
+    'student-attendance.view',
+    'attendance.manage',
+    'attendance.self',
+  ];
+  const teacher = portalAccess(permissions, { selfLinked: true, teacherScoped: true });
+  expect(teacher.home).toBe('/staff/punch');
+  expect(teacher.allowed('/overview')).toBe(true);
+  expect(teacher.allowed('/attendance')).toBe(true);
+  expect(teacher.allowed('/attendance/staff')).toBe(false);
+  expect(portalAccess(permissions).allowed('/attendance/staff')).toBe(true);
 });

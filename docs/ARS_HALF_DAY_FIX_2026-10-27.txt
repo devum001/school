@@ -1,0 +1,42 @@
+ARS half-day status correction — 27 October 2026
+
+Problem
+Submitting an attendance correction unconditionally replaced the day status with Invalid. This wrongly turned completed Half day records black while an ARS was awaiting review.
+
+Fix
+- Capture the attendance status before each new ARS submission.
+- Preserve Half day and its existing pay decision while the request is Pending. Rejecting the request also preserves Half day. Approving Full day changes attendance to Present and applies the existing approved-hours calculation.
+- Missing-punch Invalid records continue to remain Invalid pending approval.
+- Payroll independently checks pending ARS requests, so preserving Half day does not accidentally permit payroll finalization before review.
+- Read-time compatibility recovers older pending/rejected ARS records as Half day only where both physical punch-in and punch-out exist and the old request has no prior-status metadata. Missing-punch records are not reclassified. No production records are rewritten or migrations run.
+- Existing older records without enough evidence of their prior status require administrator correction; the code does not invent missing punch times or a historical pay decision.
+- Teacher/admin dialog wording now explains that submitting or rejecting a request retains the existing attendance status.
+
+Files changed
+Backend:
+src/api/models/hr.models.ts
+src/api/services/attendanceAdjustment.service.ts
+src/api/services/attendanceTimeRules.ts
+src/api/services/hrPayroll.service.ts
+src/api/services/attendanceTimeRules.test.ts
+src/test/attendanceAdjustments.integration.test.ts
+Frontend:
+src/features/hr/ArsRequestDialog.tsx
+src/features/hr/AttendanceRequests.tsx
+src/features/hr/attendanceCalendarModel.test.ts
+tests/teacher-workspace-live.e2e.ts
+
+Verification
+- Frontend typecheck passed; lint passed with four pre-existing Fast Refresh warnings.
+- VITE_APP_MODE=demo npm test: 57 files / 323 tests passed.
+- Backend typecheck, lint and production TypeScript compilation passed after adding the pending-request property to the payroll helper's structural type.
+- Backend focused tests: 3 suites / 27 tests passed (attendanceTimeRules, attendanceAdjustments integration, HR integration). Covers status preservation through pending/rejection/approval, payroll waiting on pending requests, actual punch preservation and legacy read compatibility.
+- Tests run in /tmp/ars-status-backend against disposable local MongoDB only. No Atlas or live school records accessed.
+- Existing unrelated modifications were preserved; no environment or dependency changes.
+- Live and demo production builds passed (existing large-chunk/third-party annotation warnings remain).
+- Teacher workspace browser test passed: Half day remains visible immediately after ARS and after reload, then becomes Present only after administrator approval. An earlier attempt used old overview/default-route assertions; those were updated to the already-implemented teacher Punch in default and /overview route.
+- Browser command: SCHOOL_BACKEND_TEST_DIR=/tmp/ars-status-backend PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome npx playwright test --config=playwright.teacher.config.ts.
+- Backend test command: npm test -- --cacheDirectory=/tmp/ars-status-jest-cache --runTestsByPath src/api/services/attendanceTimeRules.test.ts src/test/attendanceAdjustments.integration.test.ts src/test/hr.integration.test.ts. Full backend suite was not rerun for this focused fix.
+- All six backend files applied after concurrent-edit checks match the tested sources; backups are under /tmp/ars-status-backup. git diff --check passed in both repositories.
+
+Restart the backend and refresh the frontend. No database script is required. This report supersedes earlier descriptions saying every pending ARS makes a day Invalid.

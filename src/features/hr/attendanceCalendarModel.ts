@@ -1,6 +1,16 @@
+import type { AttendanceRequest } from '../../services/attendanceTypes';
 import type { HrWorkspace } from '../../services/hrService';
 type Day = HrWorkspace['attendance'][number];
 type Leave = HrWorkspace['leaves'][number];
+export function pendingLeaveOn(date: string, today: string, leaves: Leave[]) {
+  return leaves.find(
+    (leave) =>
+      leave.status === 'pending' &&
+      leave.start >= today &&
+      leave.start <= date &&
+      leave.end >= date,
+  );
+}
 export function attendanceLabel(
   date: string,
   today: string,
@@ -23,4 +33,14 @@ export function attendanceLabel(
   if (settings.holidays.includes(date)) return 'holiday';
   if (!settings.workingDays.includes(new Date(date + 'T12:00:00Z').getUTCDay())) return 'off';
   return date > today ? 'upcoming' : 'unmarked';
+}
+
+export function canRequestArs(day: Day | undefined, today: string, requests: AttendanceRequest[]) {
+  return (
+    !!day &&
+    day.date <= today &&
+    ['half-day', 'invalid'].includes(day.status) &&
+    !day.inProgress &&
+    !requests.some((r) => r.date === day.date && r.status === 'pending')
+  );
 }

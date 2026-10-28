@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const state = useSchool();
   const feature = useSchoolFeature();
   const today = useToday();
+  const teacherOnly = !!feature?.teacherScoped;
   const [selectedDate, setDate] = useState<string | null>(null);
   const notificationsUnavailable = feature?.unavailable.includes('notifications');
   const date = selectedDate ?? feature?.selectedDate ?? today;
@@ -78,6 +79,12 @@ export default function DashboardPage() {
           </>
         }
       />
+      {teacherOnly && (
+        <p className="panel-note">
+          Your assigned classes and sections only. Student totals and graphs reflect your current
+          assignments.
+        </p>
+      )}
       <div className="stats-grid dashboard-stats" role="group" aria-label="School summary">
         <StatCard
           label="Enrolled students"
@@ -89,12 +96,14 @@ export default function DashboardPage() {
           }
           href={feature && !feature.canViewStudentProfiles ? '/classes' : '/students?status=active'}
         />
-        <StatCard
-          label="Teaching team"
-          value={state.teachers.filter((t) => t.status === 'active').length}
-          detail="Active teaching staff"
-          href={feature && !feature.routeAllowed?.('/teachers') ? undefined : '/teachers'}
-        />
+        {!teacherOnly && (
+          <StatCard
+            label="Teaching team"
+            value={state.teachers.filter((t) => t.status === 'active').length}
+            detail="Active teaching staff"
+            href={feature && !feature.routeAllowed?.('/teachers') ? undefined : '/teachers'}
+          />
+        )}
         <StatCard
           label="Student attending today"
           value={
@@ -111,28 +120,43 @@ export default function DashboardPage() {
           }
           href={`/attendance?date=${date}`}
         />
-        <StatCard
-          label="Staff attending today"
-          value={
-            <>
-              {feature?.unavailable.includes('staffAttendance') ? '—' : staffAttendance.attended}
-              {!feature?.unavailable.includes('staffAttendance') && (
-                <small> / {staffAttendance.total}</small>
-              )}
-            </>
-          }
-          detail={
-            feature?.unavailable.includes('staffAttendance')
-              ? 'Staff attendance access is required'
-              : `${staffAttendance.percentage}% of total · ${staffAttendance.unmarked} unmarked`
-          }
-          href={
-            feature && !feature.routeAllowed?.('/attendance/staff')
-              ? undefined
-              : `/attendance/staff?date=${date}`
-          }
-        />
+        {!teacherOnly && (
+          <StatCard
+            label="Staff attending today"
+            value={
+              <>
+                {feature?.unavailable.includes('staffAttendance') ? '—' : staffAttendance.attended}
+                {!feature?.unavailable.includes('staffAttendance') && (
+                  <small> / {staffAttendance.total}</small>
+                )}
+              </>
+            }
+            detail={
+              feature?.unavailable.includes('staffAttendance')
+                ? 'Staff attendance access is required'
+                : feature?.staffAttendanceSummary
+                  ? `${feature.staffAttendanceSummary.onDuty} on duty · ${feature.staffAttendanceSummary.late} late`
+                  : `${staffAttendance.percentage}% of total · ${staffAttendance.unmarked} unmarked`
+            }
+            href={
+              feature && !feature.routeAllowed?.('/attendance/staff')
+                ? undefined
+                : `/attendance/staff?date=${date}`
+            }
+          />
+        )}
       </div>
+      {!!feature?.staffAttendanceSummary?.pendingRequests && (
+        <Panel title="Staff attendance requests">
+          <p>
+            {feature.staffAttendanceSummary.pendingRequests} day(s) need an attendance correction
+            decision.
+          </p>
+          <Link className="button secondary" to="/attendance/staff?view=requests">
+            Review attendance requests
+          </Link>
+        </Panel>
+      )}
       <div className="dashboard-main">
         <AttendanceTrend attendance={attendance} trend={trend} />
         <Panel
@@ -201,7 +225,7 @@ export default function DashboardPage() {
           title="Attendance by class · selected day"
           action={
             <Link className="text-link" to="/classes">
-              All classes <ArrowUpRight size={14} />
+              {teacherOnly ? 'My classes' : 'All classes'} <ArrowUpRight size={14} />
             </Link>
           }
         >

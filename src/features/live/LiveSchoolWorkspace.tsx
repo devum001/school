@@ -2,8 +2,8 @@ import { portalAccess } from './portalAccess';
 import TopbarControls from '../../components/layout/TopbarControls';
 import { useCallback, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronsUpDown, LogOut } from 'lucide-react';
+import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ChevronsUpDown, Clock3, LogOut } from 'lucide-react';
 import AppShell from '../../components/layout/AppShell';
 import { Button, LoadingOverlay, Modal, PageHeading, Panel } from '../../components/ui/Primitives';
 import { getSchoolProfile } from '../../services/schoolProfileService';
@@ -74,12 +74,16 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
   };
   const schoolName = profile?.school.name ?? fallbackSchoolName;
   const navigation = state.data
-    ? portalAccess(access.permissions, { selfLinked: status.selfLinked })
+    ? portalAccess(access.permissions, {
+        selfLinked: status.selfLinked,
+        teacherScoped: !access.owner && status.selfTeaching,
+      })
     : { allowed: () => true, home: '/overview' };
   const context = { schoolId, access, profile, status, reload: state.reload };
   return (
     <SchoolContext.Provider value={context}>
       <AppShell
+        overviewUrl="/overview"
         visibleRoute={navigation.allowed}
         school={{ name: schoolName, logo: profile?.school.logoDataUrl }}
         user={{ name: session.user.name, detail: session.user.email }}
@@ -93,6 +97,12 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
         extraNavigation={
           state.data ? (
             <>
+              {access.permissions.includes('attendance.self') && status.selfTeaching && (
+                <NavLink className="nav-link" to="/staff/punch">
+                  <Clock3 size={19} />
+                  Punch in & out
+                </NavLink>
+              )}
               {access.permissions.includes('attendance.self') && status.selfLinked && (
                 <Link className="nav-link" to="/staff/self">
                   My attendance & salary
@@ -122,6 +132,9 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
               <div style={{ minHeight: 240 }} />
             </Panel>
           </LoadingOverlay>
+        ) : (location.pathname === '/' || location.pathname === '/login') &&
+          navigation.home === '/staff/punch' ? (
+          <Navigate to="/staff/punch" replace />
         ) : navigation.allowed(location.pathname) ? (
           <Outlet />
         ) : (

@@ -210,10 +210,21 @@ function AttendanceRegister() {
         )
       ) : (
         <>
+          {feature?.attendanceGate?.required && !feature.attendanceGate.active && (
+            <Panel title="Punch in before taking attendance">
+              <p className="panel-note">
+                Open Punch in & out from the sidebar when you arrive at school. You can review your
+                assigned students here; saving is enabled while you are punched in today.
+              </p>
+              <Link className="button secondary" to="/staff/punch">
+                Open Punch in & out
+              </Link>
+            </Panel>
+          )}
           {feature && !state.classes.length && (
             <p className="panel-note">
               No classes are assigned to you yet. Your school administrator can assign classes and
-              subjects in Teachers → Teaching assignments.
+              subjects in Staff & HR → Staff assignments.
             </p>
           )}
       <div id="attendance-register-content">
@@ -263,6 +274,8 @@ function AttendanceRegister() {
               </>
             ) : hasAssignedTiming ? (
               <span>Not a school working day.</span>
+            ) : feature?.teacherScoped ? (
+              <span>School timing has not been configured.</span>
             ) : (
               <Link className="student-timing-link" to="/settings?section=timing">
                 Set school timing
@@ -289,11 +302,12 @@ function AttendanceRegister() {
           ))}
         </div>
         <Panel
-          title={`${state.classes.find((c) => c.id === classId)?.name} · Section ${sections.find((s) => s.id === sectionId)?.name}`}
+          title={`${state.classes.find((c) => c.id === classId)?.name ?? 'Class'}${sectionId ? ` · Section ${sections.find((s) => s.id === sectionId)?.name}` : ' · Whole class'}`}
           subtitle={`${rows.length} active students · ${displayDate(date)}`}
           action={
             <Button
               variant="secondary"
+              disabled={!canManage || saving || !rows.length}
               onClick={() =>
                 setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])))
               }

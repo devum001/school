@@ -1,0 +1,56 @@
+.campus-location-picker {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+.campus-location-picker p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.campus-location-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.campus-location-toolbar button {
+  margin-left: auto;
+}
+.campus-map {
+  height: 320px;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  z-index: 0;
+}
+.campus-pin span {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 4px solid white;
+  border-radius: 50%;
+  background: #19494d;
+  box-shadow: 0 2px 8px #0006;
+}
+.campus-radius-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.campus-radius-presets [aria-pressed='true'] {
+  background: #d2e7dc;
+  border-color: #21746e;
+}
+.campus-location-picker .leaflet-container {
+  font-family: inherit;
+}
+.campus-location-picker .leaflet-control-attribution {
+  font-size: 10px;
+}
+@media (max-width: 600px) {
+  .campus-map {
+    height: 260px;
+  }
+}

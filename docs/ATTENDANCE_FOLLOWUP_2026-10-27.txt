@@ -1,0 +1,50 @@
+Attendance follow-up — 27 October 2026
+
+Changes
+1. Linked teachers with attendance.self now land on Punch in & out from the root/login route. Overview remains available at /overview. Explicit deep links remain usable; school owners and non-teacher roles retain their existing landing rules. Demo navigation keeps its original root route.
+2. School settings > Staff & Payroll > Work & Leave now has optional Half day after. An arrival strictly after this local school time counts as half-day, even if minimum working hours are later met. Exact cutoff time is not after it. The existing minimum-minutes rule still also applies. Empty disables the arrival cutoff. Valid cutoff is at/after Late after and before school end. Each punch captures its work-rule snapshot; later settings changes do not rewrite that day. Manual time corrections apply the same rule. Approved ARS still explicitly credits the requested period.
+3. Future pending leave requests appear with a small pink dot in the personal calendar. Selecting a date in the request opens Cancel leave request with its date range/reason. Confirmation cancels the entire request and refreshes the calendar. The same dialog is reused by the leave list. Approved, rejected, cancelled and already-started requests cannot be cancelled this way; backend authorization, revisions and payroll locks remain authoritative.
+
+No environment, dependency or database changes. No migration is required. Existing uncommitted changes in both repositories were preserved.
+
+Frontend files touched in this follow-up
+src/components/layout/AppShell.tsx
+src/features/live/LiveSchoolWorkspace.tsx
+src/features/live/portalAccess.ts
+src/features/live/portalAccess.test.ts
+src/app/liveRouter.tsx
+src/services/hrService.ts
+src/features/hr/HrSettingsPanel.tsx
+src/features/hr/AttendanceCalendar.tsx
+src/features/hr/attendanceCalendarModel.ts
+src/features/hr/attendanceCalendarModel.test.ts
+src/features/hr/CancelLeaveDialog.tsx (new)
+src/features/hr/HrWorkspace.tsx
+src/features/hr/hr-personal-calendar.css
+src/features/hr/TeacherPunchPage.tsx
+tests/attendance-ars-live.e2e.ts
+tests/staff-payroll-live.e2e.ts
+
+Backend files touched
+src/api/models/hr.models.ts
+src/api/controllers/requests/hr.request.ts
+src/api/services/hrSettings.service.ts
+src/api/services/automaticStaffAttendance.ts
+src/api/services/automaticStaffAttendance.test.ts
+src/api/services/attendanceTimes.service.ts
+src/test/schoolWorkRules.integration.test.ts (new)
+
+Verification
+- Frontend typecheck passed.
+- Frontend lint passed with the same four pre-existing Fast Refresh warnings.
+- VITE_APP_MODE=demo npm test: 57 files / 322 tests passed. An initial run without the explicit demo test mode failed two demo-repository tests; the correctly configured rerun passed.
+- VITE_APP_MODE=live npm run build and VITE_APP_MODE=demo npm run build: passed. Existing large-chunk and third-party annotation warnings remain.
+- Backend typecheck, lint and production TypeScript compilation passed. Initial isolated-copy lint lacked .prettierrc; copied the repository formatting config. New integration tests were separated into their own file to respect the 600-line limit.
+- Browser tests: playwright.ars.config.ts (1 passed: teacher default landing, ARS, future leave cancellation and reload); playwright.hr.config.ts (3 passed: cutoff settings save, punching, payroll and account/department workflows); demo HR preservation and monthly attendance (2 passed).
+- Local browser tests used PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome. Live fixtures used SCHOOL_BACKEND_TEST_DIR=/tmp/attendance-followup-backend, with isolated disposable MongoDB only. No live school records, Atlas connection or physical GPS tests were performed.
+- Final backend focused run: npm test -- --cacheDirectory=/tmp/followup-jest-cache --runTestsByPath src/api/services/automaticStaffAttendance.test.ts src/api/services/attendanceTimeRules.test.ts src/test/hr.integration.test.ts src/test/attendanceAdjustments.integration.test.ts src/test/schoolWorkRules.integration.test.ts — 5 suites / 32 tests passed. This follow-up used focused backend tests, not a new full-suite run.
+- Applied seven backend files after checking against initial hashes; originals backed up to /tmp/attendance-followup-backup. Applied files match the tested staging copy.
+- git diff --check passed in both repositories.
+
+Use
+Restart the backend and refresh the frontend. Configure Half day after in Work & Leave. Teachers opening the application root now land on Punch in & out. To cancel a future pending leave request, open personal attendance, select its month/date with a pink dot, and confirm cancellation.

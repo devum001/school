@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 const LiveFinanceWorkspace = lazy(() => import('../features/fees/LiveFinanceWorkspace'));
 import LiveLearning from '../features/live/LiveLearning';
+import TeacherPunchPage from '../features/hr/TeacherPunchPage';
 import LiveHrWorkspace from '../features/hr/HrWorkspace';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import LiveApp from '../features/live/LiveApp';
@@ -13,8 +14,8 @@ export const liveRouter = createBrowserRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <LiveLearning area="overview" /> },
-      { path: 'overview', element: <Navigate to="/" replace /> },
-      { path: 'login', element: <Navigate to="/settings" replace /> },
+      { path: 'overview', element: <LiveLearning area="overview" /> },
+      { path: 'login', element: <Navigate to="/" replace /> },
       { path: 'settings', element: <LiveSchoolSettings /> },
       ...[
         'students',
@@ -24,6 +25,7 @@ export const liveRouter = createBrowserRouter([
         'teachers',
         'teachers/:teacherId',
         'staff',
+        'staff/:staffId',
       ].map((path) => ({ path, element: <ExistingPeopleRoute /> })),
       { path: 'attendance', element: <LiveLearning area="attendance" /> },
       { path: 'classes', element: <LiveLearning area="classes" /> },
@@ -37,6 +39,7 @@ export const liveRouter = createBrowserRouter([
           </Suspense>
         ),
       },
+      { path: 'staff/punch', element: <TeacherPunchPage /> },
       { path: 'staff/self', element: <LiveHrWorkspace section="self" /> },
       ...[{ path: 'notifications', title: 'Notifications' }].map(({ path, title }) => ({
         path,

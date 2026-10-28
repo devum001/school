@@ -72,9 +72,18 @@ const setupMessages: Record<string, string> = {
     'Approved full-day leave applies today. Ask your administrator to review it before punching.',
   HR_LOCATION_SETUP:
     'Your school has not configured a punch location. Ask your administrator to add the campus in Work & Leave settings.',
-  HR_DAY_REVIEWED:
-    'An administrator has already reviewed today. Request a correction instead of punching.',
   HR_PUNCH_COMPLETE: 'Today’s punch-in and punch-out are already recorded.',
+  HR_ADJUSTMENT_ELIGIBILITY:
+    'Only a completed half day or an invalid attendance day can be corrected through ARS.',
+  HR_ATTENDANCE_TIMES:
+    'Enter valid school-local times. Punch-out must be after punch-in and cannot be in the future.',
+  HR_ADJUSTMENT_CLOSED:
+    'This day is being handled through an attendance request. View its status in Attendance requests.',
+  HR_ADJUSTMENT_STATE:
+    'This request has already been decided or a request is pending. Refresh to see its status.',
+  HR_ADJUSTMENT_LIMIT:
+    'This day has reached the correction request limit. Contact your administrator.',
+  HR_ADJUSTMENT_PENDING: 'Review the pending attendance request before making another correction.',
   HR_ALREADY_IN: 'You are already punched in. Refresh your attendance and use Punch out.',
   HR_NOT_IN: 'Punch in before recording a punch out.',
   HR_NOT_READY:
@@ -87,6 +96,8 @@ const setupMessages: Record<string, string> = {
   HR_INVALID: 'Check the settings, dates and amounts.',
   HR_STALE: 'This record changed. Refresh before saving again.',
   HR_LINK: 'Link this active school account to exactly one active staff profile first.',
+  HR_PUNCH_REQUIRED:
+    'Punch in at school before marking student attendance. An active punch for today is required.',
   HR_PUNCH: 'Punching is not enabled for this teacher or the punch sequence is invalid.',
   HR_LOCATION:
     'A fresh, accurate location inside an allowed school area is required. Try again or request an attendance correction.',

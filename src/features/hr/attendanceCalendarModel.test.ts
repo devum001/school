@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { attendanceLabel } from './attendanceCalendarModel';
+import { attendanceLabel, canRequestArs, pendingLeaveOn } from './attendanceCalendarModel';
 import type { HrWorkspace } from '../../services/hrService';
 const settings = {
   workingDays: [1, 2, 3, 4, 5],
@@ -29,4 +29,60 @@ it('uses approved leave dates even if the school calendar changes', () => {
       settings,
     ),
   ).toBe('late');
+});
+
+it('keeps a pending correction invalid until an explicit approved attendance outcome arrives', () => {
+  const day = { status: 'invalid', late: true } as HrWorkspace['attendance'][number];
+  expect(attendanceLabel('2026-10-19', '2026-10-20', day, [], settings)).toBe('invalid');
+  expect(
+    attendanceLabel('2026-10-19', '2026-10-20', { ...day, status: 'half-day' }, [], settings),
+  ).toBe('half-day');
+});
+
+it('keeps half-day attendance separate from a pending request for full-day credit', () => {
+  const day = { status: 'half-day', late: true } as HrWorkspace['attendance'][number];
+  expect(attendanceLabel('2026-10-19', '2026-10-20', day, [], settings)).toBe('half-day');
+});
+
+it('opens ARS only for eligible completed half days and invalid days without a pending request', () => {
+  const day = { date: '2026-10-20', status: 'half-day' } as HrWorkspace['attendance'][number];
+  expect(canRequestArs(day, '2026-10-20', [])).toBe(true);
+  expect(canRequestArs({ ...day, status: 'invalid' }, '2026-10-20', [])).toBe(true);
+  for (const status of ['present', 'late', 'absent', 'unmarked', 'leave', 'holiday'])
+    expect(canRequestArs({ ...day, status }, '2026-10-20', [])).toBe(false);
+  expect(canRequestArs({ ...day, inProgress: true }, '2026-10-20', [])).toBe(false);
+  expect(canRequestArs(day, '2026-10-19', [])).toBe(false);
+  expect(
+    canRequestArs(day, '2026-10-20', [{ date: day.date, status: 'pending' }] as NonNullable<
+      HrWorkspace['attendanceRequests']
+    >),
+  ).toBe(false);
+  expect(
+    canRequestArs(day, '2026-10-20', [{ date: day.date, status: 'rejected' }] as NonNullable<
+      HrWorkspace['attendanceRequests']
+    >),
+  ).toBe(true);
+});
+it('weekends follow school working days rather than fixed Saturday and Sunday rules', () => {
+  expect(
+    attendanceLabel('2026-10-18', '2026-10-20', undefined, [], {
+      ...settings,
+      workingDays: [0, 1, 2, 3, 4, 5, 6],
+    }),
+  ).toBe('unmarked');
+  expect(attendanceLabel('2026-10-17', '2026-10-20', undefined, [], settings)).toBe('off');
+});
+
+it('calendar cancellation selects the pending future request and never an approved or started request', () => {
+  const leave = {
+    id: 'leave',
+    start: '2026-10-29',
+    end: '2026-10-30',
+    status: 'pending',
+  } as HrWorkspace['leaves'][number];
+  expect(pendingLeaveOn('2026-10-30', '2026-10-27', [leave])).toBe(leave);
+  expect(pendingLeaveOn('2026-10-28', '2026-10-27', [leave])).toBeUndefined();
+  expect(pendingLeaveOn('2026-10-30', '2026-10-30', [leave])).toBeUndefined();
+  for (const status of ['approved', 'rejected', 'cancelled'])
+    expect(pendingLeaveOn('2026-10-30', '2026-10-27', [{ ...leave, status }])).toBeUndefined();
 });

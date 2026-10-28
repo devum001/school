@@ -13,6 +13,14 @@ export interface SchoolFeatureData {
   canCreateTest?: boolean;
   routeAllowed?: (path: string) => boolean;
   canMarkAttendance?: boolean;
+  teacherScoped?: boolean;
+  staffAttendanceSummary?: {
+    onDuty: number;
+    late: number;
+    invalid: number;
+    pendingRequests: number;
+  };
+  attendanceGate?: { required: boolean; active: boolean };
   canEditTest?: (id: string) => boolean;
   canMarkSubject?: (
     classId: string,
