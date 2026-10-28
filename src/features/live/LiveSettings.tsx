@@ -174,6 +174,7 @@ function SchoolWorkspace({ schoolId }: { schoolId: string }) {
   ];
   const nested = (items: { id: string; label: string }[], label: string) => (
     <SectionNavigation
+      variant="secondary"
       items={items}
       value={items.find((i) => i.id === section)?.id ?? items[0].id}
       onChange={(value) =>

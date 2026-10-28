@@ -13,11 +13,14 @@ export default function CancelLeaveDialog({
   close: () => void;
   saved: () => void;
 }) {
+  const isApproved = leave.status === 'approved';
   return (
     <HrForm
-      title="Cancel leave request?"
-      description={`${formatCalendarDate(leave.start)} – ${formatCalendarDate(leave.end)} · Pending approval`}
-      submitLabel="Cancel leave request"
+      title={isApproved ? 'Cancel approved leave?' : 'Cancel leave request?'}
+      description={`${formatCalendarDate(leave.start)} – ${formatCalendarDate(leave.end)} · ${
+        isApproved ? 'Approved leave' : 'Pending approval'
+      }`}
+      submitLabel={isApproved ? 'Cancel leave' : 'Cancel leave request'}
       close={close}
       submit={async () => {
         await adapter.save(`/leave/${leave.id}/cancel`, { revision: leave.revision });
@@ -26,8 +29,9 @@ export default function CancelLeaveDialog({
     >
       <p>{leave.reason}</p>
       <p>
-        This cancels the entire pending request for these dates. You can submit a new request if
-        your plans change.
+        {isApproved
+          ? 'This cancels your approved leave for these dates and restores regular attendance and punch-in eligibility.'
+          : 'This cancels the entire pending request for these dates. You can submit a new request if your plans change.'}
       </p>
     </HrForm>
   );

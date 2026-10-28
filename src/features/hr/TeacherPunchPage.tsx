@@ -149,37 +149,43 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
             )}
           </div>
           <h2>
-            {data?.attendanceClosed
-              ? 'Attendance correction'
-              : data?.punchOut
-                ? 'You’re all set for today'
-                : data?.active
-                  ? 'Finish your school day'
-                  : 'Let’s start your school day'}
+            {data?.state.code === 'HR_ON_LEAVE'
+              ? 'On approved leave today'
+              : data?.attendanceClosed
+                ? 'Attendance correction'
+                : data?.punchOut
+                  ? 'You’re all set for today'
+                  : data?.active
+                    ? 'Finish your school day'
+                    : 'Let’s start your school day'}
           </h2>
           <p>
-            {data?.attendanceClosed
-              ? 'View your correction in the ARS tab.'
-              : data?.punchOut
-                ? 'Your arrival and departure have been recorded.'
-                : data?.active
-                  ? 'Punch out when you leave. Your recorded times will appear below.'
-                  : 'We’ll check your location and record your arrival securely.'}
-          </p>
-          <Button
-            className="punch-primary"
-            disabled={!!busy || !data?.state.allowed}
-            onClick={() => void act(true)}
-          >
-            {busy === 'punch'
-              ? 'Verifying your location…'
+            {data?.state.code === 'HR_ON_LEAVE'
+              ? 'Your leave is approved for today. Punch in and punch out are disabled while on leave.'
               : data?.attendanceClosed
-                ? 'View ARS status'
-                : data?.active || data?.punchOut
-                  ? 'Punch out'
-                  : 'Punch in'}
-            {data?.active ? <LogOut size={18} /> : <LogIn size={18} />}
-          </Button>
+                ? 'View your correction in the ARS tab.'
+                : data?.punchOut
+                  ? 'Your arrival and departure have been recorded.'
+                  : data?.active
+                    ? 'Punch out when you leave. Your recorded times will appear below.'
+                    : 'We’ll check your location and record your arrival securely.'}
+          </p>
+          {data?.state.code !== 'HR_ON_LEAVE' && (
+            <Button
+              className="punch-primary"
+              disabled={!!busy || !data?.state.allowed}
+              onClick={() => void act(true)}
+            >
+              {busy === 'punch'
+                ? 'Verifying your location…'
+                : data?.attendanceClosed
+                  ? 'View ARS status'
+                  : data?.active || data?.punchOut
+                    ? 'Punch out'
+                    : 'Punch in'}
+              {data?.active ? <LogOut size={18} /> : <LogIn size={18} />}
+            </Button>
+          )}
           {data?.state.reason && <p className="punch-rule-note">{data.state.reason}</p>}
           <button className="punch-refresh" disabled={!!busy} onClick={() => void refresh()}>
             <RefreshCw size={14} />

@@ -15,7 +15,10 @@ export function useSettingsSection(items: readonly SectionItem[]) {
       },
       { flushSync: true },
     );
-  return { section, navigation: { items, value: section, onChange: select } };
+  return {
+    section,
+    navigation: { items, value: section, onChange: select, variant: 'secondary' as const },
+  };
 }
 
 /** These views keep the same parent form mounted, so its draft survives the view change. */

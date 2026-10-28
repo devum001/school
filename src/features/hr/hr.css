@@ -146,11 +146,46 @@
   gap: 10px;
 }
 .hr-actions {
-  max-width: 300px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 420px;
   white-space: normal;
 }
 .hr-actions .button {
   white-space: nowrap;
+  min-height: 32px;
+  padding: 5px 12px;
+  font-size: 12px;
+}
+.staff-header-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.staff-search-input {
+  min-width: 240px;
+  flex: 1 1 240px;
+  max-width: 310px;
+}
+.staff-search-input input {
+  width: 100%;
+}
+.staff-header-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.staff-row-actions .staff-action-danger {
+  color: var(--color-danger, #c53030);
+}
+.staff-row-actions .staff-action-danger:hover {
+  background: var(--color-danger-subtle, #fee2e2);
+  color: var(--color-danger, #c53030);
 }
 .hr-form .hr-fieldset {
   display: flex;

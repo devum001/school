@@ -155,6 +155,7 @@ export default function LiveSchoolSettings() {
         return (
           <>
             <SectionNavigation
+              variant="secondary"
               items={items}
               value={section}
               label={`${tab} features`}

@@ -28,7 +28,7 @@ export const personSchema = z.object({
   schoolId: id,
   code: z.string(),
   name: z.string().transform(titleCase),
-  status: z.enum(['active', 'archived']),
+  status: z.enum(['active', 'inactive', 'archived']),
   revision: z.number(),
   teaching: z.boolean().optional(),
   userId: id.optional(),
@@ -220,7 +220,12 @@ export const onboardingApi = {
     data.items.forEach((item) => scoped(item, schoolId));
     return data;
   },
-  async changeStatus(schoolId: string, kind: RosterKind, person: Person) {
+  async changeStatus(
+    schoolId: string,
+    kind: RosterKind,
+    person: Person,
+    targetStatus?: 'active' | 'inactive' | 'archived',
+  ) {
     return scoped(
       parse(
         personSchema,
@@ -228,7 +233,7 @@ export const onboardingApi = {
           method: 'PATCH',
           body: {
             revision: person.revision,
-            status: person.status === 'active' ? 'archived' : 'active',
+            status: targetStatus ?? (person.status === 'active' ? 'archived' : 'active'),
           },
         }),
       ),

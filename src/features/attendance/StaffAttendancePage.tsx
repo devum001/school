@@ -200,7 +200,7 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
         <div className="attendance-summary">
           {[
             ['Staff', summary.total, ''],
-            ['Present', summary.present, 'green'],
+            ['Present', summary.present + summary.late, 'green'],
             ['Absent', summary.absent, 'red'],
             ['Late / half day', `${summary.late} / ${summary['half-day']}`, 'amber'],
             ['Not marked', summary.unmarked, 'neutral'],

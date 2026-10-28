@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import type { HrAdapter, HrWorkspace } from '../../services/hrService';
 import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
-import { attendanceLabel, canRequestArs, pendingLeaveOn } from './attendanceCalendarModel';
+import {
+  attendanceLabel,
+  cancellableLeaveOn,
+  canRequestArs,
+  pendingLeaveOn,
+} from './attendanceCalendarModel';
 import CancelLeaveDialog from './CancelLeaveDialog';
 import AttendanceDayDetail from './AttendanceDayDetail';
 import ArsRequestDialog from './ArsRequestDialog';
@@ -39,6 +44,7 @@ export default function AttendanceCalendar({
   const requests = data.attendanceRequests ?? [];
   const pending = requests.some((r) => r.date === date && r.status === 'pending');
   const requestDay = data.attendance.find((d) => d.date === requestDate);
+  const activeLeaveOnSelected = cancellableLeaveOn(date, data.today, data.leaves);
   return (
     <section className="hr-personal-calendar" aria-label={`${label} calendar`}>
       <div className="hr-personal-calendar-heading">
@@ -65,6 +71,7 @@ export default function AttendanceCalendar({
           const record = data.attendance.find((d) => d.date === value);
           const state = attendanceLabel(value, data.today, record, data.leaves, data.settings);
           const pendingLeave = pendingLeaveOn(value, data.today, data.leaves);
+          const cancellableLeave = cancellableLeaveOn(value, data.today, data.leaves);
           return (
             <button
               type="button"
@@ -75,7 +82,7 @@ export default function AttendanceCalendar({
               aria-current={value === data.today ? 'date' : undefined}
               onClick={() => {
                 setSelected(value);
-                if (ars && pendingLeave) setCancelLeave(pendingLeave);
+                if (ars && cancellableLeave) setCancelLeave(cancellableLeave);
                 else if (ars && canRequestArs(record, data.today, requests)) setRequestDate(value);
               }}
             >
@@ -100,9 +107,11 @@ export default function AttendanceCalendar({
       )}
       <AttendanceDayDetail date={date} day={day} status={status} timezone={data.timezone} />
       {pending && <p className="ars-pending-note">ARS pending · awaiting administrator approval</p>}
-      {ars && pendingLeaveOn(date, data.today, data.leaves) && (
+      {ars && activeLeaveOnSelected && (
         <p className="ars-pending-note">
-          Leave requested · select this date to cancel the pending request.
+          {activeLeaveOnSelected.status === 'approved'
+            ? 'Approved leave · select this date to cancel your leave.'
+            : 'Leave requested · select this date to cancel the pending request.'}
         </p>
       )}
       {ars && cancelLeave && (

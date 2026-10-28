@@ -193,29 +193,54 @@
   cursor: not-allowed;
 }
 
-/* Secondary variant compatibility - Unified Pill rail */
+/* Secondary variant - Underline sub-navigation rail */
 .tab-rail.secondary,
 .workspace main .tab-rail.secondary {
   width: fit-content;
   max-width: 100%;
-  padding: 4px 5px;
-  border: 1px solid var(--border);
-  border-radius: 30px;
-  background: var(--surface-toolbar, #f1f4f3);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
+
 .tab-rail.secondary .tab-rail-viewport {
-  gap: 4px;
+  gap: 24px;
 }
-.tab-rail.secondary .tab-rail-viewport > [role='tab'] {
-  min-height: 36px;
-  padding: 7px 16px;
-  border-radius: 20px;
+
+.tab-rail.secondary .tab-rail-viewport > [role='tab'],
+.tab-rail.secondary .tab-rail-viewport > a,
+.tab-rail.secondary .tab-rail-viewport > button {
+  min-height: 44px;
+  padding: 9px 2px 12px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 500;
 }
-.tab-rail.secondary .tab-rail-viewport > [role='tab'][aria-selected='true'] {
-  background: #ffffff;
+
+.tab-rail.secondary .tab-rail-viewport > [role='tab']:hover,
+.tab-rail.secondary .tab-rail-viewport > a:hover,
+.tab-rail.secondary .tab-rail-viewport > button:hover {
+  background: transparent;
   color: var(--school-forest);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.tab-rail.secondary .tab-rail-viewport > [role='tab'][aria-selected='true'],
+.tab-rail.secondary .tab-rail-viewport > [role='tab'].active,
+.tab-rail.secondary .tab-rail-viewport > a[aria-selected='true'],
+.tab-rail.secondary .tab-rail-viewport > button[aria-selected='true'],
+.tab-rail.secondary .tab-rail-viewport > a.active,
+.tab-rail.secondary .tab-rail-viewport > button.active {
+  background: transparent;
+  box-shadow: none;
+  color: var(--school-forest);
+  border-bottom-color: var(--school-gold);
   font-weight: 700;
 }
 

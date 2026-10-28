@@ -90,6 +90,7 @@ export default function FinanceWorkspace() {
       />
       {tab === 'Overview' && (
         <SectionNavigation
+          variant="secondary"
           label="Finance overview views"
           items={[
             { id: 'summary', label: 'Collections & Revenue', icon: 'wallet' },
@@ -104,7 +105,8 @@ export default function FinanceWorkspace() {
           onChange={(value) => update('financeView', value)}
         />
       )}
-      {(tab === 'Overview' || tab === 'Transactions') && (
+      {((tab === 'Overview' && !['salary', 'recent'].includes(params.get('financeView') ?? '')) ||
+        tab === 'Transactions') && (
         <div className="finance-period">
           <label className="field">
             <select

@@ -381,6 +381,7 @@ function HrContent({
     <>
       {tab === 'self' && (
         <SectionNavigation
+          variant="secondary"
           label="My workspace"
           items={[
             { id: 'attendance', label: 'Attendance' },
@@ -408,14 +409,22 @@ function HrContent({
               'Present',
               staff.filter((p) =>
                 data.attendance.some(
-                  (d) => d.staffId === p.id && d.date === date && d.status === 'present',
+                  (d) =>
+                    d.staffId === p.id &&
+                    d.date === date &&
+                    (d.status === 'present' || d.status === 'late'),
                 ),
               ).length,
             ],
             [
               'Late',
               staff.filter((p) =>
-                data.attendance.some((d) => d.staffId === p.id && d.date === date && wasLate(d)),
+                data.attendance.some(
+                  (d) =>
+                    d.staffId === p.id &&
+                    d.date === date &&
+                    (wasLate(d) || d.status === 'late'),
+                ),
               ).length,
             ],
             [
@@ -558,49 +567,65 @@ function HrContent({
         )}
         {tab === 'self' && selfView === 'attendance' && (
           <>
-            <p>
-              Location is checked only when you punch. Missing or inaccurate location? Ask your
-              administrator to correct attendance.
-            </p>
-            {data.punchState?.reason && (
+            {data.punchState?.code === 'HR_ON_LEAVE' ||
+            data.leaves.some(
+              (l) =>
+                l.status === 'approved' &&
+                (l.approvedDates
+                  ? l.approvedDates.includes(data.today)
+                  : l.start <= data.today && l.end >= data.today),
+            ) ? (
               <p className="panel-note" role="status">
-                {data.punchState.reason}
+                You are on approved leave today. Punch in and punch out are disabled while on
+                approved leave.
               </p>
-            )}
-            {dedicatedPunchPage && (
-              <p className="panel-note">
-                <Link to="/staff/punch">Open Punch in & out</Link> to record your school day.
-              </p>
-            )}
-            <div className="toolbar">
-              {!dedicatedPunchPage && (
-                <>
-                  <Button
-                    disabled={
-                      busy ||
-                      (data.punchState &&
-                        (!data.punchState.allowed || data.punchState.nextKind !== 'in'))
-                    }
-                    onClick={() => void punch('in')}
-                  >
-                    Punch in
+            ) : (
+              <>
+                <p>
+                  Location is checked only when you punch. Missing or inaccurate location? Ask your
+                  administrator to correct attendance.
+                </p>
+                {data.punchState?.reason && (
+                  <p className="panel-note" role="status">
+                    {data.punchState.reason}
+                  </p>
+                )}
+                {dedicatedPunchPage && (
+                  <p className="panel-note">
+                    <Link to="/staff/punch">Open Punch in & out</Link> to record your school day.
+                  </p>
+                )}
+                <div className="toolbar">
+                  {!dedicatedPunchPage && (
+                    <>
+                      <Button
+                        disabled={
+                          busy ||
+                          (data.punchState &&
+                            (!data.punchState.allowed || data.punchState.nextKind !== 'in'))
+                        }
+                        onClick={() => void punch('in')}
+                      >
+                        Punch in
+                      </Button>
+                      <Button
+                        disabled={
+                          busy ||
+                          (data.punchState &&
+                            (!data.punchState.allowed || data.punchState.nextKind !== 'out'))
+                        }
+                        onClick={() => void punch('out')}
+                      >
+                        Punch out
+                      </Button>
+                    </>
+                  )}
+                  <Button variant="secondary" onClick={() => setAction({ kind: 'leave' })}>
+                    Request leave
                   </Button>
-                  <Button
-                    disabled={
-                      busy ||
-                      (data.punchState &&
-                        (!data.punchState.allowed || data.punchState.nextKind !== 'out'))
-                    }
-                    onClick={() => void punch('out')}
-                  >
-                    Punch out
-                  </Button>
-                </>
-              )}
-              <Button variant="secondary" onClick={() => setAction({ kind: 'leave' })}>
-                Request leave
-              </Button>
-            </div>
+                </div>
+              </>
+            )}
           </>
         )}
         {tab === 'self' && selfView === 'attendance' && (
@@ -904,13 +929,13 @@ function HrContent({
                             <>
                               {l.reviewNote || '—'}
                               {tab === 'self' &&
-                                l.status === 'pending' &&
-                                l.start >= data.today && (
+                                (l.status === 'pending' || l.status === 'approved') &&
+                                l.end >= data.today && (
                                   <Button
                                     variant="ghost"
                                     onClick={() => setAction({ kind: 'cancelLeave', leave: l })}
                                   >
-                                    Cancel request
+                                    {l.status === 'approved' ? 'Cancel leave' : 'Cancel request'}
                                   </Button>
                                 )}
                             </>

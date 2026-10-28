@@ -38,7 +38,7 @@ export default function SectionNavigation({
           const tabId = `${id}-${index}`;
           const content = (
             <>
-              {item.icon && <AppIcon name={item.icon} size={18} />}
+              {variant !== 'secondary' && item.icon && <AppIcon name={item.icon} size={18} />}
               <span className="tab-label">{item.label}</span>
               {item.badge !== undefined && <span className="tab-count">{item.badge}</span>}
             </>

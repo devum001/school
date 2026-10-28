@@ -589,7 +589,11 @@ export default function FeeOnboardingWorkspace({
 
               <label className="field">
                 <span>School Bus</span>
-                <div className="fee-inline-pair">
+                <div
+                  className={`fee-inline-pair ${
+                    bulkBusMode === 'enable' ? 'fee-inline-pair-expanded' : ''
+                  }`}
+                >
                   <select
                     aria-label="Bulk bus mode"
                     value={bulkBusMode}
@@ -597,9 +601,9 @@ export default function FeeOnboardingWorkspace({
                       setBulkBusMode(e.target.value as 'keep' | 'enable' | 'disable')
                     }
                   >
-                    <option value="keep">No change</option>
-                    <option value="enable">Add / Update Bus</option>
-                    <option value="disable">No Bus (Remove)</option>
+                    <option value="keep">Keep existing</option>
+                    <option value="enable">Bus Active</option>
+                    <option value="disable">No Bus</option>
                   </select>
                   {bulkBusMode === 'enable' && (
                     <>
@@ -607,7 +611,7 @@ export default function FeeOnboardingWorkspace({
                         aria-label="Bulk bus fee"
                         type="number"
                         min={0}
-                        placeholder="Bus ₹"
+                        placeholder="Bus Fee (₹)"
                         value={bulkBusFee}
                         onChange={(e) => setBulkBusFee(e.target.value)}
                       />
@@ -618,7 +622,7 @@ export default function FeeOnboardingWorkspace({
                       >
                         {Array.from({ length: 12 }, (_, i) => 12 - i).map((m) => (
                           <option key={m} value={m}>
-                            {m}m
+                            {m} mo
                           </option>
                         ))}
                       </select>
@@ -629,7 +633,11 @@ export default function FeeOnboardingWorkspace({
 
               <label className="field">
                 <span>Hostel Facility</span>
-                <div className="fee-inline-pair">
+                <div
+                  className={`fee-inline-pair ${
+                    bulkHostelMode === 'enable' ? 'fee-inline-pair-expanded' : ''
+                  }`}
+                >
                   <select
                     aria-label="Bulk hostel mode"
                     value={bulkHostelMode}
@@ -637,9 +645,9 @@ export default function FeeOnboardingWorkspace({
                       setBulkHostelMode(e.target.value as 'keep' | 'enable' | 'disable')
                     }
                   >
-                    <option value="keep">No change</option>
-                    <option value="enable">Add / Update Hostel</option>
-                    <option value="disable">No Hostel (Remove)</option>
+                    <option value="keep">Keep existing</option>
+                    <option value="enable">Hostel Active</option>
+                    <option value="disable">No Hostel</option>
                   </select>
                   {bulkHostelMode === 'enable' && (
                     <>
@@ -647,7 +655,7 @@ export default function FeeOnboardingWorkspace({
                         aria-label="Bulk hostel fee"
                         type="number"
                         min={0}
-                        placeholder="Hostel ₹"
+                        placeholder="Hostel Fee (₹)"
                         value={bulkHostelFee}
                         onChange={(e) => setBulkHostelFee(e.target.value)}
                       />
@@ -658,7 +666,7 @@ export default function FeeOnboardingWorkspace({
                       >
                         {Array.from({ length: 12 }, (_, i) => 12 - i).map((m) => (
                           <option key={m} value={m}>
-                            {m}m
+                            {m} mo
                           </option>
                         ))}
                       </select>

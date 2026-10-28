@@ -44,6 +44,7 @@ export default function AttendanceRequests({
         </Button>
       </div>
       <SectionNavigation
+        variant="secondary"
         label="ARS history"
         items={[
           { id: 'pending', label: `Pending (${pending})` },

@@ -11,6 +11,15 @@ export function pendingLeaveOn(date: string, today: string, leaves: Leave[]) {
       leave.end >= date,
   );
 }
+export function cancellableLeaveOn(date: string, today: string, leaves: Leave[]) {
+  return leaves.find(
+    (leave) =>
+      (leave.status === 'pending' || leave.status === 'approved') &&
+      leave.end >= today &&
+      leave.start <= date &&
+      leave.end >= date,
+  );
+}
 export function attendanceLabel(
   date: string,
   today: string,

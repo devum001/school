@@ -79,6 +79,7 @@ export default function LiveFinanceWorkspace() {
       />
       {tab === 'Overview' && (
         <SectionNavigation
+          variant="secondary"
           label="Finance overview views"
           items={[
             { id: 'summary', label: 'Collections & Revenue', icon: 'wallet' },
@@ -298,13 +299,7 @@ function FeeWorkspace({
     );
   return (
     <>
-      <LoadingOverlay
-        loading={state.loading || busy}
-        label={busy ? 'Selecting students…' : 'Loading fees…'}
-      >
-        <div />
-      </LoadingOverlay>
-      {(tab === 'Overview' || tab === 'Transactions') && (
+      {((tab === 'Overview' && financeView === 'summary') || tab === 'Transactions') && (
         <div className="finance-period">
           <label className="field">
             <select
@@ -404,14 +399,16 @@ function FeeWorkspace({
         />
       ) : (
         <>
-          <LoadingOverlay
-            loading={state.loading}
-            size="xl"
-            label="Loading student fees…"
-            message="Loading student fees…"
-          >
-            <div style={{ minHeight: state.loading ? 160 : 0 }} />
-          </LoadingOverlay>
+          {(state.loading || busy) && !(tab === 'Overview' && financeView === 'salary') && (
+            <LoadingOverlay
+              loading={state.loading || busy}
+              size="xl"
+              label={busy ? 'Selecting students…' : 'Loading student fees…'}
+              message={busy ? 'Selecting students…' : 'Loading student fees…'}
+            >
+              <div style={{ minHeight: 160 }} />
+            </LoadingOverlay>
+          )}
           {tab === 'Overview' && (
             <>
               {financeView === 'salary' ? (

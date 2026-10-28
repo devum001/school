@@ -112,7 +112,6 @@ export default function AcademicsPage() {
 
       <SectionNavigation
         label="Test and Result"
-        className="academic-tabs academic-main-tabs"
         value={resultsView ? 'results' : 'tests'}
         onChange={(tab) =>
           change({ view: tab === 'results' ? 'results' : null, test: null, marks: null })

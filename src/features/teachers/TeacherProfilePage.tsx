@@ -124,7 +124,7 @@ export default function TeacherProfilePage() {
               <div className="panel-padding">
                 <dl className="detail-list">
                   {[
-                    ['Present', summary.present],
+                    ['Present', summary.present + summary.late],
                     ['Absent', summary.absent],
                     ['Half Day', summary['half-day']],
                     ['Late', summary.late],

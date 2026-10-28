@@ -37,6 +37,7 @@ import { useDraftGuard } from '../academics/useDraftGuard';
 import { useToday } from '../../app/useToday';
 import { readProfileImage } from '../../lib/fileUploads';
 import StaffContactFields from './StaffContactFields';
+import '../hr/hr.css';
 export default function LiveStaff({
   access,
   yearId,
@@ -52,7 +53,10 @@ export default function LiveStaff({
     [editing, setEditing] = useState<Person | 'new' | null>(
       params.get('add') === 'teacher' ? 'new' : null,
     ),
-    [change, setChange] = useState<Person | null>(null),
+    [change, setChange] = useState<{
+      person: Person;
+      nextStatus: 'active' | 'inactive' | 'archived';
+    } | null>(null),
     [importing, setImporting] = useState(false);
   const manage = access.permissions.includes('staff.manage'),
     requested = params.get('section');
@@ -125,17 +129,16 @@ export default function LiveStaff({
                   <SearchInput
                     value={query}
                     onChange={setQuery}
-                    placeholder="Search staff name or code…"
+                    placeholder={
+                      teachersOnly ? 'Search teacher name or code…' : 'Search staff name or code…'
+                    }
                   />
                 </div>
                 <div className="staff-header-buttons">
                   {manage && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => setImporting(true)}
-                    >
+                    <Button variant="secondary" onClick={() => setImporting(true)}>
                       <AppIcon name="upload" size={16} />
-                      Import Staff
+                      {teachersOnly ? 'Import Teachers' : 'Import Staff'}
                     </Button>
                   )}
                   {manage && (
@@ -154,7 +157,7 @@ export default function LiveStaff({
                   <table>
                     <thead>
                       <tr>
-                        <th>Staff member</th>
+                        <th>{teachersOnly ? 'Teacher' : 'Staff member'}</th>
                         <th>Department</th>
                         <th>Designation</th>
                         <th>Contact</th>
@@ -198,20 +201,28 @@ export default function LiveStaff({
                           <td>{titleCase(p.designation || '') || '—'}</td>
                           <td>{p.email || p.phone || 'Not provided'}</td>
                           <td>
-                            <Badge tone={p.status === 'active' ? 'green' : 'neutral'}>
-                              {titleCase(p.status)}
+                            <Badge
+                              tone={
+                                p.status === 'active'
+                                  ? 'green'
+                                  : p.status === 'inactive'
+                                    ? 'amber'
+                                    : 'neutral'
+                              }
+                            >
+                              {p.status === 'inactive' ? 'Removed' : titleCase(p.status)}
                             </Badge>
                           </td>
                           <td>
                             {manage && (
-                              <div className="hr-actions">
+                              <div className="hr-actions staff-row-actions">
                                 <Button variant="secondary" onClick={() => setEditing(p)}>
                                   Edit
                                 </Button>
                                 {access.permissions.includes('payroll.view') &&
                                   access.permissions.includes('payroll.manage') && (
                                     <Button
-                                      variant="ghost"
+                                      variant="secondary"
                                       onClick={() =>
                                         setParams((previous) => {
                                           const next = new URLSearchParams(previous);
@@ -221,21 +232,54 @@ export default function LiveStaff({
                                         })
                                       }
                                     >
-                                      Salary & attendance
+                                      Salary &amp; attendance
                                     </Button>
                                   )}
                                 {p.status === 'active' &&
                                   !p.userId &&
                                   access.permissions.includes('memberships.manage') &&
                                   access.permissions.includes('roles.view') && (
-                                    <Button variant="ghost" onClick={() => setLoginStaff(p)}>
+                                    <Button variant="secondary" onClick={() => setLoginStaff(p)}>
                                       Enable login
                                     </Button>
                                   )}
                                 {p.userId && <Badge tone="green">Login linked</Badge>}
-                                <Button variant="ghost" onClick={() => setChange(p)}>
-                                  {p.status === 'active' ? 'Archive' : 'Restore'}
-                                </Button>
+                                {p.status === 'active' && (
+                                  <Button
+                                    variant="ghost"
+                                    className="staff-action-danger"
+                                    onClick={() => setChange({ person: p, nextStatus: 'inactive' })}
+                                  >
+                                    Remove
+                                  </Button>
+                                )}
+                                {p.status === 'inactive' && (
+                                  <>
+                                    <Button
+                                      variant="secondary"
+                                      onClick={() => setChange({ person: p, nextStatus: 'active' })}
+                                    >
+                                      Restore
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      className="staff-action-danger"
+                                      onClick={() =>
+                                        setChange({ person: p, nextStatus: 'archived' })
+                                      }
+                                    >
+                                      Archive
+                                    </Button>
+                                  </>
+                                )}
+                                {p.status === 'archived' && (
+                                  <Button
+                                    variant="secondary"
+                                    onClick={() => setChange({ person: p, nextStatus: 'active' })}
+                                  >
+                                    Restore
+                                  </Button>
+                                )}
                               </div>
                             )}
                           </td>
@@ -260,7 +304,7 @@ export default function LiveStaff({
           </Panel>
         </LoadingOverlay>
       )}
-            {importing && (
+      {importing && (
         <Modal
           open
           wide
@@ -303,12 +347,29 @@ export default function LiveStaff({
       )}
       {change && (
         <ConfirmAction
-          title={`${change.status === 'active' ? 'Archive' : 'Restore'} staff profile?`}
-          description="History is retained. Active teaching and class-teacher assignments must be removed before archiving."
+          title={
+            change.nextStatus === 'inactive'
+              ? `Remove ${change.person.name}?`
+              : change.nextStatus === 'archived'
+                ? `Archive ${change.person.name}?`
+                : `Restore ${change.person.name}?`
+          }
+          description={
+            change.nextStatus === 'inactive'
+              ? 'Removing this staff profile marks them as removed and ends their active class/subject assignments. Once removed, you can archive or restore their profile at any time.'
+              : change.nextStatus === 'archived'
+                ? 'History is retained in archived records. You can restore the profile later if needed.'
+                : 'This will restore the staff profile back to active status.'
+          }
           close={() => setChange(null)}
           saved={() => undefined}
           action={async () => {
-            await onboardingApi.changeStatus(access.schoolId, 'staff', change);
+            await onboardingApi.changeStatus(
+              access.schoolId,
+              'staff',
+              change.person,
+              change.nextStatus,
+            );
             setChange(null);
             state.reload();
           }}

@@ -202,6 +202,7 @@ export default function ResultsView({
         )}
       </div>
       <SectionNavigation
+        variant="secondary"
         label="Result views"
         items={[
           { id: 'overall', label: 'Overall Leaderboard', icon: 'trophy' },
