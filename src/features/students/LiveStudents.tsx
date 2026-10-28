@@ -6,6 +6,7 @@ import {
   SearchInput,
   EmptyState,
   LoadingOverlay,
+  AppIcon,
 } from '../../components/ui/Primitives';
 import { onboardingApi } from '../../services/onboardingService';
 import { productApi, type StudentRow } from '../../services/productService';
@@ -165,60 +166,6 @@ function StudentWorkspace({
     }, 300);
     return () => clearTimeout(timer);
   }, [searchDraft, search, setParams, firstPage]);
-  const filters = (
-    <div className="toolbar live-students-toolbar">
-      {mode === 'directory' && (
-        <div className="students-search-group">
-          <span>Search</span>
-          <SearchInput
-            value={searchDraft}
-            onChange={setSearchDraft}
-            placeholder="Search class students…"
-          />
-        </div>
-      )}
-      <div className="students-filters-group">
-        {!classId && (
-          <label className="filter-label">
-            <span>Class</span>
-            <select
-              aria-label="Student directory class"
-              value={selectedClass}
-              onChange={(e) => update('classId', e.target.value)}
-            >
-              <option value="">{mode === 'import' ? 'Choose a class' : 'All classes'}</option>
-              {snapshot.classes
-                .filter((c) => c.status === 'active')
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-        )}
-        {mode === 'directory' && (
-          <label className="filter-label">
-            <span>Section</span>
-            <select
-              aria-label="Class students section"
-              disabled={!selectedClass}
-              value={section}
-              onChange={(e) => update('studentSection', e.target.value)}
-            >
-              <option value="">Whole class · all students</option>
-              {sections.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                  {s.status === 'archived' ? ' (archived)' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
-    </div>
-  );
   const closeImport = () => {
     setParams((previous) => {
       const next = new URLSearchParams(previous);
@@ -289,39 +236,89 @@ function StudentWorkspace({
           title={current ? `${current.name} students` : 'Student directory'}
           subtitle={`${snapshot.year.name} · ${list.data?.total ?? 0} saved enrollments`}
           action={
-            manage && (
-              <div className="student-import-actions">
-                {current && (
-                  <Button
-                    variant="secondary"
-                    onClick={() =>
-                      downloadClassStudentTemplate(
-                        current.name,
-                        sections.filter((s) => s.status === 'active').map((s) => s.name),
-                      )
-                    }
+            <div className="panel-header-actions staff-header-toolbar">
+              <div className="staff-filters-row">
+                {!classId && (
+                  <select
+                    className="staff-select-filter"
+                    aria-label="Filter by class"
+                    value={selectedClass}
+                    onChange={(e) => update('classId', e.target.value)}
                   >
-                    Download Sample Excel
-                  </Button>
+                    <option value="">All classes</option>
+                    {snapshot.classes
+                      .filter((c) => c.status === 'active')
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                  </select>
                 )}
-                <Button variant="secondary" onClick={() => setInlineImport(true)}>
-                  Import Excel (.xlsx)
-                </Button>
-                {inlineAddInSettings ? (
-                  <Button onClick={() => setAdding(true)}>Add student</Button>
-                ) : (
-                  <Link
-                    className="button primary"
-                    to={`/students/new?${new URLSearchParams({ year: yearId, classId: selectedClass, sectionId: section === 'none' ? '' : section, returnTo: location.pathname + location.search })}`}
+                {mode === 'directory' && (
+                  <select
+                    className="staff-select-filter"
+                    aria-label="Filter by section"
+                    disabled={!selectedClass}
+                    value={section}
+                    onChange={(e) => update('studentSection', e.target.value)}
                   >
-                    Add student
-                  </Link>
+                    <option value="">All sections</option>
+                    {sections.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                        {s.status === 'archived' ? ' (archived)' : ''}
+                      </option>
+                    ))}
+                  </select>
                 )}
               </div>
-            )
+              {mode === 'directory' && (
+                <div className="staff-search-input">
+                  <SearchInput
+                    value={searchDraft}
+                    onChange={setSearchDraft}
+                    placeholder="Search class students…"
+                  />
+                </div>
+              )}
+              {manage && (
+                <div className="staff-header-buttons">
+                  {current && (
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        downloadClassStudentTemplate(
+                          current.name,
+                          sections.filter((s) => s.status === 'active').map((s) => s.name),
+                        )
+                      }
+                    >
+                      <AppIcon name="download" size={16} />
+                      Sample
+                    </Button>
+                  )}
+                  <Button variant="secondary" onClick={() => setInlineImport(true)}>
+                    <AppIcon name="upload" size={16} />
+                    Import Excel (.xlsx)
+                  </Button>
+                  {inlineAddInSettings ? (
+                    <Button onClick={() => setAdding(true)}>
+                      Add student
+                    </Button>
+                  ) : (
+                    <Link
+                      className="button primary"
+                      to={'/students/new?' + new URLSearchParams({ year: yearId, classId: selectedClass, sectionId: section === 'none' ? '' : section, returnTo: location.pathname + location.search }).toString()}
+                    >
+                      Add student
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
           }
         >
-          {filters}
           {list.error && <LoadState {...list} loading={false} retry={list.reload} />}
           {!list.error && (
             <>

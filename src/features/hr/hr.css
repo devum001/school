@@ -313,7 +313,7 @@
 
 /* Leave balance banner & empty state styles */
 .hr-workspace > .section-navigation {
-  margin-bottom: -10px;
+  margin-bottom: -12px;
 }
 .hr-content .hr-leave-balance-card,
 .hr-content .hr-empty-box {
