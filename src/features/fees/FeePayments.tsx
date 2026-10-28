@@ -232,9 +232,11 @@ export default function FeePayments({
               }
             }}
           >
-            <LoadingOverlay loading={busy} local label="Reversing payment…">
-              <div />
-            </LoadingOverlay>
+            {busy && (
+              <LoadingOverlay loading={busy} local label="Reversing payment…">
+                <div />
+              </LoadingOverlay>
+            )}
             <p>
               {titleCase(reverse.studentName)} · {money(reverse.amount)}
             </p>

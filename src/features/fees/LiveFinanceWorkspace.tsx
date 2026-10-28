@@ -252,7 +252,7 @@ function FeeWorkspace({
     }
     if (selected.size > 1 && [...selected.values()].some((s) => s.configured)) {
       setError(
-        'For bulk setup, choose “Fee setup pending”. Edit existing agreements individually from Manage Fees to protect their payment schedules.',
+        'Cannot select multiple students who already have fee structures. Select 1 student to edit, or select students with "Fee setup pending".',
       );
       return;
     }
@@ -576,51 +576,28 @@ function FeeWorkspace({
               title="Student fees"
               subtitle="Select students for bulk setup, or manage an individual agreement and collect payment."
               action={
-                <Button
-                  variant="secondary"
-                  disabled={!data?.items.length}
-                  onClick={() =>
-                    downloadCsv(
-                      'student-fees-page.csv',
-                      [
-                        'Student',
-                        'Admission number',
-                        'Agreed fee INR',
-                        'Old dues INR',
-                        'Paid current year INR',
-                        'Outstanding INR',
-                        'Next due',
-                      ],
-                      (data?.items ?? []).map((r) => [
-                        r.name,
-                        r.code,
-                        r.net / 100,
-                        r.oldDues / 100,
-                        r.paid / 100,
-                        r.outstanding / 100,
-                        r.nextDue ? formatCalendarDate(r.nextDue) : '',
-                      ]),
-                    )
-                  }
-                >
-                  <Download size={16} />
-                  Export page
-                </Button>
-              }
-            >
-              <div className="toolbar">
-                <SearchInput
-                  value={search}
-                  onChange={(v) => {
-                    setSearch(v);
-                    reset();
-                  }}
-                  placeholder="Search student, admission number or guardian…"
-                />
-                <label className="field">
-                  Fee status
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <SearchInput
+                    value={search}
+                    onChange={(v) => {
+                      setSearch(v);
+                      reset();
+                    }}
+                    placeholder="Search student, admission number…"
+                  />
                   <select
+                    style={{
+                      height: 38,
+                      padding: '0 12px',
+                      fontSize: 13,
+                      borderRadius: 8,
+                      border: '1px solid var(--border, #d1d5db)',
+                      background: 'var(--surface-input, #fff)',
+                      color: 'inherit',
+                      outline: 'none',
+                    }}
                     value={status}
+                    aria-label="Fee status"
                     onChange={(e) => {
                       setStatus(e.target.value);
                       reset();
@@ -633,39 +610,112 @@ function FeeWorkspace({
                     <option value="paid">Paid in full</option>
                     <option value="former">Former students / no active enrollment</option>
                   </select>
-                </label>
-              </div>
-              {can('fees.manage') && year.status !== 'closed' && (
-                <div className="fee-bulk-bar">
-                  <span>
-                    <CheckSquare size={16} />
-                    {selected.size} selected
-                  </span>
                   <Button
                     variant="secondary"
-                    disabled={busy || !data?.total}
-                    onClick={() => void selectAll()}
+                    disabled={!data?.items.length}
+                    onClick={() =>
+                      downloadCsv(
+                        'student-fees-page.csv',
+                        [
+                          'Student',
+                          'Admission number',
+                          'Agreed fee INR',
+                          'Old dues INR',
+                          'Paid current year INR',
+                          'Outstanding INR',
+                          'Next due',
+                        ],
+                        (data?.items ?? []).map((r) => [
+                          r.name,
+                          r.code,
+                          r.net / 100,
+                          r.oldDues / 100,
+                          r.paid / 100,
+                          r.outstanding / 100,
+                          r.nextDue ? formatCalendarDate(r.nextDue) : '',
+                        ]),
+                      )
+                    }
                   >
-                    {busy ? 'Selecting…' : 'Select all matching students'}
+                    <Download size={16} />
+                    Export page
                   </Button>
-                  {selected.size > 0 && (
-                    <>
-                      <Button variant="secondary" onClick={() => setSelected(new Map())}>
-                        Clear
-                      </Button>
-                      <Button onClick={openSetup}>Set up fees</Button>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setError('');
-                          setAction('opening');
+                </div>
+              }
+            >
+              {can('fees.manage') && year.status !== 'closed' && (
+                <>
+                  <div className="fee-bulk-bar">
+                    <span>
+                      <CheckSquare size={16} />
+                      {selected.size} selected
+                    </span>
+                    <Button
+                      variant="secondary"
+                      disabled={busy || !data?.total}
+                      onClick={() => void selectAll()}
+                    >
+                      {busy ? 'Selecting…' : 'Select all matching students'}
+                    </Button>
+                    {selected.size > 0 && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setSelected(new Map());
+                            setError('');
+                          }}
+                        >
+                          Clear
+                        </Button>
+                        <Button onClick={openSetup}>Set up fees</Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setError('');
+                            setAction('opening');
+                          }}
+                        >
+                          Previous-year dues
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  {error && (
+                    <div
+                      role="alert"
+                      className="form-error"
+                      style={{
+                        margin: '10px 0 14px',
+                        padding: '10px 14px',
+                        borderRadius: '6px',
+                        backgroundColor: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        color: '#b91c1c',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span>{error}</span>
+                      <button
+                        type="button"
+                        onClick={() => setError('')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#b91c1c',
+                          fontWeight: 700,
+                          fontSize: 14,
                         }}
                       >
-                        Previous-year dues
-                      </Button>
-                    </>
+                        ✕
+                      </button>
+                    </div>
                   )}
-                </div>
+                </>
               )}
               <div className="table-wrap fee-directory">
                 <table>

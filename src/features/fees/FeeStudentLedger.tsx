@@ -371,9 +371,11 @@ function CollectPayment({
           }
         }}
       >
-        <LoadingOverlay loading={busy} local label="Recording payment…">
-          <div />
-        </LoadingOverlay>
+        {busy && (
+          <LoadingOverlay loading={busy} local label="Recording payment…">
+            <div />
+          </LoadingOverlay>
+        )}
         <>
           <div className="fee-quick-split-bar" style={{ marginBottom: 4 }}>
             <span>Quick fill:</span>
@@ -577,9 +579,11 @@ function OpeningCorrection({
           }
         }}
       >
-        <LoadingOverlay loading={busy} local label="Saving balance…">
-          <div />
-        </LoadingOverlay>
+        {busy && (
+          <LoadingOverlay loading={busy} local label="Saving balance…">
+            <div />
+          </LoadingOverlay>
+        )}
         <AmountField label="Correct total opening due (₹)" value={amount} onChange={setAmount} />
         <p>
           Enter the original outstanding balance, including payments collected against it since

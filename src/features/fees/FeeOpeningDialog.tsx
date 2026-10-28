@@ -79,9 +79,11 @@ export default function FeeOpeningDialog({
           }
         }}
       >
-        <LoadingOverlay loading={busy} local label="Saving previous dues…">
-          <div />
-        </LoadingOverlay>{' '}
+        {busy && (
+          <LoadingOverlay loading={busy} local label="Saving previous dues…">
+            <div />
+          </LoadingOverlay>
+        )}{' '}
         {!review ? (
           <>
             <div className="fee-callout">

@@ -944,7 +944,10 @@ function HrContent({
                   </div>
                 </div>
               )}
-              <div style={{ marginBottom: 14 }}>
+              <div
+                className="hr-leave-subnav-row"
+                style={{ padding: '0 22px', borderBottom: '1px solid var(--border-subtle, #e5e7eb)' }}
+              >
                 <SectionNavigation
                   variant="secondary"
                   label="Leave status"

@@ -257,9 +257,11 @@ export default function FeeSetupDialog({
             } else if (step === 2) void submit();
           }}
         >
-          <LoadingOverlay loading={busy} local label="Saving fees…">
-            <div />
-          </LoadingOverlay>
+          {busy && (
+            <LoadingOverlay loading={busy} local label="Saving fees…">
+              <div />
+            </LoadingOverlay>
+          )}
           <ol className="fee-steps">
             {['Fee details', 'Review & save'].map((name, i) => (
               <li key={name} data-active={step === i + 1} data-complete={step > i + 1}>

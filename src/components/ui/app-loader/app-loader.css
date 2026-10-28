@@ -276,6 +276,9 @@
 /* Content-only blur overlay — never blurs sidebar or topbar */
 .loading-overlay-host {
   position: relative;
+}
+
+.loading-overlay-host.is-loading {
   min-height: 260px;
 }
 
