@@ -101,12 +101,19 @@ export default function AcademicsPage() {
       <PageHeading
         title="Test and Result"
         actions={
-          !resultsView && canCreateTest ? (
-            <Button onClick={() => setAdding(true)}>
-              <AppIcon name="document" size={17} />
-              Add Test / Exam
-            </Button>
-          ) : undefined
+          <div className="academic-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {!resultsView && (
+              <div style={{ minWidth: 220, flex: '1 1 220px' }}>
+                <SearchInput value={query} onChange={setQuery} placeholder="Search test or exam…" />
+              </div>
+            )}
+            {!resultsView && canCreateTest && (
+              <Button onClick={() => setAdding(true)}>
+                <AppIcon name="document" size={17} />
+                Add Test / Exam
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -121,12 +128,6 @@ export default function AcademicsPage() {
           { id: 'results', label: 'Results', icon: 'trophy' },
         ]}
       />
-
-      {!resultsView && (
-        <div className="academic-context academic-test-search">
-          <SearchInput value={query} onChange={setQuery} placeholder="Search test or exam…" />
-        </div>
-      )}
 
       {!classes.length ? (
         <EmptyState

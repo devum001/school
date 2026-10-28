@@ -85,7 +85,6 @@ function RelationList({
         }
       >
         <div className="live-content">
-          <Link to="/settings?tab=Years">Choose another academic year</Link>
           {state.error && <LoadState {...state} loading={false} retry={state.reload} />}
           {!state.error && (
             <>

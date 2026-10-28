@@ -77,33 +77,7 @@ export default function LiveFinanceWorkspace() {
           })
         }
       />
-      {tab === 'Overview' && (
-        <SectionNavigation
-          variant="secondary"
-          label="Finance overview views"
-          items={[
-            { id: 'summary', label: 'Collections & Revenue', icon: 'wallet' },
-            { id: 'salary', label: 'Salary Summary', icon: 'finance-balance' },
-            { id: 'recent', label: 'Recent Transactions', icon: 'receipt' },
-          ]}
-          value={
-            ['salary', 'recent'].includes(params.get('financeView') ?? '')
-              ? params.get('financeView')!
-              : 'summary'
-          }
-          onChange={(value) =>
-            setParams((previous) => {
-              const next = new URLSearchParams(previous);
-              if (value === 'summary') {
-                next.delete('financeView');
-              } else {
-                next.set('financeView', value);
-              }
-              return next;
-            })
-          }
-        />
-      )}
+
       {tab === 'Salary Expenses' ? (
         <LiveHrWorkspace section="salary" hideNavigation />
       ) : !canView ? (
@@ -299,7 +273,67 @@ function FeeWorkspace({
     );
   return (
     <>
-      {((tab === 'Overview' && financeView === 'summary') || tab === 'Transactions') && (
+      {tab === 'Overview' && (
+        <div className="finance-subnav-row">
+          <SectionNavigation
+            variant="secondary"
+            label="Finance overview views"
+            items={[
+              { id: 'summary', label: 'Collections & Revenue', icon: 'wallet' },
+              { id: 'salary', label: 'Salary Summary', icon: 'finance-balance' },
+              { id: 'recent', label: 'Recent Transactions', icon: 'receipt' },
+            ]}
+            value={
+              ['salary', 'recent'].includes(params.get('financeView') ?? '')
+                ? params.get('financeView')!
+                : 'summary'
+            }
+            onChange={(value) =>
+              setParams((previous) => {
+                const next = new URLSearchParams(previous);
+                if (value === 'summary') {
+                  next.delete('financeView');
+                } else {
+                  next.set('financeView', value);
+                }
+                return next;
+              })
+            }
+          />
+          {(financeView === 'summary' || financeView === 'salary') && (
+            <div className="finance-period">
+              <label className="field">
+                <select
+                  aria-label="Finance period"
+                  value={period}
+                  onChange={(e) => update('period', e.target.value)}
+                >
+                  <option value="year">Academic Year</option>
+                  <option value="cycle">Monthly Cycle</option>
+                </select>
+              </label>
+              {period === 'cycle' && (
+                <label className="field">
+                  <PickerInput
+                    aria-label="Finance cycle month"
+                    type="month"
+                    value={month}
+                    onChange={(e) => update('month', e.target.value)}
+                  />
+                </label>
+              )}
+              <p>
+                {period === 'cycle'
+                  ? `${month}-01 – ${month}-28`
+                  : year
+                    ? `${formatCalendarDate(year.start)} – ${formatCalendarDate(year.end > (context.today || '') ? (context.today || '') : year.end)}`
+                    : ''}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+      {tab === 'Transactions' && (
         <div className="finance-period">
           <label className="field">
             <select
@@ -313,7 +347,6 @@ function FeeWorkspace({
           </label>
           {period === 'cycle' && (
             <label className="field">
-              Finance cycle month
               <PickerInput
                 aria-label="Finance cycle month"
                 type="month"

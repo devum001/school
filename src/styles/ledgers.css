@@ -737,3 +737,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+.finance-subnav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.finance-subnav-row .section-navigation {
+  width: auto;
+  margin: 0;
+}
+.finance-subnav-row .finance-period {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+}
+.finance-subnav-row .finance-period .field {
+  margin: 0;
+}
+.finance-subnav-row .finance-period p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}

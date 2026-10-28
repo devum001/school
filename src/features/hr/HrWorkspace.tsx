@@ -196,20 +196,22 @@ export function HrWorkspace({
               onChange={setTab}
             />
           )}
-          <label className="hr-month-corner">
-            <span className="sr-only">
-              {self ? 'Calendar / salary month' : 'Salary / attendance month'}
-            </span>
-            <PickerInput
-              type="month"
-              required
-              aria-label={self ? 'Calendar / salary month' : 'Salary / attendance month'}
-              value={month}
-              onChange={(e) => {
-                if (e.target.value) setMonth(e.target.value);
-              }}
-            />
-          </label>
+          {tab !== 'leave' && (
+            <label className="hr-month-corner">
+              <span className="sr-only">
+                {self ? 'Calendar / salary month' : 'Salary / attendance month'}
+              </span>
+              <PickerInput
+                type="month"
+                required
+                aria-label={self ? 'Calendar / salary month' : 'Salary / attendance month'}
+                value={month}
+                onChange={(e) => {
+                  if (e.target.value) setMonth(e.target.value);
+                }}
+              />
+            </label>
+          )}
         </div>
       )}
       {!allowed ? (
@@ -305,6 +307,7 @@ function HrContent({
   changeMonth: (month: string) => void;
 }) {
   const [params, setParams] = useSearchParams();
+  const [leaveStatusTab, setLeaveStatusTab] = useState<'pending' | 'approved'>('pending');
   const initialStaff = data.staff.find((p) => p.id === params.get('setupSalary'));
   const selfView = ['attendance', 'requests', 'leave', 'salary', 'profile'].includes(
     params.get('view') || '',
@@ -572,6 +575,20 @@ function HrContent({
                     ))}
                 </select>
               </label>
+              {tab === 'leave' && (
+                <label className="field hr-inline-filter">
+                  <span>Month</span>
+                  <PickerInput
+                    type="month"
+                    required
+                    aria-label="Leave month"
+                    value={month}
+                    onChange={(e) => {
+                      if (e.target.value) changeMonth(e.target.value);
+                    }}
+                  />
+                </label>
+              )}
               {tab === 'attendance' && (
                 <label className="field hr-inline-filter">
                   <span>Attendance date</span>
@@ -895,68 +912,67 @@ function HrContent({
             today={data.today}
           />
         )}
-        {(tab === 'leave' || (tab === 'self' && selfView === 'leave')) && (
-          <>
-            {tab !== 'self' && <h3>Leave requests</h3>}
-            {tab === 'self' ? (
-              <div className="hr-leave-balance-card">
-                <div className="hr-leave-stat-pill">
-                  <span className="hr-leave-stat-num">
-                    {Math.max(
-                      0,
-                      data.settings.paidLeaveDays -
-                        (data.leaveUsage?.find((l) => staff.some((p) => p.id === l.staffId))?.used ?? 0),
-                    )}
-                  </span>
-                  <span className="hr-leave-stat-label">Paid days remaining</span>
-                </div>
-                <div className="hr-leave-info-text">
-                  <strong>Annual Paid Leave Allowance: {data.settings.paidLeaveDays} days ({month.slice(0, 4)})</strong>
-                  <p>Pending requests from every month are shown. Decided requests follow the selected month.</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p>
-                  Pending requests from every month are shown. Decided requests follow the selected
-                  month. Paid leave allowance for {month.slice(0, 4)}: {data.settings.paidLeaveDays}{' '}
-                  days per staff member.
-                </p>
-                {staff.map((p) => (
-                  <p key={p.id}>
-                    {p.name}:{' '}
-                    {Math.max(
-                      0,
-                      data.settings.paidLeaveDays -
-                        (data.leaveUsage?.find((l) => l.staffId === p.id)?.used ?? 0),
-                    )}{' '}
-                    paid days remaining
-                  </p>
-                ))}
-              </>
-            )}
-            {(() => {
-              const userLeaves = [...data.leaves]
-                .sort(
-                  (a, b) =>
-                    Number(b.status === 'pending') - Number(a.status === 'pending') ||
-                    a.start.localeCompare(b.start),
-                )
-                .filter((l) => staff.some((p) => p.id === l.staffId));
-              if (userLeaves.length === 0) {
-                return (
-                  <div className="hr-empty-box">
-                    <CalendarDays size={36} className="hr-empty-icon" />
-                    <p className="hr-empty-title">No leave requests found</p>
-                    <span className="hr-empty-desc">
-                      {tab === 'self'
-                        ? 'You haven\'t submitted any leave requests. Click "Request leave" above to apply for time off.'
-                        : 'No staff leave requests found for this month.'}
+        {(tab === 'leave' || (tab === 'self' && selfView === 'leave')) && (() => {
+          const userLeaves = [...data.leaves]
+            .sort(
+              (a, b) =>
+                Number(b.status === 'pending') - Number(a.status === 'pending') ||
+                a.start.localeCompare(b.start),
+            )
+            .filter((l) => staff.some((p) => p.id === l.staffId));
+          const pendingLeaves = userLeaves.filter((l) => l.status === 'pending');
+          const approvedLeaves = userLeaves.filter((l) => l.status !== 'pending');
+          const displayedLeaves = leaveStatusTab === 'pending' ? pendingLeaves : approvedLeaves;
+
+          return (
+            <div className="attendance-requests" style={{ padding: 0 }}>
+              {tab === 'self' && (
+                <div className="hr-leave-balance-card" style={{ margin: '0 0 16px' }}>
+                  <div className="hr-leave-stat-pill">
+                    <span className="hr-leave-stat-num">
+                      {Math.max(
+                        0,
+                        data.settings.paidLeaveDays -
+                          (data.leaveUsage?.find((l) => staff.some((p) => p.id === l.staffId))?.used ?? 0),
+                      )}
                     </span>
+                    <span className="hr-leave-stat-label">Paid days remaining</span>
                   </div>
-                );
-              }
-              return (
+                  <div className="hr-leave-info-text">
+                    <strong>Annual Paid Leave Allowance: {data.settings.paidLeaveDays} days ({month.slice(0, 4)})</strong>
+                    <p>Pending requests from every month are shown. Decided requests follow the selected month.</p>
+                  </div>
+                </div>
+              )}
+              <div style={{ marginBottom: 14 }}>
+                <SectionNavigation
+                  variant="secondary"
+                  label="Leave status"
+                  items={[
+                    { id: 'pending', label: 'Pending', badge: pendingLeaves.length },
+                    { id: 'approved', label: 'Approved', badge: approvedLeaves.length },
+                  ]}
+                  value={leaveStatusTab}
+                  onChange={(val) => setLeaveStatusTab(val as 'pending' | 'approved')}
+                />
+              </div>
+              {displayedLeaves.length === 0 ? (
+                <div className="hr-empty-box">
+                  <CalendarDays size={36} className="hr-empty-icon" />
+                  <p className="hr-empty-title">
+                    {leaveStatusTab === 'pending'
+                      ? 'No pending leave requests'
+                      : 'No approved leave requests for this month'}
+                  </p>
+                  <span className="hr-empty-desc">
+                    {leaveStatusTab === 'pending'
+                      ? (tab === 'self'
+                          ? 'You haven\'t submitted any pending leave requests. Click "Request leave" above to apply for time off.'
+                          : 'No pending staff leave requests requiring review.')
+                      : 'Approved and decided leave requests will appear here.'}
+                  </span>
+                </div>
+              ) : (
                 <div className="table-wrap">
                   <table>
                     <thead>
@@ -969,58 +985,73 @@ function HrContent({
                       </tr>
                     </thead>
                     <tbody>
-                      {userLeaves.map((l) => (
-                        <tr key={l.id}>
-                          {tab !== 'self' && <td>{data.staff.find((p) => p.id === l.staffId)?.name}</td>}
-                          <td>
-                            <strong>{formatCalendarDate(l.start)}</strong>
-                            {l.start !== l.end && <> to <strong>{formatCalendarDate(l.end)}</strong></>}
-                          </td>
-                          <td>{l.reason}</td>
-                          <td>
-                            <Badge
-                              tone={
-                                l.status === 'approved'
-                                  ? 'green'
-                                  : l.status === 'rejected'
-                                    ? 'red'
-                                    : 'amber'
-                              }
-                            >
-                              {titleCase(l.status)}{' '}
-                              {l.status === 'approved' ? (l.paid ? '· Paid' : '· Unpaid') : ''}
-                            </Badge>
-                          </td>
-                          <td>
-                            {l.status === 'pending' && tab !== 'self' && can('attendance.manage') ? (
-                              <Button onClick={() => setAction({ kind: 'leave', leave: l })}>
-                                Review
-                              </Button>
-                            ) : (
-                              <>
-                                {l.reviewNote || '—'}
-                                {tab === 'self' &&
-                                  (l.status === 'pending' || l.status === 'approved') &&
-                                  l.end >= data.today && (
-                                    <Button
-                                      variant="ghost"
-                                      onClick={() => setAction({ kind: 'cancelLeave', leave: l })}
-                                    >
-                                      {l.status === 'approved' ? 'Cancel leave' : 'Cancel request'}
-                                    </Button>
-                                  )}
-                              </>
+                      {displayedLeaves.map((l) => {
+                        const staffMember = data.staff.find((p) => p.id === l.staffId);
+                        const remaining = Math.max(
+                          0,
+                          data.settings.paidLeaveDays -
+                            (data.leaveUsage?.find((u) => u.staffId === l.staffId)?.used ?? 0),
+                        );
+                        return (
+                          <tr key={l.id}>
+                            {tab !== 'self' && (
+                              <td>
+                                <div style={{ fontWeight: 600 }}>{staffMember?.name ?? 'Unknown staff'}</div>
+                                <small style={{ color: '#047857', display: 'block', marginTop: '2px', fontSize: '11.5px', fontWeight: 500 }}>
+                                  {remaining} paid days remaining
+                                </small>
+                              </td>
                             )}
-                          </td>
-                        </tr>
-                      ))}
+                            <td>
+                              <strong>{formatCalendarDate(l.start)}</strong>
+                              {l.start !== l.end && <> to <strong>{formatCalendarDate(l.end)}</strong></>}
+                            </td>
+                            <td>{l.reason}</td>
+                            <td>
+                              <Badge
+                                tone={
+                                  l.status === 'approved'
+                                    ? 'green'
+                                    : l.status === 'rejected'
+                                      ? 'red'
+                                      : 'amber'
+                                }
+                              >
+                                {titleCase(l.status)}{' '}
+                                {l.status === 'approved' ? (l.paid ? '· Paid' : '· Unpaid') : ''}
+                              </Badge>
+                            </td>
+                            <td>
+                              {l.status === 'pending' && tab !== 'self' && can('attendance.manage') ? (
+                                <Button onClick={() => setAction({ kind: 'leave', leave: l })}>
+                                  Review
+                                </Button>
+                              ) : (
+                                <>
+                                  {l.reviewNote || '—'}
+                                  {tab === 'self' &&
+                                    (l.status === 'pending' || l.status === 'approved') &&
+                                    l.end >= data.today && (
+                                      <Button
+                                        variant="ghost"
+                                        onClick={() => setAction({ kind: 'cancelLeave', leave: l })}
+                                      >
+                                        {l.status === 'approved' ? 'Cancel leave' : 'Cancel request'}
+                                      </Button>
+                                    )}
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
-              );
-            })()}
-          </>
-        )}
+              )}
+            </div>
+          );
+        })()}
         {!staff.length && (
           <p>
             No staff found. Add staff individually or use the existing Excel import in Staff & HR.
