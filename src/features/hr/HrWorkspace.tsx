@@ -51,11 +51,17 @@ export default function LiveHrWorkspace({
   settings = false,
   hideNavigation = false,
   teachersOnly = false,
+  month,
+  onMonthChange,
+  hideMonthCorner = false,
 }: {
   section?: string;
   settings?: boolean;
   hideNavigation?: boolean;
   teachersOnly?: boolean;
+  month?: string;
+  onMonthChange?: (month: string) => void;
+  hideMonthCorner?: boolean;
 }) {
   const { schoolId, access, status } = useLiveSchool();
   const adapter = useMemo(() => liveHrAdapter(schoolId), [schoolId]);
@@ -70,6 +76,9 @@ export default function LiveHrWorkspace({
       settings={settings}
       hideNavigation={hideNavigation}
       teachersOnly={teachersOnly}
+      month={month}
+      onMonthChange={onMonthChange}
+      hideMonthCorner={hideMonthCorner}
     />
   );
 }
@@ -82,6 +91,9 @@ export function HrWorkspace({
   teachersOnly = false,
   punchSchoolId,
   liveSchoolId,
+  month: controlledMonth,
+  onMonthChange,
+  hideMonthCorner = false,
 }: {
   liveSchoolId?: string;
   punchSchoolId?: string;
@@ -91,9 +103,20 @@ export function HrWorkspace({
   settings?: boolean;
   hideNavigation?: boolean;
   teachersOnly?: boolean;
+  month?: string;
+  onMonthChange?: (month: string) => void;
+  hideMonthCorner?: boolean;
 }) {
   const today = useToday(),
-    [month, setMonth] = useState(today.slice(0, 7)),
+    [internalMonth, setInternalMonth] = useState(today.slice(0, 7)),
+    month = controlledMonth ?? internalMonth,
+    setMonth = useCallback(
+      (m: string) => {
+        setInternalMonth(m);
+        onMonthChange?.(m);
+      },
+      [onMonthChange],
+    ),
     [tab, setTab] = useState(
       section ??
         (permissions.includes('payroll.view')
@@ -186,7 +209,7 @@ export function HrWorkspace({
   const activeWorkspace = isReady ? state.data!.value : (state.data?.value ?? fallbackWorkspace);
   return (
     <div className="ledger-stack hr-workspace">
-      {!settings && (
+      {!settings && (!hideNavigation || (!hideMonthCorner && tab !== 'leave')) && (
         <div className="hr-top-bar">
           {!hideNavigation && section !== 'self' && items.length > 1 && (
             <SectionNavigation
@@ -196,7 +219,7 @@ export function HrWorkspace({
               onChange={setTab}
             />
           )}
-          {tab !== 'leave' && (
+          {!hideMonthCorner && tab !== 'leave' && (
             <label className="hr-month-corner">
               <span className="sr-only">
                 {self ? 'Calendar / salary month' : 'Salary / attendance month'}

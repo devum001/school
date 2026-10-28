@@ -312,23 +312,21 @@ function FeeWorkspace({
                   <option value="cycle">Monthly Cycle</option>
                 </select>
               </label>
-              {period === 'cycle' && (
+              {(period === 'cycle' || financeView === 'salary') && (
                 <label className="field">
                   <PickerInput
-                    aria-label="Finance cycle month"
+                    aria-label={financeView === 'salary' ? 'Salary month' : 'Finance cycle month'}
                     type="month"
                     value={month}
                     onChange={(e) => update('month', e.target.value)}
                   />
                 </label>
               )}
-              <p>
-                {period === 'cycle'
-                  ? `${month}-01 – ${month}-28`
-                  : year
-                    ? `${formatCalendarDate(year.start)} – ${formatCalendarDate(year.end > (context.today || '') ? (context.today || '') : year.end)}`
-                    : ''}
-              </p>
+              {period === 'cycle' && (
+                <p>
+                  {`${month}-01 – ${month}-28`}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -355,13 +353,11 @@ function FeeWorkspace({
               />
             </label>
           )}
-          <p>
-            {period === 'cycle'
-              ? `${month}-01 – ${month}-28`
-              : year
-                ? `${formatCalendarDate(year.start)} – ${formatCalendarDate(year.end > (context.today || '') ? (context.today || '') : year.end)}`
-                : ''}
-          </p>
+          {period === 'cycle' && (
+            <p>
+              {`${month}-01 – ${month}-28`}
+            </p>
+          )}
         </div>
       )}
       {tab === 'Student Fees' && (
@@ -445,7 +441,13 @@ function FeeWorkspace({
           {tab === 'Overview' && (
             <>
               {financeView === 'salary' ? (
-                <LiveHrWorkspace section="salary" hideNavigation />
+                <LiveHrWorkspace
+                  section="salary"
+                  hideNavigation
+                  hideMonthCorner
+                  month={month}
+                  onMonthChange={(m) => update('month', m)}
+                />
               ) : financeView === 'recent' ? (
                 <FeePayments
                   key={version}

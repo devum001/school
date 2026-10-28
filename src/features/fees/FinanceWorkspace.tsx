@@ -132,9 +132,11 @@ export default function FinanceWorkspace() {
               />
             </label>
           )}
-          <p>
-            {displayDate(range.start)} – {displayDate(range.end > today ? today : range.end)}
-          </p>
+          {period === 'cycle' && (
+            <p>
+              {displayDate(range.start)} – {displayDate(range.end > today ? today : range.end)}
+            </p>
+          )}
         </div>
       )}
       <div id="finance-panel" role="tabpanel" aria-labelledby={`finance-tab-${tabs.indexOf(tab)}`}>
