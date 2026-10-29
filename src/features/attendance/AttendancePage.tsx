@@ -315,7 +315,7 @@ function AttendanceRegister() {
               <StatCard
                 label="Total Students"
                 value={summary.total}
-                detail="Enrolled in section "
+                detail="Enrolled in section"
                 tone="blue"
                 icon={<Users size={16} />}
               />
