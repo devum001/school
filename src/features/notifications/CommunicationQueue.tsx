@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
-import { Badge, Button, EmptyState, Modal, Panel } from '../../components/ui/Primitives';
+import { Badge, Button, EmptyState, Modal, Panel, PickerInput } from '../../components/ui/Primitives';
+import { ACTIVE_EVENTS } from '../../lib/communicationConfig';
+import '../hr/hr.css';
 import { repository } from '../../lib/repository';
 import { displayDate, money } from '../../lib/config';
 import { communicationError, communicationFor } from '../../lib/communication';
@@ -11,9 +13,25 @@ import type { CommunicationRecord } from '../../types/communication';
 
 export default function CommunicationQueue({
   records,
+  date,
+  eventFilter,
+  classFilter,
+  onUpdateFilter,
+  onUpdateManyFilters,
+  classes,
+  academicYearStart,
+  today,
   onSent,
 }: {
   records: CommunicationRecord[];
+  date?: string;
+  eventFilter?: string;
+  classFilter?: string;
+  onUpdateFilter?: (key: string, value: string) => void;
+  onUpdateManyFilters?: (values: Record<string, string>) => void;
+  classes?: { id: string; name: string }[];
+  academicYearStart?: string;
+  today?: string;
   onSent: () => void;
 }) {
   const state = useSchool(),
@@ -43,15 +61,67 @@ export default function CommunicationQueue({
       title="Pending notifications"
       subtitle={`${new Set(pending.map((r) => `${r.event}:${r.recipient.enrollmentId ?? r.recipient.id}`)).size} alerts · ${pending.length} messages awaiting review`}
       action={
-        <Button
-          variant="ghost"
-          disabled={!pending.length}
-          onClick={() =>
-            setSelected(chosen.length === pending.length ? [] : pending.map((r) => r.id))
-          }
-        >
-          {pending.length && chosen.length === pending.length ? 'Deselect all' : 'Select all'}
-        </Button>
+        <div className="hr-header-filters">
+          {onUpdateFilter && (
+            <>
+              <label className="field hr-inline-filter">
+                <span>Notification type</span>
+                <select
+                  aria-label="Notification type"
+                  value={eventFilter ?? 'all'}
+                  onChange={(e) => onUpdateFilter('event', e.target.value)}
+                >
+                  <option value="all">All types</option>
+                  {ACTIVE_EVENTS.map((event) => (
+                    <option key={event}>{event}</option>
+                  ))}
+                </select>
+              </label>
+              {date && (
+                <label className="field hr-inline-filter">
+                  <span>Notification date</span>
+                  <PickerInput
+                    type="date"
+                    value={date}
+                    min={academicYearStart}
+                    max={today}
+                    onChange={(e) => {
+                      if (e.target.value) onUpdateFilter('date', e.target.value);
+                    }}
+                  />
+                </label>
+              )}
+              {classes && onUpdateManyFilters && (
+                <label className="field hr-inline-filter">
+                  <span>Class</span>
+                  <select
+                    aria-label="Class"
+                    value={classFilter ?? ''}
+                    onChange={(e) => {
+                      onUpdateManyFilters({ class: e.target.value, section: '' });
+                    }}
+                  >
+                    <option value="">All classes</option>
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </>
+          )}
+          <Button
+            variant="ghost"
+            disabled={!pending.length}
+            onClick={() =>
+              setSelected(chosen.length === pending.length ? [] : pending.map((r) => r.id))
+            }
+          >
+            {pending.length && chosen.length === pending.length ? 'Deselect all' : 'Select all'}
+          </Button>
+        </div>
       }
     >
       {pending.length ? (

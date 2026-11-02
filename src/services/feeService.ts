@@ -289,6 +289,7 @@ export const feeApi = {
       method: string;
       reference: string;
       allocations: { accountId: string; installmentId: string; amount: number }[];
+      nextDueDate?: string;
     },
   ) => save(school, '/payments', body),
   correctOpening: (
@@ -301,6 +302,20 @@ export const feeApi = {
 };
 export const installmentBalance = (i: FeeAccount['installments'][number]) =>
   i.amount - i.openingPaid - i.paid;
+export function rollForwardInstallments<
+  T extends { id: string; amount: number; dueDate: string; paid?: number; openingPaid?: number }
+>(installments: T[]): T[] {
+  const result = installments.map((i) => ({ ...i }));
+  for (let idx = 0; idx < result.length - 1; idx++) {
+    const settled = (result[idx].paid ?? 0) + (result[idx].openingPaid ?? 0);
+    if (settled > 0 && settled < result[idx].amount) {
+      const unpaid = result[idx].amount - settled;
+      result[idx].amount = settled;
+      result[idx + 1].amount += unpaid;
+    }
+  }
+  return result;
+}
 export const accountBalance = (a: FeeAccount) =>
   a.installments.reduce((s, i) => s + installmentBalance(i), 0);
 export function makeInstallments(total: number, count: number, date: string, interval: number) {

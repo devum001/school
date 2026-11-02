@@ -1,4 +1,5 @@
 import { displayTimestamp } from '../../lib/displayFormat';
+import '../hr/hr.css';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
@@ -59,92 +60,97 @@ export default function CommunicationHistory() {
     }
   };
   return (
-    <Panel title="Notification History" subtitle="Sent, failed and scheduled notices.">
-      <div className="communication-filters">
-        <label>
-          Type
-          <select
-            aria-label="Type"
-            value={params.get('historyType') ?? ''}
-            onChange={(e) => update('historyType', e.target.value)}
-          >
-            <option value="">All types</option>
-            {ACTIVE_EVENTS.map((event) => (
-              <option key={event}>{event}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Date
-          <PickerInput
-            type="date"
-            value={params.get('historyDate') ?? ''}
-            onChange={(e) => update('historyDate', e.target.value)}
-          />
-        </label>
-        <label>
-          Class
-          <select
-            aria-label="Class"
-            value={params.get('historyClass') ?? ''}
-            onChange={(e) => update('historyClass', e.target.value)}
-          >
-            <option value="">All classes</option>
-            {state.classes
-              .filter((c) => c.schoolId === state.school.id)
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
+    <Panel
+      title="Notification History"
+      subtitle="Sent, failed and scheduled notices."
+      action={
+        <div className="hr-header-filters">
+          <label className="field hr-inline-filter">
+            <span>Type</span>
+            <select
+              aria-label="Type"
+              value={params.get('historyType') ?? ''}
+              onChange={(e) => update('historyType', e.target.value)}
+            >
+              <option value="">All types</option>
+              {ACTIVE_EVENTS.map((event) => (
+                <option key={event}>{event}</option>
               ))}
-          </select>
-        </label>
-        <label>
-          Channel
-          <select
-            aria-label="Channel"
-            value={params.get('historyChannel') ?? ''}
-            onChange={(e) => update('historyChannel', e.target.value)}
+            </select>
+          </label>
+          <label className="field hr-inline-filter">
+            <span>Date</span>
+            <PickerInput
+              type="date"
+              value={params.get('historyDate') ?? ''}
+              onChange={(e) => update('historyDate', e.target.value)}
+            />
+          </label>
+          <label className="field hr-inline-filter">
+            <span>Class</span>
+            <select
+              aria-label="Class"
+              value={params.get('historyClass') ?? ''}
+              onChange={(e) => update('historyClass', e.target.value)}
+            >
+              <option value="">All classes</option>
+              {state.classes
+                .filter((c) => c.schoolId === state.school.id)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="field hr-inline-filter">
+            <span>Channel</span>
+            <select
+              aria-label="Channel"
+              value={params.get('historyChannel') ?? ''}
+              onChange={(e) => update('historyChannel', e.target.value)}
+            >
+              <option value="">All channels</option>
+              {CHANNELS.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field hr-inline-filter">
+            <span>Status</span>
+            <select
+              aria-label="Status"
+              value={params.get('historyStatus') ?? ''}
+              onChange={(e) => update('historyStatus', e.target.value)}
+            >
+              <option value="">All statuses</option>
+              {['Delivered', 'Failed', 'Scheduled', 'Cancelled'].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              setParams((previous) => {
+                const next = new URLSearchParams(previous);
+                for (const key of [
+                  'historyType',
+                  'historyDate',
+                  'historyClass',
+                  'historyChannel',
+                  'historyStatus',
+                ])
+                  next.delete(key);
+                return next;
+              })
+            }
           >
-            <option value="">All channels</option>
-            {CHANNELS.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Status
-          <select
-            aria-label="Status"
-            value={params.get('historyStatus') ?? ''}
-            onChange={(e) => update('historyStatus', e.target.value)}
-          >
-            <option value="">All statuses</option>
-            {['Delivered', 'Failed', 'Scheduled', 'Cancelled'].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </label>
-        <Button
-          variant="ghost"
-          onClick={() =>
-            setParams((previous) => {
-              const next = new URLSearchParams(previous);
-              for (const key of [
-                'historyType',
-                'historyDate',
-                'historyClass',
-                'historyChannel',
-                'historyStatus',
-              ])
-                next.delete(key);
-              return next;
-            })
-          }
-        >
-          Clear filters
-        </Button>
-      </div>
+            Clear filters
+          </Button>
+        </div>
+      }
+    >
       {records.length ? (
         <div className="table-wrap" role="region" aria-label="Notification history" tabIndex={0}>
           <table>

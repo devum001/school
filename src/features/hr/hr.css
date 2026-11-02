@@ -93,6 +93,18 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
+.hr-summary .stat-top {
+  min-height: 48px;
+}
+.hr-summary .stat-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+.hr-summary .stat-icon img {
+  width: 100%;
+  height: 100%;
+}
 .hr-summary .stat-value {
   font-size: clamp(20px, 2vw, 28px);
   overflow-wrap: anywhere;
@@ -103,9 +115,19 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+.hr-header-filters .button,
+.hr-header-filters button {
+  min-height: 34px;
+  height: 34px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  white-space: nowrap;
+}
 .hr-inline-filter {
   margin: 0 !important;
-  min-width: 155px;
+  min-width: 125px;
   max-width: 210px;
   font-size: 11px;
   font-weight: 600;
@@ -115,8 +137,10 @@
 .hr-inline-filter select,
 .hr-inline-filter input {
   min-height: 34px;
+  height: 34px;
   padding: 5px 10px;
   font-size: 12px;
+  box-sizing: border-box;
 }
 .hr-content > .field,
 .hr-content > p,

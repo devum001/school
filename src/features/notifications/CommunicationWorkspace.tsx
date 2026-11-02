@@ -3,10 +3,10 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../../app/useSchool';
 import { useToday } from '../../app/useToday';
-import { PickerInput, Button, PageHeading } from '../../components/ui/Primitives';
+import { Button, PageHeading } from '../../components/ui/Primitives';
 import { notificationReviewUrl } from '../../lib/communicationOverview';
 import { communicationFor } from '../../lib/communication';
-import { ACTIVE_EVENTS, EVENTS, SYSTEM_EVENTS } from '../../lib/communicationConfig';
+import { EVENTS, SYSTEM_EVENTS } from '../../lib/communicationConfig';
 import { repository } from '../../lib/repository';
 import { displayDate } from '../../lib/config';
 import CommunicationQueue from './CommunicationQueue';
@@ -208,69 +208,29 @@ export default function CommunicationWorkspace() {
         )}
         {tab === 'History' && <CommunicationHistory />}
         {tab === 'Overview' && (
-          <>
-            <div className="communication-filters">
-              <label>
-                Notification type
-                <select
-                  aria-label="Notification type"
-                  value={eventFilter}
-                  onChange={(e) => update('event', e.target.value)}
-                >
-                  <option value="all">All types</option>
-                  {ACTIVE_EVENTS.map((event) => (
-                    <option key={event}>{event}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Notification date
-                <PickerInput
-                  type="date"
-                  value={date}
-                  min={state.academicYear.start}
-                  max={today}
-                  onChange={(e) => {
-                    if (e.target.value) update('date', e.target.value);
-                  }}
-                />
-              </label>
-              <label>
-                Class
-                <select
-                  aria-label="Class"
-                  value={params.get('class') ?? ''}
-                  onChange={(e) => {
-                    updateMany({ class: e.target.value, section: '' });
-                  }}
-                >
-                  <option value="">All classes</option>
-                  {state.classes
-                    .filter((c) => c.schoolId === state.school.id)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
-            </div>
-            <div id="pending-alerts" tabIndex={-1} className="pending-alert-focus">
-              <CommunicationQueue
-                records={filtered}
-                onSent={() =>
-                  updateMany({
-                    tab: 'History',
-                    historyStatus: '',
-                    historyType: '',
-                    historyDate: '',
-                    historyClass: '',
-                    historyChannel: '',
-                  })
-                }
-              />
-            </div>
-          </>
+          <div id="pending-alerts" tabIndex={-1} className="pending-alert-focus">
+            <CommunicationQueue
+              records={filtered}
+              date={date}
+              eventFilter={eventFilter}
+              classFilter={params.get('class') ?? ''}
+              onUpdateFilter={update}
+              onUpdateManyFilters={updateMany}
+              classes={state.classes.filter((c) => c.schoolId === state.school.id)}
+              academicYearStart={state.academicYear.start}
+              today={today}
+              onSent={() =>
+                updateMany({
+                  tab: 'History',
+                  historyStatus: '',
+                  historyType: '',
+                  historyDate: '',
+                  historyClass: '',
+                  historyChannel: '',
+                })
+              }
+            />
+          </div>
         )}
       </div>
     </div>

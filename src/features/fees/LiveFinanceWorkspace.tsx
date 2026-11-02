@@ -2,7 +2,7 @@ import FeeOnboardingWorkspace from './onboarding/FeeOnboardingWorkspace';
 import { orderedClasses } from '../../lib/schoolLabels';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckSquare, Download, RefreshCw } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import {
   AppIcon,
   Button,
@@ -22,7 +22,6 @@ import { liveHrAdapter } from '../../services/hrService';
 import {
   feeApi,
   type FeeContext,
-  type FeeFilters,
   type FeeStudentRow,
 } from '../../services/feeService';
 import { money } from '../../lib/config';
@@ -158,13 +157,11 @@ function FeeWorkspace({
     [selected, setSelected] = useState<Map<string, FeeStudentRow>>(new Map()),
     [action, setAction] = useState<'setup' | 'opening' | null>(null),
     [student, setStudent] = useState<{ row: FeeStudentRow; collect: boolean } | null>(null),
-    [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [version, setVersion] = useState(0),
     [params, setParams] = useSearchParams();
   const period = (params.get('period') === 'cycle' ? 'cycle' : 'year') as 'year' | 'cycle';
   const month = params.get('month') || (context.today ? context.today.slice(0, 7) : new Date().toISOString().slice(0, 7));
-  const financeView = params.get('financeView') ?? 'summary';
   const update = (key: string, value: string) =>
     setParams((previous) => {
       const next = new URLSearchParams(previous);
@@ -192,14 +189,6 @@ function FeeWorkspace({
     const timer = setTimeout(() => setDebounced(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
-  const filters: FeeFilters = {
-    yearId: context.yearId,
-    classId,
-    sectionId,
-    search: debounced,
-    status,
-    page,
-  };
   const load = useCallback(
     (signal: AbortSignal) =>
       tab === 'Transactions'
@@ -224,41 +213,6 @@ function FeeWorkspace({
     setSelected(new Map());
     setVersion((v) => v + 1);
   };
-  const selectAll = async () => {
-    setBusy(true);
-    setError('');
-    const all = new Map<string, FeeStudentRow>();
-    try {
-      for (let next = 1; ; next++) {
-        const result = await feeApi.directory(schoolId, { ...filters, page: next });
-        result.items.forEach((r) => {
-          all.set(r.id, r);
-        });
-        if (next * result.pageSize >= result.total) break;
-      }
-      setSelected(all);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unable to select students.');
-    } finally {
-      setBusy(false);
-    }
-  };
-  const openSetup = () => {
-    if ([...selected.values()].some((s) => s.enrollment?.status !== 'active')) {
-      setError(
-        'Current-year fees need an active enrollment. Use Previous-year dues for former students.',
-      );
-      return;
-    }
-    if (selected.size > 1 && [...selected.values()].some((s) => s.configured)) {
-      setError(
-        'Cannot select multiple students who already have fee structures. Select 1 student to edit, or select students with "Fee setup pending".',
-      );
-      return;
-    }
-    setError('');
-    setAction('setup');
-  };
   if (student)
     return (
       <FeeStudentLedger
@@ -274,60 +228,31 @@ function FeeWorkspace({
   return (
     <>
       {tab === 'Overview' && (
-        <div className="finance-subnav-row">
-          <SectionNavigation
-            variant="secondary"
-            label="Finance overview views"
-            items={[
-              { id: 'summary', label: 'Collections & Revenue', icon: 'wallet' },
-              { id: 'salary', label: 'Salary Summary', icon: 'finance-balance' },
-              { id: 'recent', label: 'Recent Transactions', icon: 'receipt' },
-            ]}
-            value={
-              ['salary', 'recent'].includes(params.get('financeView') ?? '')
-                ? params.get('financeView')!
-                : 'summary'
-            }
-            onChange={(value) =>
-              setParams((previous) => {
-                const next = new URLSearchParams(previous);
-                if (value === 'summary') {
-                  next.delete('financeView');
-                } else {
-                  next.set('financeView', value);
-                }
-                return next;
-              })
-            }
-          />
-          {(financeView === 'summary' || financeView === 'salary') && (
-            <div className="finance-period">
-              <label className="field">
-                <select
-                  aria-label="Finance period"
-                  value={period}
-                  onChange={(e) => update('period', e.target.value)}
-                >
-                  <option value="year">Academic Year</option>
-                  <option value="cycle">Monthly Cycle</option>
-                </select>
-              </label>
-              {(period === 'cycle' || financeView === 'salary') && (
-                <label className="field">
-                  <PickerInput
-                    aria-label={financeView === 'salary' ? 'Salary month' : 'Finance cycle month'}
-                    type="month"
-                    value={month}
-                    onChange={(e) => update('month', e.target.value)}
-                  />
-                </label>
-              )}
-              {period === 'cycle' && (
-                <p>
-                  {`${month}-01 – ${month}-28`}
-                </p>
-              )}
-            </div>
+        <div className="finance-period" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <label className="field">
+            <select
+              aria-label="Finance period"
+              value={period}
+              onChange={(e) => update('period', e.target.value)}
+            >
+              <option value="year">Academic Year</option>
+              <option value="cycle">Monthly Cycle</option>
+            </select>
+          </label>
+          {period === 'cycle' && (
+            <label className="field">
+              <PickerInput
+                aria-label="Finance cycle month"
+                type="month"
+                value={month}
+                onChange={(e) => update('month', e.target.value)}
+              />
+            </label>
+          )}
+          {period === 'cycle' && (
+            <p>
+              {`${month}-01 – ${month}-28`}
+            </p>
           )}
         </div>
       )}
@@ -428,39 +353,19 @@ function FeeWorkspace({
         />
       ) : (
         <>
-          {(state.loading || busy) && !(tab === 'Overview' && financeView === 'salary') && (
+          {state.loading && (
             <LoadingOverlay
-              loading={state.loading || busy}
+              loading={state.loading}
               size="xl"
-              label={busy ? 'Selecting students…' : 'Loading student fees…'}
-              message={busy ? 'Selecting students…' : 'Loading student fees…'}
+              label="Loading student fees…"
+              message="Loading student fees…"
             >
               <div style={{ minHeight: 160 }} />
             </LoadingOverlay>
           )}
-          {tab === 'Overview' && (
+          {tab === 'Overview' && data && (
             <>
-              {financeView === 'salary' ? (
-                <LiveHrWorkspace
-                  section="salary"
-                  hideNavigation
-                  hideMonthCorner
-                  month={month}
-                  onMonthChange={(m) => update('month', m)}
-                />
-              ) : financeView === 'recent' ? (
-                <FeePayments
-                  key={version}
-                  schoolId={schoolId}
-                  schoolName={context.schoolName}
-                  yearId={context.yearId}
-                  canReverse={can('fees.reverse')}
-                  changed={refresh}
-                />
-              ) : (
-                data && (
-                  <>
-                    <div className="stats-grid four finance-summary fee-stats">
+              <div className="stats-grid four finance-summary fee-stats">
                       <StatCard
                         label="Student Fee Collections"
                         value={money(data.summary.collected)}
@@ -564,21 +469,18 @@ function FeeWorkspace({
                       >
                         Upcoming installments & balances
                       </Button>
-                      <Button variant="secondary" onClick={() => update('financeView', 'recent')}>
+                      <Button variant="secondary" onClick={() => setTab('Transactions')}>
                         Recent payments & receipts
                       </Button>
                     </div>
                   </>
-                )
-              )}
-            </>
-          )}
+                )}
           {tab === 'Student Fees' && (
             <Panel
               title="Student fees"
-              subtitle="Select students for bulk setup, or manage an individual agreement and collect payment."
+              subtitle="Manage individual fee agreements, track dues, and collect payments."
               action={
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <SearchInput
                     value={search}
                     onChange={(v) => {
@@ -645,87 +547,84 @@ function FeeWorkspace({
                 </div>
               }
             >
-              {can('fees.manage') && year.status !== 'closed' && (
-                <>
-                  <div className="fee-bulk-bar">
-                    <span>
-                      <CheckSquare size={16} />
-                      {selected.size} selected
-                    </span>
-                    <Button
-                      variant="secondary"
-                      disabled={busy || !data?.total}
-                      onClick={() => void selectAll()}
-                    >
-                      {busy ? 'Selecting…' : 'Select all matching students'}
-                    </Button>
-                    {selected.size > 0 && (
-                      <>
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setSelected(new Map());
-                            setError('');
-                          }}
-                        >
-                          Clear
-                        </Button>
-                        <Button onClick={openSetup}>Set up fees</Button>
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setError('');
-                            setAction('opening');
-                          }}
-                        >
-                          Previous-year dues
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                  {error && (
-                    <div
-                      role="alert"
-                      className="form-error"
-                      style={{
-                        margin: '10px 0 14px',
-                        padding: '10px 14px',
-                        borderRadius: '6px',
-                        backgroundColor: '#fef2f2',
-                        border: '1px solid #fecaca',
-                        color: '#b91c1c',
-                        fontSize: '13px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <span>{error}</span>
-                      <button
-                        type="button"
-                        onClick={() => setError('')}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#b91c1c',
-                          fontWeight: 700,
-                          fontSize: 14,
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  )}
-                </>
+              {can('fees.manage') && year.status !== 'closed' && error && (
+                <div
+                  role="alert"
+                  className="form-error"
+                  style={{
+                    margin: '10px 0 14px',
+                    padding: '10px 14px',
+                    borderRadius: '6px',
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#b91c1c',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>{error}</span>
+                  <button
+                    type="button"
+                    onClick={() => setError('')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#b91c1c',
+                      fontWeight: 700,
+                      fontSize: 14,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
               )}
               <div className="table-wrap fee-directory">
                 <table>
                   <thead>
                     <tr>
                       {can('fees.manage') && (
-                        <th>
-                          <span className="sr-only">Select</span>
+                        <th style={{ width: 44, textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            aria-label="Select all students"
+                            checked={
+                              Boolean(data?.items.length) &&
+                              data!.items.every((r) => selected.has(r.id))
+                            }
+                            ref={(el) => {
+                              if (el) {
+                                const hasSome =
+                                  Boolean(data?.items.length) &&
+                                  data!.items.some((r) => selected.has(r.id));
+                                const hasAll =
+                                  Boolean(data?.items.length) &&
+                                  data!.items.every((r) => selected.has(r.id));
+                                el.indeterminate = hasSome && !hasAll;
+                              }
+                            }}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelected((old) => {
+                                  const next = new Map(old);
+                                  for (const item of data?.items ?? []) {
+                                    next.set(item.id, item);
+                                  }
+                                  return next;
+                                });
+                              } else {
+                                setSelected((old) => {
+                                  const next = new Map(old);
+                                  for (const item of data?.items ?? []) {
+                                    next.delete(item.id);
+                                  }
+                                  return next;
+                                });
+                              }
+                            }}
+                          />
                         </th>
                       )}
                       <th>Student</th>
