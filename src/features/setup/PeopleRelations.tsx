@@ -1,7 +1,9 @@
 import ReplaceTeacherDialog from './ReplaceTeacherDialog';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, LoadingOverlay, Modal, Panel } from '../../components/ui/Primitives';
+import { useDebouncedValue } from '../../app/useDebouncedValue';
+import '../hr/hr.css';
 import {
   onboardingApi,
   type Relation,
@@ -55,11 +57,15 @@ function RelationList({
   staffId?: string;
 }) {
   const [after, setAfter] = useState<string>();
-  const [search, setSearch] = useState(''),
-    [query, setQuery] = useState(''),
-    [classId, setClassId] = useState(''),
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const [classId, setClassId] = useState(''),
     [sectionId, setSectionId] = useState(''),
     [subjectId, setSubjectId] = useState('');
+
+  useEffect(() => {
+    setAfter(undefined);
+  }, [debouncedSearch, classId, sectionId, subjectId]);
   const optionsLoad = useCallback(
     async (signal: AbortSignal) => {
       if (
@@ -82,12 +88,12 @@ function RelationList({
     (signal: AbortSignal) =>
       onboardingApi.relations(access.schoolId, yearId, kind, signal, after, {
         ...(staffId ? { staffId } : {}),
-        ...(query ? { search: query } : {}),
+        ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
         ...(classId ? { classId } : {}),
         ...(sectionId ? { sectionId } : {}),
         ...(subjectId ? { subjectId } : {}),
       }),
-    [access.schoolId, yearId, kind, after, staffId, query, classId, sectionId, subjectId],
+    [access.schoolId, yearId, kind, after, staffId, debouncedSearch, classId, sectionId, subjectId],
   );
   const state = useRemote(load),
     [ending, setEnding] = useState<Relation | null>(null),
@@ -112,96 +118,90 @@ function RelationList({
         title={`${assignments ? 'Staff assignments' : 'Student enrollments'}${year ? ` · ${year.name}` : ''}`}
         subtitle="Manage who teaches each class, section and subject."
         action={
-          assignments && canAssign && <Button onClick={() => setAdding(true)}>Assign staff</Button>
+          <div className="hr-header-filters">
+            {assignments && (
+              <>
+                <label className="field hr-inline-filter">
+                  <span>Find teacher</span>
+                  <input
+                    value={search}
+                    maxLength={80}
+                    placeholder="Name or ID"
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        state.reload();
+                      }
+                    }}
+                  />
+                </label>
+                <label className="field hr-inline-filter">
+                  <span>Class</span>
+                  <select
+                    value={classId}
+                    disabled={!options.data}
+                    onChange={(e) => {
+                      setClassId(e.target.value);
+                      setSectionId('');
+                      setSubjectId('');
+                    }}
+                  >
+                    <option value="">All classes</option>
+                    {options.data?.sections.classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field hr-inline-filter">
+                  <span>Section</span>
+                  <select
+                    value={sectionId}
+                    disabled={!options.data}
+                    onChange={(e) => setSectionId(e.target.value)}
+                  >
+                    <option value="">All sections</option>
+                    {options.data?.sections.children
+                      .filter((s) => !classId || s.classId === classId)
+                      .map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="field hr-inline-filter">
+                  <span>Subject</span>
+                  <select
+                    value={subjectId}
+                    disabled={!options.data}
+                    onChange={(e) => setSubjectId(e.target.value)}
+                  >
+                    <option value="">All subjects</option>
+                    {options.data?.subjects.children
+                      .filter((s) => !classId || s.classId === classId)
+                      .map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </>
+            )}
+            {assignments && canAssign && (
+              <Button onClick={() => setAdding(true)}>Assign staff</Button>
+            )}
+          </div>
         }
       >
         <div className="live-content">
           {state.error && <LoadState {...state} loading={false} retry={state.reload} />}
           {!state.error && (
             <>
-              {assignments && (
-                <form
-                  className="contact-toolbar"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setAfter(undefined);
-                    setQuery(search);
-                  }}
-                >
-                  <label className="field">
-                    Find teacher
-                    <input
-                      value={search}
-                      maxLength={80}
-                      placeholder="Name or employee ID"
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
-                  </label>
-                  <Button>Search</Button>
-                  {options.data && (
-                    <>
-                      <label className="field">
-                        Class
-                        <select
-                          value={classId}
-                          onChange={(e) => {
-                            setClassId(e.target.value);
-                            setSectionId('');
-                            setSubjectId('');
-                            setAfter(undefined);
-                          }}
-                        >
-                          <option value="">All classes</option>
-                          {options.data.sections.classes.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="field">
-                        Section
-                        <select
-                          value={sectionId}
-                          onChange={(e) => {
-                            setSectionId(e.target.value);
-                            setAfter(undefined);
-                          }}
-                        >
-                          <option value="">All sections</option>
-                          {options.data.sections.children
-                            .filter((s) => !classId || s.classId === classId)
-                            .map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                        </select>
-                      </label>
-                      <label className="field">
-                        Subject
-                        <select
-                          value={subjectId}
-                          onChange={(e) => {
-                            setSubjectId(e.target.value);
-                            setAfter(undefined);
-                          }}
-                        >
-                          <option value="">All subjects</option>
-                          {options.data.subjects.children
-                            .filter((s) => !classId || s.classId === classId)
-                            .map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                        </select>
-                      </label>
-                    </>
-                  )}
-                </form>
-              )}
-              <div className="onboarding-table">
+              <div className="onboarding-table" style={{ margin: "0 0 20px 0" }}>
                 <table>
                   <caption>
                     {assignments ? 'Teacher subject assignments' : 'Annual student enrollments'}

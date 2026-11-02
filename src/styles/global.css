@@ -892,6 +892,10 @@ footer button {
   border-color: #0f766e;
   box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.15);
 }
+.staff-attendance-select {
+  height: 38px;
+  box-sizing: border-box;
+}
 .staff-search-input {
   min-width: 240px;
   flex: 1 1 240px;
@@ -1268,17 +1272,20 @@ th {
 tbody tr {
   height: 44px;
 }
-td {
+td,
+tbody th {
   padding: 10px 18px;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-main);
   font-size: 12px;
 }
-td strong {
+td strong,
+th strong {
   color: var(--school-forest);
   font-weight: 600;
 }
-tbody tr:last-child td {
+tbody tr:last-child td,
+tbody tr:last-child th {
   border-bottom: 0;
 }
 tbody tr:hover {

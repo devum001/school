@@ -22,7 +22,6 @@ import { feeSummary } from '../../lib/selectors';
 import { defaultStaffPayroll } from '../../lib/settings';
 import { currentPayrollMonth, payrollCycle } from '../../lib/staffPayroll';
 import { salaryMonthSchema } from '../../lib/staffSalary';
-import { schoolMonthlyFinance } from '../../lib/schoolFinance';
 import { financeEntries } from '../../lib/financeLedger';
 import { downloadCsv } from '../../lib/download';
 import type { GeneratedDocument } from '../../types/ledger';
@@ -50,7 +49,6 @@ export default function FinanceWorkspace() {
   const period = params.get('period') === 'cycle' ? 'cycle' : 'year';
   const range =
     period === 'cycle' ? cycle : { start: state.academicYear.start, end: state.academicYear.end };
-  const finance = schoolMonthlyFinance(state, config, cycle.end > today ? today : cycle.end, month);
   const entries = financeEntries(state, range.start, range.end, today),
     fees = feeSummary(state);
   const income = entries.reduce((sum, entry) => sum + entry.income, 0),
@@ -88,26 +86,8 @@ export default function FinanceWorkspace() {
           icon: financeTabIcons[value],
         }))}
       />
-      {tab === 'Overview' && (
-        <SectionNavigation
-          variant="secondary"
-          label="Finance overview views"
-          items={[
-            { id: 'summary', label: 'Collections & Revenue', icon: 'wallet' },
-            { id: 'salary', label: 'Salary Summary', icon: 'finance-balance' },
-            { id: 'recent', label: 'Recent Transactions', icon: 'receipt' },
-          ]}
-          value={
-            ['salary', 'recent'].includes(params.get('financeView') ?? '')
-              ? params.get('financeView')!
-              : 'summary'
-          }
-          onChange={(value) => update('financeView', value)}
-        />
-      )}
-      {((tab === 'Overview' && !['salary', 'recent'].includes(params.get('financeView') ?? '')) ||
-        tab === 'Transactions') && (
-        <div className="finance-period">
+      {(tab === 'Overview' || tab === 'Transactions') && (
+        <div className="finance-period" style={tab === 'Overview' ? { display: 'flex', justifyContent: 'flex-end', marginBottom: 12 } : undefined}>
           <label className="field">
             <select
               aria-label="Finance period"
@@ -142,126 +122,34 @@ export default function FinanceWorkspace() {
       <div id="finance-panel" role="tabpanel" aria-labelledby={`finance-tab-${tabs.indexOf(tab)}`}>
         {tab === 'Overview' && (
           <div className="ledger-stack">
-            {!['salary', 'recent'].includes(params.get('financeView') ?? '') && (
-              <div className="stats-grid four finance-summary">
-                <StatCard
-                  label="Student Fee Collections"
-                  value={money(income)}
-                  detail="Recorded student fee collections"
-                  icon={<AppIcon name="receipt" size={48} />}
-                  tone="green"
-                />
-                <StatCard
-                  label="Salary Expenses"
-                  value={money(expenses)}
-                  detail="Recorded salary payments"
-                  icon={<AppIcon name="wallet" size={48} />}
-                  tone="amber"
-                />
-                <StatCard
-                  label="Net Revenue"
-                  value={money(netRevenue)}
-                  detail="Revenue minus paid salaries"
-                  icon={<AppIcon name="finance-balance" size={48} />}
-                />
-                <StatCard
-                  label="Pending Student Fees"
-                  value={money(fees.outstanding)}
-                  detail="All current fee plans, including future dues"
-                  icon={<AppIcon name="fees" size={48} />}
-                />
-              </div>
-            )}
-            {params.get('financeView') === 'salary' && (
-              <Panel
-                title="Salary Overview"
-                action={
-                  <Button variant="secondary" onClick={() => update('tab', 'Salary Expenses')}>
-                    Manage Staff Salaries
-                  </Button>
-                }
-              >
-                <div className="finance-period panel-padding">
-                  <label className="field">
-                    Salary cycle month
-                    <PickerInput
-                      aria-label="Overview salary cycle month"
-                      type="month"
-                      value={month}
-                      onChange={(e) => {
-                        if (salaryMonthSchema.safeParse(e.target.value).success)
-                          update('month', e.target.value);
-                      }}
-                    />
-                  </label>
-                  <p>
-                    {displayDate(cycle.start)} – {displayDate(cycle.end)}
-                  </p>
-                </div>
-                <dl className="school-finance-values finance-salary-values" data-month={month}>
-                  {[
-                    ['Gross monthly salaries', finance.grossSalary],
-                    ['Salary deductions', finance.deductions],
-                    ['Net monthly salaries', finance.netSalary],
-                  ].map(([label, value]) => (
-                    <div key={String(label)}>
-                      <dt>{label}</dt>
-                      <dd>{money(Number(value))}</dd>
-                    </div>
-                  ))}
-                </dl>
-                <p className="school-finance-note panel-padding">
-                  {finance.configuredCount} active staff with salary configured
-                  {finance.unconfiguredCount
-                    ? ` · ${finance.unconfiguredCount} salaries not set`
-                    : ''}
-                  .
-                </p>
-              </Panel>
-            )}
-            {params.get('financeView') === 'recent' && (
-              <Panel title="Recent transactions">
-                <div
-                  className="table-wrap"
-                  role="region"
-                  aria-label="Recent finance transactions"
-                  tabIndex={0}
-                >
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Person</th>
-                        <th>Type</th>
-                        <th>Date</th>
-                        <th className="currency-cell">Income</th>
-                        <th className="currency-cell">Expense</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {entries.slice(0, 8).map((entry) => (
-                        <tr key={entry.id}>
-                          <th scope="row">{entry.name}</th>
-                          <td>{entry.type}</td>
-                          <td>{displayDate(entry.date)}</td>
-                          <td className="currency-cell">
-                            {entry.income ? money(entry.income) : '—'}
-                          </td>
-                          <td className="currency-cell">
-                            {entry.expense ? money(entry.expense) : '—'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {!entries.length && (
-                  <EmptyState
-                    title="No payments in this period"
-                    description="Record student or salary payments to update this summary."
-                  />
-                )}
-              </Panel>
-            )}
+            <div className="stats-grid four finance-summary">
+              <StatCard
+                label="Student Fee Collections"
+                value={money(income)}
+                detail="Recorded student fee collections"
+                icon={<AppIcon name="receipt" size={48} />}
+                tone="green"
+              />
+              <StatCard
+                label="Salary Expenses"
+                value={money(expenses)}
+                detail="Recorded salary payments"
+                icon={<AppIcon name="wallet" size={48} />}
+                tone="amber"
+              />
+              <StatCard
+                label="Net Revenue"
+                value={money(netRevenue)}
+                detail="Revenue minus paid salaries"
+                icon={<AppIcon name="finance-balance" size={48} />}
+              />
+              <StatCard
+                label="Pending Student Fees"
+                value={money(fees.outstanding)}
+                detail="All current fee plans, including future dues"
+                icon={<AppIcon name="fees" size={48} />}
+              />
+            </div>
           </div>
         )}
         {tab === 'Student Fees' && <FeesPage embedded />}

@@ -21,10 +21,33 @@ export function parseRuntimeConfig(source: { mode?: string; baseUrl?: string }) 
   }
   return { mode: mode as 'demo' | 'live', baseUrl };
 }
+
+export function resolveBrowserBaseUrl(configuredUrl: string): string {
+  if (typeof window !== 'undefined' && window.location && configuredUrl) {
+    try {
+      const url = new URL(configuredUrl);
+      const isLocalHost = (host: string) =>
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        /^192\.168\./.test(host) ||
+        /^10\./.test(host) ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+
+      if (isLocalHost(url.hostname) && isLocalHost(window.location.hostname)) {
+        url.hostname = window.location.hostname;
+        return url.toString().replace(/\/+$/, '');
+      }
+    } catch {
+      // Keep configured URL if parsing fails
+    }
+  }
+  return configuredUrl;
+}
+
 // Node-based fixture runners have no Vite import.meta.env. Browser builds always do.
 const config = parseRuntimeConfig({
   mode: import.meta.env?.VITE_APP_MODE,
   baseUrl: import.meta.env?.VITE_API_BASE_URL,
 });
 export const appMode = config.mode;
-export const apiBaseUrl = config.baseUrl;
+export const apiBaseUrl = resolveBrowserBaseUrl(config.baseUrl);

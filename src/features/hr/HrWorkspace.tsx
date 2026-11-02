@@ -15,6 +15,7 @@ import {
   StatCard,
   Avatar,
   PickerInput,
+  AppIcon,
 } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
 import { CalendarDays } from 'lucide-react';
@@ -451,21 +452,27 @@ function HrContent({
             label="Staff members"
             value={staff.length}
             detail="In the selected department"
+            icon={<AppIcon name="staff" size={48} />}
           />
           <StatCard
             label="Salary drafts"
             value={visiblePayroll.filter((p) => p.status === 'draft').length}
             detail="Awaiting review and approval"
+            icon={<AppIcon name="document" size={48} />}
           />
           <StatCard
             label="Paid this salary month"
             value={rupees(paid)}
             detail="Recorded payments for approved salaries"
+            icon={<AppIcon name="wallet" size={48} />}
+            tone="green"
           />
           <StatCard
             label="Outstanding"
             value={rupees(outstanding)}
             detail="Approved salaries still to be paid"
+            icon={<AppIcon name="finance-balance" size={48} />}
+            tone="amber"
           />
         </div>
       )}
@@ -931,7 +938,7 @@ function HrContent({
                     label="Leave status"
                     items={[
                       { id: 'pending', label: 'Pending', badge: pendingLeaves.length },
-                      { id: 'approved', label: 'Approved', badge: approvedLeaves.length },
+                      { id: 'approved', label: 'Reviewed', badge: approvedLeaves.length },
                     ]}
                     value={leaveStatusTab}
                     onChange={(val) => setLeaveStatusTab(val as 'pending' | 'approved')}
@@ -943,14 +950,14 @@ function HrContent({
                     <p className="hr-empty-title">
                       {leaveStatusTab === 'pending'
                         ? 'No pending leave requests'
-                        : 'No approved leave requests for this month'}
+                        : 'No reviewed leave requests for this month'}
                     </p>
                     <span className="hr-empty-desc">
                       {leaveStatusTab === 'pending'
                         ? tab === 'self'
                           ? 'You haven\'t submitted any pending leave requests. Click "Request leave" above to apply for time off.'
                           : 'No pending staff leave requests requiring review.'
-                        : 'Approved and decided leave requests will appear here.'}
+                        : 'Reviewed and decided leave requests will appear here.'}
                     </span>
                   </div>
                 ) : (

@@ -73,7 +73,7 @@ export default function LiveStaff({
     ...(!teachersOnly && access.permissions.includes('attendance.manage')
       ? [{ id: 'leave', label: 'Leave' }]
       : []),
-    ...(access.permissions.includes('assignments.view')
+    ...(!teachersOnly && access.permissions.includes('assignments.view')
       ? [{ id: 'assignments', label: 'Staff assignments' }]
       : []),
   ];
@@ -143,23 +143,22 @@ export default function LiveStaff({
             title={teachersOnly ? 'Teachers' : 'Staff & HR'}
             action={
               <div className="panel-header-actions staff-header-toolbar">
-                <label className="field">
-                  Today's attendance
-                  <select
-                    value={attendanceFilter}
-                    onChange={(e) => {
-                      state.first();
-                      setAttendanceFilter(e.target.value);
-                    }}
-                  >
-                    <option value="">All attendance</option>
-                    {attendanceOptions.map((status) => (
-                      <option key={status} value={status}>
-                        {titleCase(status.replaceAll('-', ' '))}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <select
+                  className="staff-select-filter staff-attendance-select"
+                  aria-label="Filter by today's attendance"
+                  value={attendanceFilter}
+                  onChange={(e) => {
+                    state.first();
+                    setAttendanceFilter(e.target.value);
+                  }}
+                >
+                  <option value="">Today: All attendance</option>
+                  {attendanceOptions.map((status) => (
+                    <option key={status} value={status}>
+                      Today: {titleCase(status.replaceAll('-', ' '))}
+                    </option>
+                  ))}
+                </select>
                 <div className="staff-search-input">
                   <SearchInput
                     value={query}

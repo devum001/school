@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Bus, Building2, CheckCircle2, Layers3, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bus, Building2, CheckCircle2, Sparkles } from 'lucide-react';
 import { Button, Modal, LoadingOverlay } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
 import {
@@ -19,11 +19,13 @@ export function AmountField({
   value,
   onChange,
   disabled = false,
+  required = false,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   disabled?: boolean;
+  required?: boolean;
 }) {
   return (
     <label className="field">
@@ -34,10 +36,15 @@ export function AmountField({
         min="0"
         max="10000000"
         step="0.01"
-        value={value / 100}
+        value={value === 0 ? '' : value / 100}
+        placeholder="0"
         disabled={disabled}
-        required
-        onChange={(e) => onChange(Math.round(Number(e.target.value) * 100))}
+        required={required}
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => {
+          const val = e.target.value;
+          onChange(val === '' ? 0 : Math.round(Number(val) * 100));
+        }}
       />
     </label>
   );
@@ -272,18 +279,8 @@ export default function FeeSetupDialog({
           </ol>
           {step === 1 && (
             <>
-              <div className="fee-callout">
-                <Layers3 size={22} />
-                <div>
-                  <strong>Set the common arrangement once</strong>
-                  <p>
-                    Next, adjust only the students who need different fees, bus/hostel services, or
-                    installments. Existing agreements keep their saved values.
-                  </p>
-                </div>
-              </div>
               <div className="fee-form-grid">
-                <AmountField label="Base yearly fee (₹)" value={base} onChange={setBase} />
+                <AmountField label="Tuition yearly fees (₹)" value={base} onChange={setBase} />
                 <AmountField
                   label="Concession (₹)"
                   value={discount}
@@ -431,6 +428,7 @@ export default function FeeSetupDialog({
                         max={60}
                         required
                         value={count}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => setCount(Number(e.target.value))}
                       />
                     </label>
@@ -465,113 +463,121 @@ export default function FeeSetupDialog({
           )}
           {step === 2 && (
             <>
-              <p>
-                Edit the amounts below. Use <strong>Payment details</strong> for Bus, Hostel,
-                mid-year service changes, custom due dates, and previously paid amounts. Paid
-                installments are protected.
-              </p>
-              <div className="table-wrap fee-bulk-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Student</th>
-                      <th className="currency-cell">Base fee ₹</th>
-                      <th className="currency-cell">Concession ₹</th>
-                      <th className="currency-cell">Scholarship ₹</th>
-                      <th className="currency-cell">Already paid ₹</th>
-                      <th className="currency-cell">Final fee</th>
-                      <th>Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.slice((reviewPage - 1) * 50, reviewPage * 50).map((r) => {
-                      const student = students.find((s) => s.id === r.studentId)!;
-                      return (
-                        <tr key={r.studentId}>
-                          <th scope="row">
-                            {titleCase(student.name)}
-                            <small>{student.code}</small>
-                            {(r.transportActive || r.hostelActive) && (
-                              <small style={{ color: 'var(--green)' }}>
-                                {r.transportActive ? `Bus ${money(r.transportFee ?? 0)} ` : ''}
-                                {r.hostelActive ? `Hostel ${money(r.hostelFee ?? 0)}` : ''}
-                              </small>
-                            )}
-                          </th>
-                          {(['baseFee', 'concession', 'scholarship', 'openingPaid'] as const).map(
-                            (field) => (
-                              <td key={field}>
-                                <input
-                                  aria-label={`${student.code} ${field}`}
-                                  type="number"
-                                  min={0}
-                                  max={10000000}
-                                  step="0.01"
-                                  disabled={
-                                    (field === 'concession' || field === 'scholarship') &&
-                                    !canApprove
-                                  }
-                                  value={r[field] / 100}
-                                  onChange={(e) => {
-                                    const val = Math.round(Number(e.target.value) * 100);
-                                    const patch: Partial<FeeAgreement> = { [field]: val };
-                                    if (field === 'baseFee') {
-                                      patch.tuitionFee = Math.max(
-                                        0,
-                                        val - (r.transportFee ?? 0) - (r.hostelFee ?? 0),
-                                      );
-                                    }
-                                    updateWithRebalance(r.studentId, patch);
-                                  }}
-                                />
-                              </td>
-                            ),
-                          )}
-                          <td className="currency-cell">
-                            {money(r.baseFee - r.concession - r.scholarship)}
-                          </td>
-                          <td>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              onClick={() =>
-                                setExpanded(expanded === r.studentId ? null : r.studentId)
-                              }
-                            >
-                              Payment details
-                            </Button>
-                          </td>
+              {rows.length > 1 && (
+                <>
+                  <p>
+                    Edit the amounts below. Use <strong>Payment details</strong> for Bus, Hostel,
+                    mid-year service changes, custom due dates, and previously paid amounts. Paid
+                    installments are protected.
+                  </p>
+                  <div className="table-wrap fee-bulk-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Student</th>
+                          <th className="currency-cell">Base fee ₹</th>
+                          <th className="currency-cell">Concession ₹</th>
+                          <th className="currency-cell">Scholarship ₹</th>
+                          <th className="currency-cell">Already paid ₹</th>
+                          <th className="currency-cell">Final fee</th>
+                          <th>Details</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="pagination">
-                <span>
-                  {rows.length} selected students · Page {reviewPage}
-                </span>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={reviewPage <= 1}
-                  onClick={() => setReviewPage((p) => p - 1)}
-                >
-                  Previous students
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={reviewPage * 50 >= rows.length}
-                  onClick={() => setReviewPage((p) => p + 1)}
-                >
-                  Next students
-                </Button>
-              </div>
-              {expanded &&
+                      </thead>
+                      <tbody>
+                        {rows.slice((reviewPage - 1) * 50, reviewPage * 50).map((r) => {
+                          const student = students.find((s) => s.id === r.studentId)!;
+                          return (
+                            <tr key={r.studentId}>
+                              <th scope="row">
+                                {titleCase(student.name)}
+                                <small>{student.code}</small>
+                                <small style={{ color: 'var(--muted)', display: 'block' }}>
+                                  Tuition {money(r.tuitionFee !== undefined ? r.tuitionFee : Math.max(0, r.baseFee - (r.transportActive ? r.transportFee ?? 0 : 0) - (r.hostelActive ? r.hostelFee ?? 0 : 0)))}
+                                  {r.transportActive ? ` · Bus ${money(r.transportFee ?? 0)}` : ''}
+                                  {r.hostelActive ? ` · Hostel ${money(r.hostelFee ?? 0)}` : ''}
+                                </small>
+                              </th>
+                              {(['baseFee', 'concession', 'scholarship', 'openingPaid'] as const).map(
+                                (field) => (
+                                  <td key={field}>
+                                    <input
+                                      aria-label={`${student.code} ${field}`}
+                                      type="number"
+                                      min={0}
+                                      max={10000000}
+                                      step="0.01"
+                                      disabled={
+                                        (field === 'concession' || field === 'scholarship') &&
+                                        !canApprove
+                                      }
+                                      value={r[field] === 0 ? '' : r[field] / 100}
+                                      placeholder="0"
+                                      onFocus={(e) => e.target.select()}
+                                      onChange={(e) => {
+                                        const val = e.target.value === '' ? 0 : Math.round(Number(e.target.value) * 100);
+                                        const patch: Partial<FeeAgreement> = { [field]: val };
+                                        if (field === 'baseFee') {
+                                          patch.tuitionFee = Math.max(
+                                            0,
+                                            val - (r.transportFee ?? 0) - (r.hostelFee ?? 0),
+                                          );
+                                        }
+                                        updateWithRebalance(r.studentId, patch);
+                                      }}
+                                    />
+                                  </td>
+                                ),
+                              )}
+                              <td className="currency-cell">
+                                {money(r.baseFee - r.concession - r.scholarship)}
+                              </td>
+                              <td>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  onClick={() =>
+                                    setExpanded(expanded === r.studentId ? null : r.studentId)
+                                  }
+                                >
+                                  Payment details
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="pagination">
+                    <span>
+                      {rows.length} selected students · Page {reviewPage}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={reviewPage <= 1}
+                      onClick={() => setReviewPage((p) => p - 1)}
+                    >
+                      Previous students
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={reviewPage * 50 >= rows.length}
+                      onClick={() => setReviewPage((p) => p + 1)}
+                    >
+                      Next students
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {(rows.length === 1 || expanded) &&
                 (() => {
-                  const r = rows.find((r) => r.studentId === expanded)!;
-                  const student = students.find((s) => s.id === expanded)!;
+                  const activeId = rows.length === 1 ? rows[0].studentId : expanded!;
+                  const r = rows.find((item) => item.studentId === activeId);
+                  if (!r) return null;
+                  const student = students.find((s) => s.id === activeId)!;
                   const tuitionVal =
                     r.tuitionFee ??
                     Math.max(0, r.baseFee - (r.transportFee ?? 0) - (r.hostelFee ?? 0));
@@ -592,11 +598,62 @@ export default function FeeSetupDialog({
                     });
                   };
 
-                  return (
-                    <section className="fee-schedule-editor">
-                      <h3>{titleCase(student.name)} · Payment, Bus &amp; Hostel details</h3>
+                  const addInstallment = () => {
+                    const lastInst = r.installments[r.installments.length - 1];
+                    const baseDate = lastInst?.dueDate || date || context.today;
+                    const d = new Date(`${baseDate}T12:00:00Z`);
+                    d.setMonth(d.getMonth() + 1);
+                    const nextDueDate = Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : baseDate;
 
-                      {/* TUITION, BUS & HOSTEL BREAKDOWN */}
+                    const currentSum = r.installments.reduce((s, i) => s + i.amount, 0);
+                    const diff = targetNet - currentSum;
+                    const newInst = {
+                      id: crypto.randomUUID(),
+                      amount: diff > 0 ? diff : 0,
+                      dueDate: nextDueDate,
+                    };
+
+                    if (diff <= 0) {
+                      const studentAcc = students.find((s) => s.id === r.studentId)?.account;
+                      const rebalanced = rebalanceInstallments(
+                        targetNet,
+                        [...r.installments, newInst],
+                        studentAcc?.installments ?? [],
+                        r.installments[0]?.dueDate || date,
+                      );
+                      update(r.studentId, { installments: rebalanced });
+                    } else {
+                      update(r.studentId, { installments: [...r.installments, newInst] });
+                    }
+                  };
+
+                  const removeInstallment = (instId: string) => {
+                    if (r.installments.length <= 1) return;
+                    const remaining = r.installments.filter((v) => v.id !== instId);
+                    const studentAcc = students.find((s) => s.id === r.studentId)?.account;
+                    const rebalanced = rebalanceInstallments(
+                      targetNet,
+                      remaining,
+                      studentAcc?.installments ?? [],
+                      remaining[0]?.dueDate || date,
+                    );
+                    update(r.studentId, { installments: rebalanced });
+                  };
+
+                  return (
+                    <section className="fee-schedule-editor" style={rows.length === 1 ? { border: 'none', borderRadius: 0, padding: 0, boxShadow: 'none' } : undefined}>
+                      {rows.length === 1 ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                          <div>
+                            <h3 style={{ margin: 0, fontSize: 18 }}>{titleCase(student.name)}</h3>
+                            <small style={{ color: 'var(--muted, #64748b)' }}>Adm {student.code}</small>
+                          </div>
+                        </div>
+                      ) : (
+                        <h3>{titleCase(student.name)} · Payment, Bus &amp; Hostel details</h3>
+                      )}
+
+                      {/* TUITION, CONCESSION, SCHOLARSHIP */}
                       <div className="fee-facility-cards" style={{ marginTop: 4 }}>
                         <div className="fee-form-grid">
                           <AmountField
@@ -605,20 +662,17 @@ export default function FeeSetupDialog({
                             onChange={(v) => updateBreakdown({ tuitionFee: v })}
                           />
                           <AmountField
-                            label="Already paid before onboarding (₹)"
-                            value={r.openingPaid}
-                            onChange={(v) =>
-                              update(r.studentId, { openingPaid: v, asOf: r.asOf || asOf })
-                            }
+                            label="Concession (₹)"
+                            value={r.concession}
+                            disabled={!canApprove}
+                            onChange={(v) => updateWithRebalance(r.studentId, { concession: v })}
                           />
-                          <label className="field">
-                            Balance recorded on
-                            <CalendarDateInput
-                              value={r.asOf}
-                              max={context.today}
-                              onChange={(e) => update(r.studentId, { asOf: e.target.value })}
-                            />
-                          </label>
+                          <AmountField
+                            label="Scholarship (₹)"
+                            value={r.scholarship}
+                            disabled={!canApprove}
+                            onChange={(v) => updateWithRebalance(r.studentId, { scholarship: v })}
+                          />
                           <label className="field">
                             Note (optional)
                             <input
@@ -760,22 +814,75 @@ export default function FeeSetupDialog({
                         </div>
                       </div>
 
-                      <p>
-                        Already paid means money received before using this app. It will not appear
-                        as a collection received today.
-                      </p>
+                      {/* ALREADY PAID (OPTIONAL) */}
+                      <div className="fee-form-grid" style={{ marginTop: 12 }}>
+                        <AmountField
+                          label="Already paid before onboarding (₹)"
+                          value={r.openingPaid}
+                          required={false}
+                          onChange={(v) =>
+                            update(r.studentId, { openingPaid: v, asOf: r.asOf || asOf })
+                          }
+                        />
+                        {r.openingPaid > 0 && (
+                          <label className="field">
+                            Balance recorded on
+                            <CalendarDateInput
+                              value={r.asOf}
+                              max={context.today}
+                              onChange={(e) => update(r.studentId, { asOf: e.target.value })}
+                            />
+                          </label>
+                        )}
+                      </div>
 
-                      {schedTotal !== targetNet && (
-                        <div className="fee-inline">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => updateWithRebalance(r.studentId, {})}
+                      {/* INSTALLMENT ARRANGEMENT */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '20px 0 8px', flexWrap: 'wrap' }}>
+                        <h4 style={{ margin: 0, fontSize: 15 }}>Payment Schedule &amp; Due Dates</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <label style={{ fontSize: 13, color: 'var(--muted, #64748b)' }}>Installment plan:</label>
+                          <select
+                            aria-label="Installment plan"
+                            style={{
+                              padding: '5px 10px',
+                              borderRadius: 6,
+                              fontSize: 13,
+                              border: '1px solid var(--border, #cbd5e1)',
+                              background: 'var(--surface, #fff)',
+                            }}
+                            value={
+                              [1, 2, 3, 4, 6, 12].includes(r.installments.length)
+                                ? r.installments.length
+                                : 'custom'
+                            }
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'custom') return;
+                              const cnt = Number(val);
+                              const studentAcc = students.find((s) => s.id === r.studentId)?.account;
+                              const firstDue = r.installments[0]?.dueDate || date || context.today;
+                              const nextInst = makeInstallments(targetNet, cnt, firstDue, 1);
+                              const rebalanced = rebalanceInstallments(
+                                targetNet,
+                                nextInst,
+                                studentAcc?.installments ?? [],
+                                firstDue,
+                              );
+                              update(r.studentId, { installments: rebalanced });
+                            }}
                           >
-                            <Sparkles size={15} /> Auto-balance unpaid installments ({money(targetNet)})
-                          </Button>
+                            <option value={1}>One Time (1 balance)</option>
+                            <option value={2}>2 Parts (Equal)</option>
+                            <option value={3}>3 Parts (Equal)</option>
+                            <option value={4}>4 Parts (Equal)</option>
+                            <option value={6}>6 Parts (Equal)</option>
+                            <option value={12}>12 Parts (Monthly)</option>
+                            {![1, 2, 3, 4, 6, 12].includes(r.installments.length) && (
+                              <option value="custom">Custom ({r.installments.length} parts)</option>
+                            )}
+                          </select>
                         </div>
-                      )}
+                      </div>
 
                       {r.installments.map((i, index) => {
                         const prevInst = student.account?.installments.find((old) => old.id === i.id);
@@ -795,7 +902,6 @@ export default function FeeSetupDialog({
                             <label className="field">
                               Due date
                               <CalendarDateInput
-                                required
                                 value={i.dueDate}
                                 onChange={(e) =>
                                   update(r.studentId, {
@@ -809,6 +915,7 @@ export default function FeeSetupDialog({
                             <AmountField
                               label={`Installment ${index + 1} amount (₹)`}
                               value={i.amount}
+                              required={false}
                               onChange={(amount) =>
                                 update(r.studentId, {
                                   installments: r.installments.map((v) =>
@@ -821,35 +928,71 @@ export default function FeeSetupDialog({
                               type="button"
                               variant="secondary"
                               disabled={r.installments.length === 1 || settled > 0}
-                              onClick={() =>
-                                update(r.studentId, {
-                                  installments: r.installments.filter((v) => v.id !== i.id),
-                                })
-                              }
+                              onClick={() => removeInstallment(i.id)}
                             >
                               Remove
                             </Button>
                           </div>
                         );
                       })}
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={r.installments.length >= 60}
-                        onClick={() =>
-                          update(r.studentId, {
-                            installments: [
-                              ...r.installments,
-                              { id: crypto.randomUUID(), amount: 0, dueDate: date },
-                            ],
-                          })
-                        }
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={r.installments.length >= 60}
+                            onClick={addInstallment}
+                          >
+                            + Add installment
+                          </Button>
+                          {schedTotal !== targetNet && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => updateWithRebalance(r.studentId, {})}
+                            >
+                              <Sparkles size={15} /> Auto-balance schedule ({money(targetNet)})
+                            </Button>
+                          )}
+                        </div>
+                        <p
+                          role="status"
+                          style={{
+                            margin: 0,
+                            fontWeight: 600,
+                            color: schedTotal === targetNet ? 'var(--green, #16a34a)' : 'var(--amber, #d97706)',
+                          }}
+                        >
+                          Schedule total: {money(schedTotal)} / {money(targetNet)}
+                          {schedTotal === targetNet ? ' ✓' : ` (Diff: ${money(targetNet - schedTotal)})`}
+                        </p>
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: 16,
+                          padding: '12px 16px',
+                          background: 'var(--surface-sunken, #f8fafc)',
+                          borderRadius: 8,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: 12,
+                        }}
                       >
-                        Add installment
-                      </Button>
-                      <p role="status">
-                        Schedule total: {money(schedTotal)} / {money(targetNet)}
-                      </p>
+                        <span>
+                          Total agreed fee: <strong>{money(targetNet)}</strong>
+                          {r.transportActive && ` · Bus ${money(r.transportFee ?? 0)}`}
+                          {r.hostelActive && ` · Hostel ${money(r.hostelFee ?? 0)}`}
+                          {(r.concession > 0 || r.scholarship > 0) &&
+                            ` · Concession ${money(r.concession + r.scholarship)}`}
+                        </span>
+                        <span style={{ fontWeight: 600 }}>
+                          Payable this year: {money(Math.max(0, targetNet - r.openingPaid))}
+                        </span>
+                      </div>
                     </section>
                   );
                 })()}

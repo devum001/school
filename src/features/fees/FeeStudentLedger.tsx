@@ -7,6 +7,7 @@ import {
   allocateToEarliest,
   feeApi,
   installmentBalance,
+  rollForwardInstallments,
   type FeeAccount,
   type FeeContext,
   type FeeStudentRow,
@@ -16,6 +17,7 @@ import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import { money } from '../../lib/config';
 import FeePayments from './FeePayments';
 import FeeSetupDialog, { AmountField } from './FeeSetupDialog';
+import './fees-live.css';
 
 export default function FeeStudentLedger({
   schoolId,
@@ -70,24 +72,20 @@ export default function FeeStudentLedger({
         {state.data && (
           <>
             <div className="fee-ledger-heading">
-              <div>
-                <span>Total outstanding</span>
-                <strong>
+              <div className="fee-ledger-stat">
+                <span className="fee-ledger-label">Total outstanding</span>
+                <strong className="fee-ledger-amount">
                   {money(state.data.accounts.reduce((s, a) => s + accountBalance(a), 0))}
                 </strong>
               </div>
-              <div className="fee-inline">
-                {can('fees.manage') &&
-                  student.enrollment?.status === 'active' &&
-                  context.years.find((y) => y.id === context.yearId)?.status !== 'closed' && (
-                    <Button variant="secondary" onClick={() => setEdit(true)}>
-                      {current ? 'Edit current-year fees' : 'Set up current-year fees'}
-                    </Button>
-                  )}
-                {can('fees.collect') && state.data.accounts.some((a) => accountBalance(a) > 0) && (
-                  <Button onClick={() => setCollect(true)}>Collect payment</Button>
+              {!state.data.accounts.length &&
+                can('fees.manage') &&
+                student.enrollment?.status === 'active' &&
+                context.years.find((y) => y.id === context.yearId)?.status !== 'closed' && (
+                  <div className="fee-ledger-actions">
+                    <Button onClick={() => setEdit(true)}>Set up current-year fees</Button>
+                  </div>
                 )}
-              </div>
             </div>
             {state.data.accounts.map((a) => {
               const busPaise = a.transportFee ?? 0;
@@ -105,41 +103,68 @@ export default function FeeStudentLedger({
                   title={`${a.yearName}${a.historical ? ' · Opening dues' : ''}`}
                   subtitle={a.reason || 'Student fee agreement'}
                   action={
-                    a.historical && can('fees.manage') ? (
-                      <Button variant="secondary" onClick={() => setCorrection(a)}>
-                        Correct opening balance
-                      </Button>
-                    ) : undefined
+                    <div className="fee-ledger-actions">
+                      {a.historical && can('fees.manage') && (
+                        <Button variant="secondary" onClick={() => setCorrection(a)}>
+                          Correct opening balance
+                        </Button>
+                      )}
+                      {!a.historical &&
+                        can('fees.manage') &&
+                        student.enrollment?.status === 'active' &&
+                        context.years.find((y) => y.id === context.yearId)?.status !== 'closed' && (
+                          <Button variant="secondary" onClick={() => setEdit(true)}>
+                            {current ? 'Edit current-year fees' : 'Set up current-year fees'}
+                          </Button>
+                        )}
+                      {can('fees.collect') && accountBalance(a) > 0 && (
+                        <Button onClick={() => setCollect(true)}>Collect payment</Button>
+                      )}
+                    </div>
                   }
                 >
                   <div className="fee-account-summary">
                     {hasFacilities && (
-                      <span>
-                        Tuition: <strong>{money(tuitionPaise)}</strong>
+                      <span className="fee-summary-chip">
+                        <span className="fee-chip-label">Tuition:</span>
+                        <strong className="fee-chip-val">{money(tuitionPaise)}</strong>
                       </span>
                     )}
                     {(a.transportActive || busPaise > 0) && (
-                      <span className="fee-facility-badge">
-                        <Bus size={14} /> Bus ({a.transportMonths || 12}m
-                        {a.transportRoute ? ` · ${a.transportRoute}` : ''}):{' '}
-                        <strong>{money(busPaise)}</strong>
+                      <span className="fee-summary-chip fee-chip-bus">
+                        <Bus size={14} />
+                        <span className="fee-chip-label">
+                          Bus ({a.transportMonths || 12}m{a.transportRoute ? ` · ${a.transportRoute}` : ''}):
+                        </span>
+                        <strong className="fee-chip-val">{money(busPaise)}</strong>
                       </span>
                     )}
                     {(a.hostelActive || hostelPaise > 0) && (
-                      <span className="fee-facility-badge">
-                        <Building2 size={14} /> Hostel ({a.hostelMonths || 12}m
-                        {a.hostelRoom ? ` · ${a.hostelRoom}` : ''}):{' '}
-                        <strong>{money(hostelPaise)}</strong>
+                      <span className="fee-summary-chip fee-chip-hostel">
+                        <Building2 size={14} />
+                        <span className="fee-chip-label">
+                          Hostel ({a.hostelMonths || 12}m{a.hostelRoom ? ` · ${a.hostelRoom}` : ''}):
+                        </span>
+                        <strong className="fee-chip-val">{money(hostelPaise)}</strong>
                       </span>
                     )}
-                    <span>
-                      Agreed: <strong>{money(a.baseFee - a.concession - a.scholarship)}</strong>
+                    {(a.concession + a.scholarship > 0) && (
+                      <span className="fee-summary-chip fee-chip-concession">
+                        <span className="fee-chip-label">Concession / scholarship:</span>
+                        <strong className="fee-chip-val">{money(a.concession + a.scholarship)}</strong>
+                      </span>
+                    )}
+                    <span className="fee-summary-chip fee-chip-agreed">
+                      <span className="fee-chip-label">Agreed:</span>
+                      <strong className="fee-chip-val">{money(a.baseFee - a.concession - a.scholarship)}</strong>
                     </span>
-                    <span>
-                      Concession / scholarship: <strong>{money(a.concession + a.scholarship)}</strong>
-                    </span>
-                    <span>
-                      Outstanding: <strong>{money(accountBalance(a))}</strong>
+                    <span
+                      className={`fee-summary-chip ${
+                        accountBalance(a) > 0 ? 'fee-chip-outstanding' : 'fee-chip-paid'
+                      }`}
+                    >
+                      <span className="fee-chip-label">Outstanding:</span>
+                      <strong className="fee-chip-val">{money(accountBalance(a))}</strong>
                     </span>
                   </div>
                   {a.asOf && (
@@ -152,22 +177,38 @@ export default function FeeStudentLedger({
                       <thead>
                         <tr>
                           <th>Due date</th>
-                          <th className="currency-cell">Amount due</th>
-                          <th className="currency-cell">Previously paid</th>
-                          <th className="currency-cell">Collected</th>
+                          <th className="currency-cell">Installment</th>
+                          <th className="currency-cell">Paid</th>
                           <th className="currency-cell">Remaining</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {a.installments.map((i) => (
-                          <tr key={i.id}>
-                            <td>{formatCalendarDate(i.dueDate)}</td>
-                            <td className="currency-cell">{money(i.amount)}</td>
-                            <td className="currency-cell">{money(i.openingPaid)}</td>
-                            <td className="currency-cell">{money(i.paid)}</td>
-                            <td className="currency-cell">{money(installmentBalance(i))}</td>
-                          </tr>
-                        ))}
+                        {rollForwardInstallments(a.installments).map((i: FeeAccount['installments'][number]) => {
+                          const bal = installmentBalance(i);
+                          return (
+                            <tr key={i.id}>
+                              <td>
+                                <div style={{ fontWeight: 500 }}>{formatCalendarDate(i.dueDate)}</div>
+                                {bal > 0 && (
+                                  <div style={{ fontSize: 12, color: '#b45309', fontWeight: 600 }}>
+                                    {money(bal)} due
+                                  </div>
+                                )}
+                              </td>
+                              <td className="currency-cell">{money(i.amount)}</td>
+                              <td className="currency-cell">{money((i.openingPaid ?? 0) + (i.paid ?? 0))}</td>
+                              <td
+                                className="currency-cell"
+                                style={{
+                                  fontWeight: bal > 0 ? 700 : 500,
+                                  color: bal > 0 ? '#b45309' : '#059669',
+                                }}
+                              >
+                                {bal > 0 ? money(bal) : 'Paid ✓'}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -286,8 +327,8 @@ function CollectPayment({
   const pending = accounts
     .flatMap((a) =>
       a.installments
-        .filter((i) => installmentBalance(i) > 0)
-        .map((i) => ({
+        .filter((i: FeeAccount['installments'][number]) => installmentBalance(i) > 0)
+        .map((i: FeeAccount['installments'][number]) => ({
           accountId: a.id!,
           yearName: a.yearName,
           historical: a.historical || a.academicYearId !== context.yearId,
@@ -297,36 +338,32 @@ function CollectPayment({
         })),
     )
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const [amount, setAmount] = useState(pending[0]?.balance ?? 0),
+
+  const totalPendingPaise = pending.reduce((s, i) => s + i.balance, 0);
+
+  const [amount, setAmount] = useState(totalPendingPaise),
     [date, setDate] = useState(context.today),
     [method, setMethod] = useState('Cash'),
     [reference, setReference] = useState(''),
-    [custom, setCustom] = useState(false),
-    [chosen, setChosen] = useState<Record<string, number>>({}),
+    [nextDueDate, setNextDueDate] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
-  const automatic = allocateToEarliest(pending, amount);
-  const allocations = pending.map((i, index) => ({
-    ...i,
-    amount: custom ? (chosen[`${i.accountId}:${i.installmentId}`] ?? 0) : automatic[index].amount,
-  }));
-  const allocated = allocations.reduce((s, a) => s + a.amount, 0),
-    valid =
-      amount > 0 &&
-      amount === allocated &&
-      allocations.every((a) => a.amount >= 0 && a.amount <= a.balance);
 
-  const totalPendingPaise = pending.reduce((s, i) => s + i.balance, 0);
-  const oldDuesPendingPaise = pending
-    .filter((i) => i.historical)
-    .reduce((s, i) => s + i.balance, 0);
-  const nextDuePaise = pending[0]?.balance ?? 0;
+  const allocations = allocateToEarliest(pending, amount);
+  const valid = amount > 0 && amount <= totalPendingPaise;
+
+  const lastPendingItem = pending[pending.length - 1];
+  const priorPendingPaise = totalPendingPaise - (lastPendingItem?.balance ?? 0);
+  const remainingPaise = totalPendingPaise - amount;
+  // Trigger remaining balance & due date only when payment leaves an unpaid balance on the final installment
+  const showFinalInstallmentPartialPicker =
+    amount > priorPendingPaise && amount < totalPendingPaise;
 
   return (
     <Modal
       open
       title="Collect fee payment"
-      description="Review the year and installment allocation before confirming. A receipt is issued after the payment is saved."
+      description="Enter amount and payment details. A receipt is issued after the payment is saved."
       onClose={() => {
         if (!busy) close();
       }}
@@ -338,13 +375,24 @@ function CollectPayment({
           e.preventDefault();
           if (!valid) {
             setError(
-              'The payment amount must match allocations and cannot exceed outstanding dues.',
+              amount > totalPendingPaise
+                ? 'Payment amount cannot exceed total outstanding dues.'
+                : 'Please enter a valid payment amount.',
             );
             return;
           }
           setBusy(true);
           setError('');
           try {
+            const effectiveNextDate = showFinalInstallmentPartialPicker
+              ? nextDueDate ||
+                (() => {
+                  const d = new Date(`${date || context.today}T12:00:00Z`);
+                  d.setDate(d.getDate() + 30);
+                  return d.toISOString().slice(0, 10);
+                })()
+              : undefined;
+
             await feeApi.collect(schoolId, {
               studentId,
               amount,
@@ -358,6 +406,7 @@ function CollectPayment({
                   installmentId: a.installmentId,
                   amount: a.amount,
                 })),
+              ...(effectiveNextDate ? { nextDueDate: effectiveNextDate } : {}),
             });
             saved();
           } catch (e) {
@@ -376,147 +425,101 @@ function CollectPayment({
             <div />
           </LoadingOverlay>
         )}
-        <>
-          <div className="fee-quick-split-bar" style={{ marginBottom: 4 }}>
-            <span>Quick fill:</span>
-            {nextDuePaise > 0 && (
-              <button
-                type="button"
-                className="fee-split-pill"
-                onClick={() => {
-                  setCustom(false);
-                  setAmount(nextDuePaise);
-                }}
-              >
-                Next installment ({money(nextDuePaise)})
-              </button>
-            )}
-            {totalPendingPaise > nextDuePaise && (
-              <button
-                type="button"
-                className="fee-split-pill rebalance"
-                onClick={() => {
-                  setCustom(false);
-                  setAmount(totalPendingPaise);
-                }}
-              >
-                Pay full remaining lump-sum ({money(totalPendingPaise)})
-              </button>
-            )}
-            {oldDuesPendingPaise > 0 && oldDuesPendingPaise !== totalPendingPaise && (
-              <button
-                type="button"
-                className="fee-split-pill"
-                onClick={() => {
-                  setCustom(true);
-                  const oldMap = Object.fromEntries(
-                    pending.map((p) => [
-                      `${p.accountId}:${p.installmentId}`,
-                      p.historical ? p.balance : 0,
-                    ]),
-                  );
-                  setChosen(oldMap);
-                  setAmount(oldDuesPendingPaise);
-                }}
-              >
-                Clear previous-year dues ({money(oldDuesPendingPaise)})
-              </button>
-            )}
-          </div>
 
-          <div className="fee-form-grid">
-            <AmountField label="Amount received (₹)" value={amount} onChange={setAmount} />
-            <label className="field">
-              Payment date
+        {totalPendingPaise > 0 && (
+          <div className="fee-quick-split-bar" style={{ marginBottom: 8 }}>
+            <span>Quick fill:</span>
+            <button
+              type="button"
+              className="fee-split-pill rebalance"
+              onClick={() => setAmount(totalPendingPaise)}
+            >
+              Pay full remaining lump-sum ({money(totalPendingPaise)})
+            </button>
+          </div>
+        )}
+
+        <div className="fee-form-grid">
+          <AmountField label="Amount received (₹)" value={amount} onChange={setAmount} />
+          <label className="field">
+            Payment date
+            <CalendarDateInput
+              required
+              max={context.today}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            Payment method
+            <select value={method} onChange={(e) => setMethod(e.target.value)}>
+              {['Cash', 'UPI', 'Bank transfer', 'Card', 'Cheque'].map((m) => (
+                <option key={m}>{m}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            Reference
+            <input
+              maxLength={120}
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+            />
+          </label>
+        </div>
+
+        {showFinalInstallmentPartialPicker && (
+          <div
+            style={{
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              margin: '12px 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}
+          >
+            <div>
+              <strong style={{ fontSize: 13, color: '#b45309', display: 'block' }}>
+                Remaining balance: {money(remainingPaise)}
+              </strong>
+              <span style={{ fontSize: 12, color: '#78350f' }}>
+                Select due date for remaining balance (used for reminders & notifications)
+              </span>
+            </div>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 500,
+                color: '#78350f',
+                margin: 0,
+              }}
+            >
+              Due date:
               <CalendarDateInput
                 required
-                max={context.today}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              Payment method
-              <select value={method} onChange={(e) => setMethod(e.target.value)}>
-                {['Cash', 'UPI', 'Bank transfer', 'Card', 'Cheque'].map((m) => (
-                  <option key={m}>{m}</option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Reference
-              <input
-                maxLength={120}
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
+                min={date || context.today}
+                value={
+                  nextDueDate ||
+                  (() => {
+                    const d = new Date(`${date || context.today}T12:00:00Z`);
+                    d.setDate(d.getDate() + 30);
+                    return d.toISOString().slice(0, 10);
+                  })()
+                }
+                onChange={(e) => setNextDueDate(e.target.value)}
               />
             </label>
           </div>
-          <label className="fee-checkbox">
-            <input
-              type="checkbox"
-              checked={custom}
-              onChange={(e) => {
-                setChosen(
-                  Object.fromEntries(
-                    allocations.map((a) => [`${a.accountId}:${a.installmentId}`, a.amount]),
-                  ),
-                );
-                setCustom(e.target.checked);
-              }}
-            />
-            Choose specific installments
-          </label>
-          <p>
-            Payments clear the earliest unpaid balance first, including future installments. Paying
-            on 28 October for an installment due on 30 October pays that installment early. Any
-            remainder goes to the next unpaid balance.
-          </p>
-        </>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Year / Due</th>
-                <th className="currency-cell">Remaining</th>
-                <th className="currency-cell">Allocate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allocations.map((a) => (
-                <tr key={`${a.accountId}:${a.installmentId}`}>
-                  <th>
-                    {a.yearName}
-                    <small>{formatCalendarDate(a.dueDate)}</small>
-                  </th>
-                  <td className="currency-cell">{money(a.balance)}</td>
-                  <td className="currency-cell">
-                    {custom ? (
-                      <input
-                        aria-label={`Allocate ${a.yearName} ${a.dueDate}`}
-                        type="number"
-                        min={0}
-                        max={a.balance / 100}
-                        step="0.01"
-                        value={a.amount / 100}
-                        onChange={(e) =>
-                          setChosen((old) => ({
-                            ...old,
-                            [`${a.accountId}:${a.installmentId}`]: Math.round(
-                              Number(e.target.value) * 100,
-                            ),
-                          }))
-                        }
-                      />
-                    ) : (
-                      money(a.amount)
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        )}
+
         <p className="fee-total">
           Payment total <strong>{money(amount)}</strong>
         </p>

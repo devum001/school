@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bus, Building2, ChevronDown, Search } from 'lucide-react';
 import { useFeedback } from '../../../app/useFeedback';
 import {
@@ -20,7 +20,6 @@ import {
   type FeeContext,
   type FeeStudentRow,
 } from '../../../services/feeService';
-import FeeSetupDialog from '../FeeSetupDialog';
 import './fee-onboarding.css';
 
 type EditableRow = {
@@ -197,6 +196,267 @@ function buildAgreementForRow(row: EditableRow, defaultDueDate: string): FeeAgre
   };
 }
 
+
+function FeeStickyTableHeader({
+  tableWrapRef,
+  theadRef,
+  selectedIds,
+  visibleRows,
+  setSelectedIds,
+}: {
+  tableWrapRef: React.RefObject<HTMLDivElement | null>;
+  theadRef: React.RefObject<HTMLTableSectionElement | null>;
+  selectedIds: string[];
+  visibleRows: { student: { id: string } }[];
+  setSelectedIds: (ids: string[]) => void;
+}) {
+  const [isSticky, setIsSticky] = useState(false);
+  const [layout, setLayout] = useState<{
+    left: number;
+    width: number;
+    tableWidth: number;
+    colWidths: number[];
+  } | null>(null);
+
+  const headerContentRef = useRef<HTMLDivElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
+  const isStickyRef = useRef(false);
+  isStickyRef.current = isSticky;
+  const touchStartX = useRef<number | null>(null);
+
+  const measureLayout = useCallback(() => {
+    const wrap = tableWrapRef.current;
+    const thead = theadRef.current;
+    if (!wrap || !thead) return;
+
+    const wrapRect = wrap.getBoundingClientRect();
+    const table = wrap.querySelector('table');
+    const tableWidth = table ? table.offsetWidth : 1420;
+    const ths = Array.from(thead.querySelectorAll('th'));
+    const colWidths = ths.map((th) => th.getBoundingClientRect().width);
+
+    if (outerRef.current) {
+      outerRef.current.style.left = `${wrapRect.left}px`;
+      outerRef.current.style.width = `${wrapRect.width}px`;
+    }
+
+    setLayout({
+      left: wrapRect.left,
+      width: wrapRect.width,
+      tableWidth,
+      colWidths,
+    });
+  }, [tableWrapRef, theadRef]);
+
+  // Synchronize horizontal position via GPU transform (zero layout thrashing, zero re-renders)
+  const syncTransform = useCallback(() => {
+    const wrap = tableWrapRef.current;
+    const content = headerContentRef.current;
+    if (wrap && content) {
+      content.style.transform = `translate3d(-${wrap.scrollLeft}px, 0, 0)`;
+    }
+  }, [tableWrapRef]);
+
+  // Check sticky condition on window scroll using requestAnimationFrame
+  useEffect(() => {
+    const wrap = tableWrapRef.current;
+    const thead = theadRef.current;
+    if (!wrap || !thead) return;
+
+    let ticking = false;
+
+    const checkSticky = () => {
+      const wrapRect = wrap.getBoundingClientRect();
+      const theadRect = thead.getBoundingClientRect();
+      const shouldStick = theadRect.top <= 0 && wrapRect.bottom > 60;
+
+      if (shouldStick !== isStickyRef.current) {
+        if (shouldStick) {
+          measureLayout();
+        }
+        setIsSticky(shouldStick);
+      } else if (shouldStick && outerRef.current) {
+        outerRef.current.style.left = `${wrapRect.left}px`;
+        outerRef.current.style.width = `${wrapRect.width}px`;
+      }
+      ticking = false;
+    };
+
+    const onWindowScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(checkSticky);
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', onWindowScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onWindowScroll);
+  }, [measureLayout, tableWrapRef, theadRef]);
+
+  // Sync horizontal scrolling from table to floating header with zero frame lag
+  useEffect(() => {
+    const wrap = tableWrapRef.current;
+    if (!wrap) return;
+
+    const onWrapScroll = () => {
+      if (!isStickyRef.current) return;
+      syncTransform();
+    };
+
+    wrap.addEventListener('scroll', onWrapScroll, { passive: true });
+    return () => {
+      wrap.removeEventListener('scroll', onWrapScroll);
+    };
+  }, [syncTransform, tableWrapRef]);
+
+  // Handle window and table resize
+  useEffect(() => {
+    const wrap = tableWrapRef.current;
+    if (!wrap) return;
+
+    const onResize = () => {
+      if (isStickyRef.current) {
+        measureLayout();
+        syncTransform();
+      }
+    };
+
+    window.addEventListener('resize', onResize, { passive: true });
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => {
+        if (isStickyRef.current) {
+          measureLayout();
+          syncTransform();
+        }
+      });
+      ro.observe(wrap);
+    }
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (ro) ro.disconnect();
+    };
+  }, [measureLayout, syncTransform, tableWrapRef, visibleRows.length]);
+
+  // Align transform immediately when sticky activates
+  useEffect(() => {
+    if (isSticky) {
+      syncTransform();
+    }
+  }, [isSticky, syncTransform]);
+
+  // Forward horizontal wheel gestures on the floating header to table wrap
+  const onHeaderWheel = (e: React.WheelEvent) => {
+    const wrap = tableWrapRef.current;
+    if (wrap && e.deltaX !== 0) {
+      wrap.scrollLeft += e.deltaX;
+    }
+  };
+
+  // Forward touch swipes on floating header to table wrap
+  const onHeaderTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartX.current = e.touches[0].clientX;
+    }
+  };
+
+  const onHeaderTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || e.touches.length !== 1) return;
+    const currentX = e.touches[0].clientX;
+    const deltaX = touchStartX.current - currentX;
+    touchStartX.current = currentX;
+    const wrap = tableWrapRef.current;
+    if (wrap) {
+      wrap.scrollLeft += deltaX;
+    }
+  };
+
+  const onHeaderTouchEnd = () => {
+    touchStartX.current = null;
+  };
+
+  if (!isSticky || !layout) return null;
+
+  return (
+    <div
+      ref={outerRef}
+      className="fee-floating-sticky-header"
+      onWheel={onHeaderWheel}
+      onTouchStart={onHeaderTouchStart}
+      onTouchMove={onHeaderTouchMove}
+      onTouchEnd={onHeaderTouchEnd}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: layout.left,
+        width: layout.width,
+        zIndex: 40,
+        overflow: 'hidden',
+        pointerEvents: 'auto',
+      }}
+    >
+      <div
+        ref={headerContentRef}
+        className="fee-floating-scroll-container"
+        style={{
+          width: layout.tableWidth,
+          willChange: 'transform',
+        }}
+      >
+        <table
+          style={{
+            width: layout.tableWidth,
+            minWidth: 1420,
+            tableLayout: 'fixed',
+            borderCollapse: 'collapse',
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={{ width: layout.colWidths[0] || 48 }}>
+                <input
+                  type="checkbox"
+                  aria-label="Select all shown students"
+                  checked={
+                    visibleRows.length > 0 &&
+                    visibleRows.every((r) => selectedIds.includes(r.student.id))
+                  }
+                  onChange={(e) =>
+                    setSelectedIds(
+                      e.target.checked ? visibleRows.map((r) => r.student.id) : [],
+                    )
+                  }
+                />
+              </th>
+              <th style={{ width: layout.colWidths[1] || 220 }}>Student</th>
+              <th style={{ width: layout.colWidths[2] || 224 }}>Tuition Fee (₹)</th>
+              <th style={{ width: layout.colWidths[3] || 218 }}>
+                <span className="fee-th-icon">
+                  <Bus size={14} /> Bus Service (₹ / Months)
+                </span>
+              </th>
+              <th style={{ width: layout.colWidths[4] || 218 }}>
+                <span className="fee-th-icon">
+                  <Building2 size={14} /> Hostel (₹ / Months)
+                </span>
+              </th>
+              <th style={{ width: layout.colWidths[5] || 224 }}>Concession (₹)</th>
+              <th style={{ width: layout.colWidths[6] || 224 }}>Old Pending (₹)</th>
+              <th style={{ width: layout.colWidths[7] || 186 }}>Schedule &amp; Due Dates</th>
+              <th className="currency-cell" style={{ width: layout.colWidths[8] || 209 }}>
+                Final Fee
+              </th>
+              <th style={{ width: layout.colWidths[9] || 98 }}>Actions</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function FeeOnboardingWorkspace({
   schoolId,
   context,
@@ -207,6 +467,8 @@ export default function FeeOnboardingWorkspace({
   permissions: readonly string[];
 }) {
   const notify = useFeedback();
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const theadRef = useRef<HTMLTableSectionElement>(null);
   const canApprove = permissions.includes('fees.approve');
   const year = context.years.find((y) => y.id === context.yearId);
   const defaultDueDate =
@@ -256,8 +518,6 @@ export default function FeeOnboardingWorkspace({
   const [bulkDueDates, setBulkDueDates] = useState<string[]>(() =>
     defaultDueDatesForCount(1, defaultDueDate),
   );
-
-  const [detailStudent, setDetailStudent] = useState<FeeStudentRow | null>(null);
 
   const loadDirectory = useCallback(async () => {
     if (!context.yearId) return;
@@ -601,6 +861,7 @@ export default function FeeOnboardingWorkspace({
                 min={0}
                 placeholder="e.g. 24000"
                 value={bulkTuition}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setBulkTuition(e.target.value)}
               />
             </label>
@@ -634,6 +895,7 @@ export default function FeeOnboardingWorkspace({
                       min={0}
                       placeholder="Bus Fee (₹)"
                       value={bulkBusFee}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setBulkBusFee(e.target.value)}
                     />
                     <div className="fee-setup-select-wrapper">
@@ -684,6 +946,7 @@ export default function FeeOnboardingWorkspace({
                       min={0}
                       placeholder="Hostel Fee (₹)"
                       value={bulkHostelFee}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setBulkHostelFee(e.target.value)}
                     />
                     <div className="fee-setup-select-wrapper">
@@ -713,6 +976,7 @@ export default function FeeOnboardingWorkspace({
                 placeholder="0"
                 disabled={!canApprove}
                 value={bulkDiscount}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setBulkDiscount(e.target.value)}
               />
             </label>
@@ -748,6 +1012,7 @@ export default function FeeOnboardingWorkspace({
                 min={0}
                 placeholder="Optional partial paid"
                 value={bulkOpeningPaid}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => setBulkOpeningPaid(e.target.value)}
               />
             </label>
@@ -844,9 +1109,16 @@ export default function FeeOnboardingWorkspace({
             />
           ) : (
             <>
-              <div className="table-wrap fee-onboarding-grid">
+              <FeeStickyTableHeader
+                tableWrapRef={tableWrapRef}
+                theadRef={theadRef}
+                selectedIds={selectedIds}
+                visibleRows={visibleRows}
+                setSelectedIds={setSelectedIds}
+              />
+              <div className="table-wrap fee-onboarding-grid" ref={tableWrapRef}>
                 <table>
-                  <thead>
+                  <thead ref={theadRef}>
                     <tr>
                       <th>
                         <input
@@ -890,10 +1162,12 @@ export default function FeeOnboardingWorkspace({
                       const hostelP = row.hostelActive ? toPaise(row.hostelFee) : 0;
                       const discountP = toPaise(row.discountAmount);
                       const scholP = toPaise(row.scholarshipAmount);
+                      const oldDueP = toPaise(row.previousDueAmount);
                       const finalNetPaise = Math.max(
                         0,
                         tuitionP + busP + hostelP - discountP - scholP,
                       );
+                      const totalPayablePaise = finalNetPaise + oldDueP;
                       return (
                         <tr key={id} className={row.dirty ? 'fee-row-dirty' : ''}>
                           <td>
@@ -913,9 +1187,11 @@ export default function FeeOnboardingWorkspace({
                           <th scope="row">
                             <strong>{row.student.name}</strong>
                             <small>
-                              Adm {row.student.code} ·{' '}
-                              {classNameFor(row.student.enrollment?.classId)}{' '}
-                              {sectionNameFor(row.student.enrollment?.sectionId)}
+                              <span>Adm {row.student.code}</span>
+                              <span style={{ display: 'block', color: 'var(--muted, #64748b)' }}>
+                                {classNameFor(row.student.enrollment?.classId)}{' '}
+                                {sectionNameFor(row.student.enrollment?.sectionId)}
+                              </span>
                             </small>
                           </th>
 
@@ -926,6 +1202,7 @@ export default function FeeOnboardingWorkspace({
                               min={0}
                               placeholder="0"
                               value={row.tuitionFee}
+                              onFocus={(e) => e.target.select()}
                               onChange={(e) =>
                                 updateRow(id, (r) => ({ ...r, tuitionFee: e.target.value }))
                               }
@@ -957,6 +1234,7 @@ export default function FeeOnboardingWorkspace({
                                     min={0}
                                     placeholder="Bus ₹"
                                     value={row.transportFee}
+                                    onFocus={(e) => e.target.select()}
                                     onChange={(e) =>
                                       updateRow(id, (r) => ({
                                         ...r,
@@ -1027,6 +1305,7 @@ export default function FeeOnboardingWorkspace({
                                     min={0}
                                     placeholder="Hostel ₹"
                                     value={row.hostelFee}
+                                    onFocus={(e) => e.target.select()}
                                     onChange={(e) =>
                                       updateRow(id, (r) => ({
                                         ...r,
@@ -1080,6 +1359,7 @@ export default function FeeOnboardingWorkspace({
                               placeholder="0"
                               disabled={!canApprove}
                               value={row.discountAmount}
+                              onFocus={(e) => e.target.select()}
                               onChange={(e) =>
                                 updateRow(id, (r) => ({ ...r, discountAmount: e.target.value }))
                               }
@@ -1099,6 +1379,7 @@ export default function FeeOnboardingWorkspace({
                                   : 'Add previous-year pending balance'
                               }
                               value={row.previousDueAmount}
+                              onFocus={(e) => e.target.select()}
                               onChange={(e) =>
                                 updateRow(id, (r) => ({
                                   ...r,
@@ -1147,6 +1428,7 @@ export default function FeeOnboardingWorkspace({
                                     placeholder="Paid now ₹ (opt)"
                                     title="Optional: enter amount paid now if student leaves a remaining balance on One Time fee"
                                     value={row.openingPaid}
+                                    onFocus={(e) => e.target.select()}
                                     onChange={(e) =>
                                       updateRow(id, (r) => ({ ...r, openingPaid: e.target.value }))
                                     }
@@ -1196,11 +1478,12 @@ export default function FeeOnboardingWorkspace({
                           </td>
 
                           <td className="currency-cell">
-                            <strong>{money(finalNetPaise)}</strong>
-                            {(row.transportActive || row.hostelActive) && (
+                            <strong>{money(totalPayablePaise)}</strong>
+                            {(row.transportActive || row.hostelActive || oldDueP > 0) && (
                               <small>
                                 {row.transportActive ? `Bus ${money(busP)} ` : ''}
-                                {row.hostelActive ? `Hostel ${money(hostelP)}` : ''}
+                                {row.hostelActive ? `Hostel ${money(hostelP)} ` : ''}
+                                {oldDueP > 0 ? `Old Due ${money(oldDueP)}` : ''}
                               </small>
                             )}
                           </td>
@@ -1214,13 +1497,6 @@ export default function FeeOnboardingWorkspace({
                                 onClick={() => void saveSingleRow(row)}
                               >
                                 {savingStudentId === id ? 'Saving...' : 'Save'}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => setDetailStudent(row.student)}
-                              >
-                                Schedule
                               </Button>
                             </div>
                           </td>
@@ -1257,20 +1533,6 @@ export default function FeeOnboardingWorkspace({
           )}
         </LoadingOverlay>
       </Panel>
-
-      {detailStudent && (
-        <FeeSetupDialog
-          schoolId={schoolId}
-          context={context}
-          students={[detailStudent]}
-          canApprove={canApprove}
-          close={() => setDetailStudent(null)}
-          saved={() => {
-            setDetailStudent(null);
-            void loadDirectory();
-          }}
-        />
-      )}
     </div>
   );
 }

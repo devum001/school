@@ -163,12 +163,14 @@ export default function FeeOpeningDialog({
                             min={0}
                             max={10000000}
                             step="0.01"
-                            value={amounts[i].amount / 100}
+                            value={amounts[i].amount === 0 ? '' : amounts[i].amount / 100}
+                            placeholder="0"
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) =>
                               setAmounts((old) =>
                                 old.map((a, j) =>
                                   i === j
-                                    ? { ...a, amount: Math.round(Number(e.target.value) * 100) }
+                                    ? { ...a, amount: e.target.value === '' ? 0 : Math.round(Number(e.target.value) * 100) }
                                     : a,
                                 ),
                               )

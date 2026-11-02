@@ -18,6 +18,8 @@ import { useToday } from '../../app/useToday';
 import { staffDirectory, staffDesignation } from '../../lib/staffStructure';
 import { defaultStaffPayroll } from '../../lib/settings';
 import { titleCase } from '../../lib/displayFormat';
+import { useDebouncedValue } from '../../app/useDebouncedValue';
+import '../hr/hr.css';
 import './contacts.css';
 type Loader = (query: ContactQuery, signal: AbortSignal) => Promise<ContactDirectory>;
 export default function LiveQuickConnect() {
@@ -126,20 +128,26 @@ export function DemoQuickConnect() {
   return <Directory tabs={['students', 'teachers', 'staff']} load={load} />;
 }
 function Directory({ tabs, load }: { tabs: string[]; load: Loader }) {
-  const [query, setQuery] = useState<ContactQuery>({
-    kind: tabs[0] || 'students',
-    search: '',
-    status: '',
-    offset: 0,
-  });
+  const [kind, setKind] = useState(tabs[0] || 'students');
   const [search, setSearch] = useState('');
-  const allowed = tabs.includes(query.kind);
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const [status, setStatus] = useState('');
+  const [offset, setOffset] = useState(0);
+
+  const query: ContactQuery = {
+    kind,
+    search: debouncedSearch.trim(),
+    status,
+    offset,
+  };
+
+  const allowed = tabs.includes(kind);
   const fetch = useCallback(
     (signal: AbortSignal) =>
       allowed
         ? load(query, signal)
         : Promise.resolve({ items: [], total: 0, counts: {}, date: '', nextOffset: null }),
-    [load, query, allowed],
+    [load, allowed, kind, debouncedSearch, status, offset],
   );
   const state = useRemote(fetch);
   return (
@@ -154,8 +162,11 @@ function Directory({ tabs, load }: { tabs: string[]; load: Loader }) {
         <>
           <SectionNavigation
             label="Contact directory"
-            value={query.kind}
-            onChange={(kind) => setQuery({ ...query, kind, offset: 0 })}
+            value={kind}
+            onChange={(newKind) => {
+              setKind(newKind);
+              setOffset(0);
+            }}
             items={tabs.map((id) => ({
               id,
               label: id === 'staff' ? 'Other Staff' : titleCase(id),
@@ -164,45 +175,52 @@ function Directory({ tabs, load }: { tabs: string[]; load: Loader }) {
           />
           <Panel
             title={
-              query.kind === 'students' ? 'Parent & guardian contacts' : 'School staff contacts'
+              kind === 'students' ? 'Parent & guardian contacts' : 'School staff contacts'
             }
             subtitle="Attendance describes the school day, not whether someone is signed in."
+            action={
+              <div className="hr-header-filters">
+                <label className="field hr-inline-filter">
+                  <span>Search</span>
+                  <input
+                    value={search}
+                    maxLength={80}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setOffset(0);
+                    }}
+                    placeholder="Name, ID or phone"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setOffset(0);
+                        state.reload();
+                      }
+                    }}
+                  />
+                </label>
+                <label className="field hr-inline-filter">
+                  <span>Attendance</span>
+                  <select
+                    value={status}
+                    onChange={(e) => {
+                      setStatus(e.target.value);
+                      setOffset(0);
+                    }}
+                  >
+                    <option value="">All statuses</option>
+                    {attendanceOptions.map((s) => (
+                      <option key={s} value={s}>
+                        {titleCase(s.replaceAll('-', ' '))} ({state.data?.counts[s] || 0})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button type="button" variant="secondary" onClick={state.reload}>
+                  Refresh
+                </Button>
+              </div>
+            }
           >
-            <form
-              className="contact-toolbar"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setQuery({ ...query, search, offset: 0 });
-              }}
-            >
-              <label className="field">
-                Search
-                <input
-                  value={search}
-                  maxLength={80}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Name, ID or phone"
-                />
-              </label>
-              <label className="field">
-                Attendance
-                <select
-                  value={query.status}
-                  onChange={(e) => setQuery({ ...query, status: e.target.value, offset: 0 })}
-                >
-                  <option value="">All statuses</option>
-                  {attendanceOptions.map((s) => (
-                    <option key={s} value={s}>
-                      {titleCase(s.replaceAll('-', ' '))} ({state.data?.counts[s] || 0})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Button type="submit">Search</Button>
-              <Button type="button" variant="secondary" onClick={state.reload}>
-                Refresh
-              </Button>
-            </form>
             <LoadingOverlay loading={state.loading} label="Loading contacts…">
               {state.error ? (
                 <p className="form-error" role="alert">
@@ -243,8 +261,8 @@ function Directory({ tabs, load }: { tabs: string[]; load: Loader }) {
             <div className="live-actions">
               <Button
                 variant="secondary"
-                disabled={!query.offset}
-                onClick={() => setQuery({ ...query, offset: Math.max(0, query.offset - 50) })}
+                disabled={!offset}
+                onClick={() => setOffset(Math.max(0, offset - 50))}
               >
                 Previous
               </Button>
@@ -252,7 +270,7 @@ function Directory({ tabs, load }: { tabs: string[]; load: Loader }) {
               <Button
                 variant="secondary"
                 disabled={state.data?.nextOffset == null}
-                onClick={() => setQuery({ ...query, offset: state.data?.nextOffset || 0 })}
+                onClick={() => setOffset(state.data?.nextOffset || 0)}
               >
                 Next
               </Button>

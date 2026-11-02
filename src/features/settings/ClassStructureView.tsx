@@ -1,7 +1,7 @@
-import ClassName from '../../components/shared/ClassName';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useSettingsSection } from './useSettingsSection';
 import '../academics/academics.css';
+import '../hr/hr.css';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
@@ -94,99 +94,91 @@ export default function ClassStructureView({
     id: string;
     name: string;
   } | null>(null);
+  const classFilters = current ? (
+    <div className="hr-header-filters">
+      <label className="field hr-inline-filter" style={{ minWidth: '160px' }}>
+        <span>Class</span>
+        <select
+          aria-label="Setup class"
+          value={current.id}
+          onChange={(e) => setSelected(e.target.value)}
+        >
+          {classes.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {setupAction ?? (
+        <Button
+          disabled={!canManageClasses}
+          variant="secondary"
+          onClick={() => setEditing({ kind: 'class' })}
+        >
+          <Plus size={15} />
+          Add class
+        </Button>
+      )}
+    </div>
+  ) : null;
+
   return (
     <div className="setup-stack">
       {toolbar}
-      <Panel
-        title="Classes & sections"
-        subtitle="Choose a class once, then manage its sections, students and subjects below."
-        action={
-          setupAction ?? (
-            <Button
-              disabled={!canManageClasses}
-              variant="secondary"
-              onClick={() => setEditing({ kind: 'class' })}
+      {!current ? (
+        <EmptyState
+          title="Set up your first class"
+          description="Create classes and their sections together with Set up classes."
+          action={setupAction}
+        />
+      ) : (
+        <>
+          <SectionNavigation {...navigation} label="Class features" />
+          {section === 'sections' && (
+            <Panel
+              title={`${current.name} sections`}
+              subtitle={`${sections.length} sections · ${studentCount(current.id, true)} students · Each section has its own student list and optional class teacher.`}
+              action={classFilters}
             >
-              <Plus size={15} />
-              Add class
-            </Button>
-          )
-        }
-      >
-        {current ? (
-          <>
-            <div className="setup-toolbar">
-              <strong className="selected-class-name">
-                <ClassName name={current.name} />
-              </strong>
-              <label className="student-timing-field">
-                Class
-                <select
-                  aria-label="Setup class"
-                  value={current.id}
-                  onChange={(e) => {
-                    setSelected(e.target.value);
-                  }}
-                >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <span>
-                {sections.length} sections · {studentCount(current.id, true)} students
-              </span>
-            </div>
-          </>
-        ) : (
-          <EmptyState
-            title="Set up your first class"
-            description="Create classes and their sections together with Set up classes."
-          />
-        )}
-      </Panel>
-      {current && <SectionNavigation {...navigation} label="Class features" />}
-      {current && section === 'sections' && (
-        <Panel
-          title={`${current.name} sections`}
-          subtitle="Each section has its own student list and optional class teacher."
-        >
-          {counts.some((c) => c.classId === current.id && !c.sectionId && c.count > 0) && (
-            <p className="panel-padding">
-              {counts
-                .filter((c) => c.classId === current.id && !c.sectionId)
-                .reduce((n, c) => n + c.count, 0)}{' '}
-              students enrolled directly in this class (no section).
-            </p>
-          )}
-          <div className="setup-toolbar class-structure-actions">
-            <Button
-              disabled={!canManageClasses}
-              variant="ghost"
-              onClick={() => setEditing({ kind: 'class', id: current.id })}
-            >
-              <AppIcon name="edit" size={14} />
-              Edit class
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={!canManageClasses}
-              aria-label={`${archive ? 'Archive' : 'Delete'} class ${current.name}`}
-              onClick={() => setDeleting({ kind: 'class', id: current.id, name: current.name })}
-            >
-              <AppIcon name="delete" size={14} />
-            </Button>
-            <Button
-              disabled={!canManageSections}
-              variant="secondary"
-              onClick={() => setEditing({ kind: 'section' })}
-            >
-              <Plus size={14} />
-              Add section
-            </Button>
-          </div>
+              <div className="setup-toolbar class-structure-toolbar">
+                <div className="class-structure-note">
+                  {counts.some((c) => c.classId === current.id && !c.sectionId && c.count > 0) && (
+                    <span>
+                      {counts
+                        .filter((c) => c.classId === current.id && !c.sectionId)
+                        .reduce((n, c) => n + c.count, 0)}{' '}
+                      students enrolled directly in this class (no section).
+                    </span>
+                  )}
+                </div>
+                <div className="class-structure-actions">
+                  <Button
+                    disabled={!canManageClasses}
+                    variant="ghost"
+                    onClick={() => setEditing({ kind: 'class', id: current.id })}
+                  >
+                    <AppIcon name="edit" size={14} />
+                    Edit class
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled={!canManageClasses}
+                    aria-label={`${archive ? 'Archive' : 'Delete'} class ${current.name}`}
+                    onClick={() => setDeleting({ kind: 'class', id: current.id, name: current.name })}
+                  >
+                    <AppIcon name="delete" size={14} />
+                  </Button>
+                  <Button
+                    disabled={!canManageSections}
+                    variant="secondary"
+                    onClick={() => setEditing({ kind: 'section' })}
+                  >
+                    <Plus size={14} />
+                    Add section
+                  </Button>
+                </div>
+              </div>
           {sections.length ? (
             <ul className="setup-sections">
               {sections.map((s) => (
@@ -254,9 +246,11 @@ export default function ClassStructureView({
           )}
         </Panel>
       )}
-      {current && section === 'subjects' && renderSubjects(current.id)}
-      {current && section === 'students' && (
+      {section === 'subjects' && renderSubjects(current.id)}
+      {section === 'students' && (
         <div key={current.id}>{renderStudents(current.id)}</div>
+      )}
+        </>
       )}
       {!current && emptyHelper}
       {editing &&
