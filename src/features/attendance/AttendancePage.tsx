@@ -1,7 +1,7 @@
 import { useToday } from '../../app/useToday';
 import { useEffect, useState } from 'react';
 import { Link, useBlocker, useSearchParams, useNavigate } from 'react-router-dom';
-import { AlertCircle, CircleAlert, Clock, UserCheck, Users, UserX } from 'lucide-react';
+import { AlertCircle, CalendarX2, CircleAlert, Clock, UserCheck, Users, UserX } from 'lucide-react';
 import StudentRecordLink from '../../components/shared/StudentRecordLink';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
@@ -25,6 +25,7 @@ import type { AttendanceStatus } from '../../types/domain';
 import { formatSchoolTime, studentLateCutoff } from '../../lib/studentTimings';
 import { configuredSchoolHours, schoolHoursForDate } from '../../lib/schoolHours';
 import { defaultAttendancePolicy } from '../../lib/settings';
+import { isDateHoliday } from '../../lib/indianHolidays';
 import AttendanceTabs from '../../components/shared/AttendanceTabs';
 import LiveHrWorkspace from '../hr/HrWorkspace';
 import StaffAttendancePage from './StaffAttendancePage';
@@ -67,6 +68,16 @@ function AttendanceRegister() {
   );
   const timing = schoolHoursForDate(state, date);
   const hasAssignedTiming = !!configuredSchoolHours(state);
+  const [, setHolidayRevision] = useState(0);
+  useEffect(() => {
+    const handleHolidayChange = () => setHolidayRevision((v) => v + 1);
+    window.addEventListener('schoolwell_holidays_changed', handleHolidayChange);
+    return () => window.removeEventListener('schoolwell_holidays_changed', handleHolidayChange);
+  }, []);
+
+  const holidayInfo = isDateHoliday(date, state.holidays);
+  const isNonWorkingDay = !timing && hasAssignedTiming;
+  const isDateLocked = holidayInfo.isHoliday || isNonWorkingDay;
   const [draft, setDraft] = useState<Record<string, AttendanceStatus>>({});
   const [error, setError] = useState('');
   const handleAttendanceKeyDown = (
@@ -75,7 +86,7 @@ function AttendanceRegister() {
     statusIndex: number,
     enrollmentId: string,
   ) => {
-    if (e.altKey || e.ctrlKey || e.metaKey || isTeacherOnLeave || !canManage) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || isTeacherOnLeave || !canManage || isDateLocked) return;
     const table = e.currentTarget.closest('table');
     if (!table) return;
     const tableRows = Array.from(table.querySelectorAll('tbody tr'));
@@ -149,7 +160,16 @@ function AttendanceRegister() {
     setParams(next, { flushSync: true });
   };
   const save = async () => {
-    if (saving) return;
+    if (saving || isDateLocked) {
+      if (isDateLocked) {
+        notify(
+          holidayInfo.isHoliday
+            ? `Cannot record attendance on school holiday (${holidayInfo.reason}).`
+            : 'Cannot record attendance on a non-working day.',
+        );
+      }
+      return;
+    }
     setSaving(true);
     try {
       await data.saveAttendance(
@@ -255,6 +275,57 @@ function AttendanceRegister() {
             </p>
           )}
           <div id="attendance-register-content">
+            {holidayInfo.isHoliday ? (
+              <div
+                className="attendance-lock-banner holiday-lock"
+                role="alert"
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: '#991b1b',
+                  margin: '12px 0 16px 0',
+                }}
+              >
+                <CalendarX2 size={20} />
+                <div>
+                  <strong style={{ display: 'block', fontSize: '15px' }}>
+                    School Holiday: {holidayInfo.reason}
+                  </strong>
+                  <span style={{ fontSize: '13px', color: '#b91c1c' }}>
+                    Attendance cannot be marked or edited on designated school holidays and festivals.
+                  </span>
+                </div>
+              </div>
+            ) : isNonWorkingDay ? (
+              <div
+                className="attendance-lock-banner weekend-lock"
+                role="alert"
+                style={{
+                  background: '#fef3c7',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: '#92400e',
+                  margin: '12px 0 16px 0',
+                }}
+              >
+                <AlertCircle size={20} />
+                <div>
+                  <strong style={{ display: 'block', fontSize: '15px' }}>Non-Working Day</strong>
+                  <span style={{ fontSize: '13px', color: '#b45309' }}>
+                    School is closed on this day. Attendance recording is disabled.
+                  </span>
+                </div>
+              </div>
+            ) : null}
             <Panel>
               <div className="toolbar attendance-toolbar">
                 <label className="filter-label">
@@ -358,7 +429,7 @@ function AttendanceRegister() {
               action={
                 <Button
                   variant="secondary"
-                  disabled={!canManage || saving || !rows.length}
+                  disabled={!canManage || saving || !rows.length || isDateLocked}
                   onClick={() =>
                     setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])))
                   }
@@ -407,7 +478,7 @@ function AttendanceRegister() {
                                 <button
                                   key={s}
                                   type="button"
-                                  disabled={!canManage || saving}
+                                  disabled={!canManage || saving || isDateLocked}
                                   aria-pressed={status === s}
                                   className={status === s ? `selected ${s}` : ''}
                                   onClick={() =>
@@ -446,7 +517,7 @@ function AttendanceRegister() {
                   </small>
                 </div>
                 <Button
-                  disabled={!canManage || saving || !classId || !rows.length}
+                  disabled={!canManage || saving || !classId || !rows.length || isDateLocked}
                   onClick={() => void save()}
                 >
                   <AppIcon name="save" size={16} />

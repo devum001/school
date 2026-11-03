@@ -1,4 +1,5 @@
 import FeeOnboardingWorkspace from './onboarding/FeeOnboardingWorkspace';
+import SalarySetupWorkspace from '../hr/SalarySetupWorkspace';
 import { orderedClasses } from '../../lib/schoolLabels';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -38,6 +39,7 @@ import type { IconName } from '../../components/ui/AppIcon';
 const LIVE_FINANCE_ICONS: Record<string, IconName> = {
   Overview: 'overview',
   'Student Fees': 'fees',
+  'Salary setup': 'wallet',
   'Salary Expenses': 'wallet',
   Transactions: 'receipt',
 };
@@ -50,6 +52,7 @@ export default function LiveFinanceWorkspace() {
   const tabs = [
     ...(canView ? ['Overview', 'Student Fees'] : []),
     ...(canView && access.permissions.includes('fees.manage') ? ['School fee setup'] : []),
+    ...(payroll && access.permissions.includes('payroll.manage') ? ['Salary setup'] : []),
     ...(payroll ? ['Salary Expenses'] : []),
     ...(canView ? ['Transactions'] : []),
   ];
@@ -79,6 +82,11 @@ export default function LiveFinanceWorkspace() {
 
       {tab === 'Salary Expenses' ? (
         <LiveHrWorkspace section="salary" hideNavigation />
+      ) : tab === 'Salary setup' ? (
+        <SalarySetupWorkspace
+          schoolId={schoolId}
+          permissions={access.permissions}
+        />
       ) : !canView ? (
         <EmptyState title="Fee access is not assigned" />
       ) : state.error ? (

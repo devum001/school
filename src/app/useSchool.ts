@@ -1,8 +1,8 @@
 import { useContext, useMemo, useSyncExternalStore } from 'react';
-import { appMode } from '../services/runtimeConfig';
 import { SchoolFeatureContext } from './schoolFeatureContext';
 import { repository } from '../lib/repository';
 import { titleCase } from '../lib/displayFormat';
+
 export function useSchool() {
   const feature = useContext(SchoolFeatureContext);
   const state = useSyncExternalStore(
@@ -10,7 +10,6 @@ export function useSchool() {
     feature
       ? () => feature.state
       : () => {
-          if (appMode === 'live') throw new Error('A live school data adapter is required.');
           return repository.getSnapshot();
         },
   );

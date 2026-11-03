@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from 'react';
+import { liveHrAdapter } from '../../services/hrService';
 import type { ProfileSource } from './data/contracts';
 import { Button, LoadingOverlay, Panel } from '../../components/ui/Primitives';
 import type { SchoolHours } from '../../types/domain';
@@ -15,6 +17,34 @@ export default function LiveSchoolProfile({
   onSaved?: () => void;
 }) {
   const profile = useSchoolProfile(schoolId);
+  const adapter = useMemo(() => liveHrAdapter(schoolId), [schoolId]);
+  const [hrSettings, setHrSettings] = useState<any>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    adapter
+      .load(currentMonth, false, ctrl.signal)
+      .then((data) => setHrSettings(data.settings))
+      .catch(() => undefined);
+    return () => ctrl.abort();
+  }, [adapter]);
+
+  const handleSaveHolidays = async (newHolidays: string[]) => {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const data = hrSettings
+      ? { settings: hrSettings }
+      : await adapter.load(currentMonth, false, new AbortController().signal);
+    await adapter.save(
+      '/settings',
+      {
+        ...data.settings,
+        holidays: newHolidays,
+      },
+      'PUT',
+    );
+    setHrSettings({ ...data.settings, holidays: newHolidays });
+  };
   if (profile.status === 'error')
     return (
       <Panel>
@@ -110,6 +140,8 @@ export default function LiveSchoolProfile({
               registrationManaged
               validate={source.validate}
               save={source.save}
+              holidays={hrSettings?.holidays || []}
+              onSaveHolidays={handleSaveHolidays}
             />
           );
         })()

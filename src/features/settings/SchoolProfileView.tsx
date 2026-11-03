@@ -1,3 +1,4 @@
+import SchoolCalendarSettings from './SchoolCalendarSettings';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useSettingsSection } from './useSettingsSection';
 import { useState } from 'react';
@@ -46,6 +47,8 @@ export interface SchoolProfileViewProps {
   showOperationalFields?: boolean;
   validate: (school: ProfileViewValue) => Record<string, string>;
   save: (school: ProfileViewValue, hours?: SchoolHours) => Promise<void> | void;
+  holidays?: string[];
+  onSaveHolidays?: (holidays: string[]) => Promise<void> | void;
 }
 export default function SchoolProfileView({
   school,
@@ -58,10 +61,13 @@ export default function SchoolProfileView({
   showOperationalFields = false,
   validate,
   save,
+  holidays = [],
+  onSaveHolidays,
 }: SchoolProfileViewProps) {
   const { section, navigation } = useSettingsSection([
     { id: 'profile', label: 'School Profile' },
     { id: 'timing', label: 'School Timing' },
+    { id: 'calendar', label: 'School Calendar & Holidays' },
   ]);
   const today = useToday();
   const notify = useFeedback();
@@ -97,7 +103,23 @@ export default function SchoolProfileView({
   return (
     <>
       <SectionNavigation {...navigation} label="General settings features" />
-      <Panel className="settings-profile">
+      {section === 'calendar' ? (
+        <Panel>
+          <SchoolCalendarSettings
+            initialHolidays={holidays}
+            workingDays={
+              hours?.days && hours.days.length > 0
+                ? hours.days
+                    .map((d) => SCHOOL_WEEKDAYS.indexOf(d))
+                    .filter((i) => i >= 0)
+                : [1, 2, 3, 4, 5, 6]
+            }
+            onSave={onSaveHolidays}
+            canManage={canManage}
+          />
+        </Panel>
+      ) : (
+        <Panel className="settings-profile">
         <div className="settings-profile-banner">
           <div className="settings-profile-identity">
             <span className="settings-school-mark">
@@ -153,6 +175,7 @@ export default function SchoolProfileView({
             ))}
         </dl>
       </Panel>
+      )}
       <Modal
         open={draft !== null}
         onClose={() => {

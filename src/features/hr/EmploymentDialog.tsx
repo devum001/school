@@ -47,6 +47,17 @@ export default function EmploymentDialog({
           { ...draft, userId: draft.userId || undefined },
           'PUT',
         );
+        try {
+          await adapter.save(`/staff/${staff.id}/payroll`, {
+            month,
+            revision: 0,
+            adjustment: 0,
+            advanceRecovery: 0,
+            note: '',
+          });
+        } catch {
+          // best-effort draft creation
+        }
         saved();
       }}
     >

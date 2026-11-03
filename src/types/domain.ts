@@ -321,6 +321,7 @@ export interface DemoState {
   studentTimings?: StudentTiming[];
   schoolHours?: SchoolHours;
   classTimetables?: ClassTimetable[];
+  holidays?: string[];
   classes: SchoolClass[];
   sections: Section[];
   teachers: Teacher[];

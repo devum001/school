@@ -585,12 +585,11 @@ export default function FeeOnboardingWorkspace({
   };
 
   const applyBulkToTargets = () => {
-    const targetIds =
-      selectedIds.length > 0 ? selectedIds : visibleRows.map((r) => r.student.id);
-    if (targetIds.length === 0) {
-      setError('No students match the current filter to apply bulk fee rules.');
+    if (selectedIds.length <= 1) {
+      setError('Select more than 1 student to apply bulk fee rules.');
       return;
     }
+    const targetIds = selectedIds;
     setError('');
     setRowsById((prev) => {
       const next = { ...prev };
@@ -835,17 +834,14 @@ export default function FeeOnboardingWorkspace({
           </div>
         </div>
 
+        {selectedIds.length > 1 && (
         <div className="fee-setup-bulk-card">
           <div className="fee-setup-bulk-header">
             <div className="fee-setup-bulk-title">
               <span className="fee-setup-green-dot" />
               <strong>Quick Bulk Fill</strong>
               <span className="fee-setup-bulk-count">
-                (Apply to{' '}
-                {selectedIds.length > 0
-                  ? `${selectedIds.length} selected student${selectedIds.length === 1 ? '' : 's'}`
-                  : `all ${visibleRows.length} shown student${visibleRows.length === 1 ? '' : 's'}`}
-                )
+                (Apply to {selectedIds.length} selected students)
               </span>
             </div>
             <span className="fee-setup-bulk-hint">
@@ -1025,7 +1021,7 @@ export default function FeeOnboardingWorkspace({
                 className="fee-setup-fill-btn"
                 onClick={applyBulkToTargets}
               >
-                Fill {selectedIds.length > 0 ? `Selected (${selectedIds.length} Students)` : `Shown (${visibleRows.length} Students)`}
+                Fill Selected ({selectedIds.length} Students)
               </button>
             </div>
           </div>
@@ -1061,6 +1057,7 @@ export default function FeeOnboardingWorkspace({
             </div>
           )}
         </div>
+        )}
       </div>
 
       {error && (

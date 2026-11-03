@@ -26,12 +26,14 @@ import { financeEntries } from '../../lib/financeLedger';
 import { downloadCsv } from '../../lib/download';
 import type { GeneratedDocument } from '../../types/ledger';
 import FeesPage from './FeesPage';
+import SalarySetupWorkspace from '../hr/SalarySetupWorkspace';
 import StaffPage from '../teachers/StaffPage';
 import '../../styles/ledgers.css';
-const tabs = ['Overview', 'Student Fees', 'Salary Expenses', 'Transactions'] as const;
+const tabs = ['Overview', 'Student Fees', 'Salary setup', 'Salary Expenses', 'Transactions'] as const;
 const financeTabIcons: Record<(typeof tabs)[number], IconName> = {
   Overview: 'overview',
   'Student Fees': 'fees',
+  'Salary setup': 'wallet',
   'Salary Expenses': 'wallet',
   Transactions: 'receipt',
 };
@@ -153,6 +155,7 @@ export default function FinanceWorkspace() {
           </div>
         )}
         {tab === 'Student Fees' && <FeesPage embedded />}
+        {tab === 'Salary setup' && <SalarySetupWorkspace />}
         {tab === 'Salary Expenses' && <StaffPage embedded />}
         {tab === 'Transactions' && (
           <Panel

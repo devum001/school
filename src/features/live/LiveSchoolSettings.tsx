@@ -2,6 +2,7 @@ import LiveHrWorkspace from '../hr/HrWorkspace';
 import LiveNotificationsWorkspace from '../notifications/LiveNotificationsWorkspace';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import SettingsPage from '../settings/SettingsPage';
+import TemplatesSettings from '../settings/TemplatesSettings';
 import LiveSchoolProfile from '../settings/LiveSchoolProfile';
 import LiveClassStructure from '../settings/LiveClassStructure';
 import SectionNavigation from '../../components/shared/SectionNavigation';
@@ -11,7 +12,9 @@ import LiveRoles from './LiveRoles';
 import LiveMembers from './LiveMembers';
 import LiveAccount from './LiveAccount';
 import LiveAudit from './LiveAudit';
+import { useEffect } from 'react';
 import { useLiveSchool } from './schoolContext';
+import { updateLiveSnapshotSchool } from '../../lib/repository';
 const sections: Record<string, { id: string; label: string }[]> = {
   'Staff & Payroll': [
     { id: 'departments', label: 'Departments' },
@@ -44,6 +47,22 @@ const sections: Record<string, { id: string; label: string }[]> = {
 export default function LiveSchoolSettings() {
   const context = useLiveSchool(),
     [params, setParams] = useSearchParams();
+
+  useEffect(() => {
+    if (context.profile?.school) {
+      updateLiveSnapshotSchool({
+        name: context.profile.school.name,
+        principal: context.profile.school.principalName,
+        logoDataUrl: context.profile.school.logoDataUrl || undefined,
+        city: context.profile.school.city || undefined,
+        phone: context.profile.school.phone || undefined,
+        email: context.profile.school.email || undefined,
+        website: context.profile.school.website || undefined,
+        board: context.profile.school.board || undefined,
+        affiliationNumber: context.profile.school.affiliationNumber || undefined,
+      });
+    }
+  }, [context.profile]);
   const legacy: Record<string, { tab: string; section?: string }> = {
     Years: { tab: 'Preferences', section: 'context' },
     'Academic years': { tab: 'Preferences', section: 'context' },
@@ -79,6 +98,7 @@ export default function LiveSchoolSettings() {
               ...(can('payroll.view') && can('payroll.manage') ? ['Staff & Payroll'] : []),
               ...(can('school.profile.view') || can('overview.view') ? ['Communication'] : []),
               ...(can('roles.view') || can('memberships.view') ? ['Roles & Permissions'] : []),
+              'Templates',
               'Data & Security',
               ...(can('academic-years.view') ? ['Preferences'] : []),
             ]
@@ -110,6 +130,7 @@ export default function LiveSchoolSettings() {
           ) : (
             denied
           );
+        if (tab === 'Templates') return <TemplatesSettings />;
         const items = sections[tab].filter((item) => {
             if (tab === 'Roles & Permissions')
               return can(item.id === 'roles' ? 'roles.view' : 'memberships.view');

@@ -1,3 +1,5 @@
+import GeneratedDocumentPreview from '../../components/shared/GeneratedDocumentPreview';
+import type { GeneratedDocument } from '../../types/ledger';
 import { useState } from 'react';
 import type { HrAdapter, HrPayroll, HrStaff, HrWorkspace } from '../../services/hrService';
 import { payrollPaid, rupees } from '../../services/hrService';
@@ -28,7 +30,7 @@ export function PayrollDialog({
   });
   return (
     <HrForm
-      title={`Prepare salary · ${staff.name}`}
+      title={item ? `Manage salary · ${staff.name}` : `Prepare salary · ${staff.name}`}
       description="Review salary and attendance first. This creates a draft, not a payment."
       close={close}
       submit={async () => {
@@ -317,68 +319,121 @@ export function Payslip({
   data: HrWorkspace;
   close: () => void;
 }) {
+  const [activeTab, setActiveTab] = useState<'slip' | 'breakdown'>('slip');
+  const paid = payrollPaid(item, data);
+  const outstanding = item.net - paid;
+
+  const doc: GeneratedDocument = {
+    kind: 'Salary Slip',
+    number: 'SLIP-' + item.month.replace('-', '') + '-' + (item.code || item.id.slice(-4)),
+    schoolName: 'School Management',
+    recipientName: item.name,
+    date: item.dueDate || item.month,
+    createdAt: new Date().toISOString(),
+    template: {
+      templateId: 'classic',
+      accent: '#19494d',
+    },
+    amount: item.net,
+    amountLabel: 'Net Payable Salary',
+    fields: [
+      { label: 'Staff Member', value: item.name + ' (' + item.code + ')' },
+      { label: 'Department', value: item.department || 'General' },
+      { label: 'Salary Month', value: item.month },
+      { label: 'Status', value: item.status === 'draft' ? 'Draft' : 'Approved' },
+      { label: 'Basic Salary', value: rupees(item.basic) },
+      { label: 'Allowances & Bonus', value: rupees(item.allowance + item.bonus) },
+      { label: 'Gross Salary', value: rupees(item.gross) },
+      { label: 'Attendance Deductions', value: rupees(item.leaveDeduction) },
+      { label: 'Other Deductions', value: rupees(item.manualDeduction) },
+      { label: 'Advance Recovery', value: rupees(item.advanceRecovery) },
+      { label: 'Total Paid', value: rupees(paid) },
+      { label: 'Outstanding Balance', value: rupees(outstanding) },
+    ],
+  };
+
   return (
     <Modal
       open
       wide
-      title={`Salary statement · ${item.name}`}
-      description={`${item.month} · ${item.code} · ${item.department}`}
+      title={'Salary statement · ' + item.name}
+      description={item.month + ' · ' + item.code + ' · ' + item.department}
       onClose={close}
     >
-      <div className="hr-payslip">
-        <h2>
-          {item.name} · {item.month}
-        </h2>
-        <p>
-          {item.status === 'draft'
-            ? 'Draft — not an approved payslip'
-            : 'Approved salary statement'}{' '}
-          · Due {formatCalendarDate(item.dueDate)}
-        </p>
-        <dl className="hr-breakdown">
-          {Object.entries({
-            Basic: item.basic,
-            Allowances: item.allowance,
-            Bonus: item.bonus,
-            Gross: item.gross,
-            'Unpaid attendance deduction': item.leaveDeduction,
-            'Regular deduction': item.manualDeduction,
-            Adjustment: item.adjustment,
-            'Advance recovery': item.advanceRecovery,
-            'Net salary': item.net,
-            Paid: payrollPaid(item, data),
-            Outstanding: item.net - payrollPaid(item, data),
-          }).map(([k, v]) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>{rupees(v)}</dd>
-            </div>
-          ))}
-        </dl>
-        <p>
-          Unpaid days: {item.unpaidUnits}. {item.note}
-        </p>
-        <h3>Payment history</h3>
-        {data.payments
-          .filter((p) => p.payrollId === item.id)
-          .map((p) => (
-            <p key={p.id}>
-              {formatCalendarDate(p.date)} · {rupees(p.amount)} · {p.method} ·{' '}
-              {p.reference || 'No reference'}
-            </p>
-          ))}
-        {!!item.unresolved.length && (
-          <>
-            <h3>Needs review</h3>
-            <ul>
-              {item.unresolved.map((v) => (
-                <li key={v}>{v}</li>
-              ))}
-            </ul>
-          </>
-        )}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+        <Button
+          variant={activeTab === 'slip' ? 'primary' : 'secondary'}
+          onClick={() => setActiveTab('slip')}
+        >
+          Official Payslip Preview
+        </Button>
+        <Button
+          variant={activeTab === 'breakdown' ? 'primary' : 'secondary'}
+          onClick={() => setActiveTab('breakdown')}
+        >
+          Calculation Details & History
+        </Button>
       </div>
-      <Button onClick={() => window.print()}>Print / save PDF</Button>
+
+      {activeTab === 'slip' ? (
+        <div style={{ display: 'flex', justifyContent: 'center', minHeight: '400px' }}>
+          <GeneratedDocumentPreview data={doc} actions={true} />
+        </div>
+      ) : (
+        <div className="hr-payslip">
+          <h2>
+            {item.name} · {item.month}
+          </h2>
+          <p>
+            {item.status === 'draft'
+              ? 'Draft — not an approved payslip'
+              : 'Approved salary statement'}{' '}
+            · Due {formatCalendarDate(item.dueDate)}
+          </p>
+          <dl className="hr-breakdown">
+            {Object.entries({
+              Basic: item.basic,
+              Allowances: item.allowance,
+              Bonus: item.bonus,
+              Gross: item.gross,
+              'Unpaid attendance deduction': item.leaveDeduction,
+              'Regular deduction': item.manualDeduction,
+              Adjustment: item.adjustment,
+              'Advance recovery': item.advanceRecovery,
+              'Net salary': item.net,
+              Paid: paid,
+              Outstanding: outstanding,
+            }).map(([k, v]) => (
+              <div key={k}>
+                <dt>{k}</dt>
+                <dd>{rupees(v)}</dd>
+              </div>
+            ))}
+          </dl>
+          <p>
+            Unpaid days: {item.unpaidUnits}. {item.note}
+          </p>
+          <h3>Payment history</h3>
+          {data.payments
+            .filter((p) => p.payrollId === item.id)
+            .map((p) => (
+              <p key={p.id}>
+                {formatCalendarDate(p.date)} · {rupees(p.amount)} · {p.method} ·{' '}
+                {p.reference || 'No reference'}
+              </p>
+            ))}
+          {!!item.unresolved.length && (
+            <>
+              <h3>Needs review</h3>
+              <ul>
+                {item.unresolved.map((v) => (
+                  <li key={v}>{v}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
     </Modal>
   );
 }

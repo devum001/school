@@ -1,0 +1,14 @@
+.school-calendar-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.calendar-day-cell:hover {
+  background: var(--surface-hover, #f8fafc) !important;
+}
+
+.calendar-nav-btn:hover {
+  background: var(--surface-hover, #e2e8f0) !important;
+}

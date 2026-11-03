@@ -730,6 +730,29 @@ function HrContent({
               <tbody>
                 {staff.map((p) => {
                   const item = data.payroll.find((v) => v.staffId === p.id);
+                  const paid = item ? payrollPaid(item, data) : 0;
+                  const outstanding = item ? Math.max(0, item.net - paid) : 0;
+                  const isOverdue = Boolean(item && item.status === 'approved' && item.dueDate < data.today && outstanding > 0);
+                  const statusTone = !item
+                    ? 'neutral'
+                    : item.status === 'draft'
+                      ? 'amber'
+                      : outstanding === 0 && item.net > 0
+                        ? 'green'
+                        : isOverdue
+                          ? 'red'
+                          : 'amber';
+                  const statusLabel = !item
+                    ? 'Not prepared'
+                    : item.status === 'draft'
+                      ? 'Draft'
+                      : outstanding === 0 && item.net > 0
+                        ? 'Paid'
+                        : paid > 0
+                          ? 'Partially paid'
+                          : isOverdue
+                            ? 'Overdue'
+                            : 'Pending';
                   return (
                     <tr key={p.id}>
                       <td>
@@ -750,107 +773,51 @@ function HrContent({
                         )}
                       </td>
                       <td>{titleCase(p.department || '') || '—'}</td>
-                      <td className="currency-cell">{item ? rupees(item.net) : 'Not prepared'}</td>
+                      <td className="currency-cell">{item ? rupees(item.net) : '—'}</td>
                       <td className="currency-cell">
-                        {item
-                          ? `${rupees(payrollPaid(item, data))} / ${rupees(item.net - payrollPaid(item, data))}`
-                          : '—'}
+                        {item ? `${rupees(paid)} / ${rupees(outstanding)}` : '—'}
                       </td>
                       <td>
                         {item ? (
                           <>
-                            <Badge
-                              tone={payrollStatus(item, data) === 'Paid' ? 'green' : 'neutral'}
-                            >
-                              {payrollStatus(item, data)}
-                            </Badge>
-                            <small>
-                              {formatCalendarDate(item.dueDate)}
-                              {item.status === 'approved' &&
-                              item.dueDate < data.today &&
-                              payrollPaid(item, data) < item.net
-                                ? ' · Overdue'
-                                : ''}
-                            </small>
+                            <Badge tone={statusTone}>{statusLabel}</Badge>
+                            <small>{formatCalendarDate(item.dueDate)}</small>
                           </>
                         ) : (
-                          '—'
+                          <Badge tone="neutral">Not prepared</Badge>
                         )}
                       </td>
                       <td>
                         <div className="hr-actions">
-                          {!p.userId &&
-                            can('staff.manage') &&
-                            can('memberships.manage') &&
-                            can('roles.view') && (
-                              <Button
-                                variant="ghost"
-                                onClick={() => setAction({ kind: 'login', staff: p })}
-                              >
-                                Enable login
-                              </Button>
-                            )}
-                          {can('payroll.manage') && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                onClick={() => setAction({ kind: 'employment', staff: p })}
-                              >
-                                Salary setup
-                              </Button>
-                              {(!item || item.status === 'draft') && (
-                                <Button
-                                  variant="ghost"
-                                  onClick={() => setAction({ kind: 'payroll', staff: p, item })}
-                                >
-                                  {item ? 'Recalculate draft' : 'Prepare salary'}
-                                </Button>
-                              )}
-                            </>
+                          {!item && can('payroll.manage') && (
+                            <Button onClick={() => setAction({ kind: 'employment', staff: p })}>
+                              Prepare salary
+                            </Button>
+                          )}
+                          {item && can('payroll.manage') && (
+                            <Button
+                              variant="secondary"
+                              onClick={() => setAction({ kind: 'payroll', staff: p, item })}
+                            >
+                              Manage salary
+                            </Button>
                           )}
                           {item?.status === 'draft' && can('payroll.approve') && (
-                            <Button
-                              variant="ghost"
-                              onClick={() => setAction({ kind: 'approve', item })}
-                            >
+                            <Button onClick={() => setAction({ kind: 'approve', item })}>
                               Review & approve
                             </Button>
                           )}
-                          {item?.status === 'approved' &&
-                            payrollPaid(item, data) < item.net &&
-                            can('payroll.pay') && (
-                              <Button
-                                variant="ghost"
-                                onClick={() => setAction({ kind: 'payment', staff: p, item })}
-                              >
-                                Record payment
-                              </Button>
-                            )}
-                          {can('payroll.pay') && (
-                            <details className="hr-more-actions">
-                              <summary>More actions</summary>
-                              <Button
-                                variant="ghost"
-                                onClick={() => setAction({ kind: 'advance', staff: p })}
-                              >
-                                Record advance
-                              </Button>
-                            </details>
-                          )}
-                          {data.advances.some((a) => a.staffId === p.id) && (
-                            <Button
-                              variant="ghost"
-                              onClick={() => setAction({ kind: 'advanceHistory', staff: p })}
-                            >
-                              Advance history
+                          {item?.status === 'approved' && outstanding > 0 && can('payroll.pay') && (
+                            <Button onClick={() => setAction({ kind: 'payment', staff: p, item })}>
+                              Record payment
                             </Button>
                           )}
-                          {item && (
+                          {item && item.status === 'approved' && (
                             <Button
                               variant="ghost"
                               onClick={() => setAction({ kind: 'slip', item })}
                             >
-                              Statement
+                              Receipt
                             </Button>
                           )}
                         </div>

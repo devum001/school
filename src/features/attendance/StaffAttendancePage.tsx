@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { AlertCircle, Clock, UserCheck, Users, UserX } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertCircle, CalendarX2, Clock, UserCheck, Users, UserX } from 'lucide-react';
 import '../../styles/ledgers.css';
 import AttendanceTabs from '../../components/shared/AttendanceTabs';
 import { attendanceSummary } from '../../lib/selectors';
@@ -26,6 +26,7 @@ import { staffDirectory, staffLabel } from '../../lib/staffStructure';
 import { staffStatusFor } from '../../lib/staffAttendance';
 import { repository } from '../../lib/repository';
 import { STATUS_LABELS } from '../../lib/config';
+import { isDateHoliday } from '../../lib/indianHolidays';
 import type { AttendanceStatus } from '../../types/domain';
 const statuses: AttendanceStatus[] = ['present', 'absent', 'half-day', 'late', 'unmarked'];
 export default function StaffAttendancePage({ embedded = false }: { embedded?: boolean }) {
@@ -47,6 +48,18 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
       ? requested
       : today;
   const department = params.get('department') ?? '';
+  const [, setHolidayRevision] = useState(0);
+  useEffect(() => {
+    const handleHolidayChange = () => setHolidayRevision((v) => v + 1);
+    window.addEventListener('schoolwell_holidays_changed', handleHolidayChange);
+    return () => window.removeEventListener('schoolwell_holidays_changed', handleHolidayChange);
+  }, []);
+
+  const holidayInfo = isDateHoliday(date, state.holidays);
+  const weekdayName = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+  const isWeeklyOff = config.work.weeklyOff === weekdayName;
+  const isDateLocked = holidayInfo.isHoliday || isWeeklyOff;
+
   const members = staffDirectory(state, config).filter(
     (member) =>
       member.status === 'active' &&
@@ -62,7 +75,7 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
     statusIndex: number,
     memberId: string,
   ) => {
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || isDateLocked) return;
     const table = e.currentTarget.closest('table');
     if (!table) return;
     const tableRows = Array.from(table.querySelectorAll('tbody tr'));
@@ -127,6 +140,10 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
     setParams(next, { flushSync: true });
   };
   const save = () => {
+    if (isDateLocked) {
+      notify(holidayInfo.isHoliday ? `Cannot record attendance on school holiday (${holidayInfo.reason}).` : 'Cannot record attendance on a weekly off day.');
+      return;
+    }
     try {
       repository.saveStaffAttendance(
         date,
@@ -161,6 +178,57 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
       )}
       {!embedded && <AttendanceTabs date={date} />}
       <div id="attendance-register-content">
+        {holidayInfo.isHoliday ? (
+          <div
+            className="attendance-lock-banner holiday-lock"
+            role="alert"
+            style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              color: '#991b1b',
+              margin: '12px 0 16px 0',
+            }}
+          >
+            <CalendarX2 size={20} />
+            <div>
+              <strong style={{ display: 'block', fontSize: '15px' }}>
+                School Holiday: {holidayInfo.reason}
+              </strong>
+              <span style={{ fontSize: '13px', color: '#b91c1c' }}>
+                Staff attendance is locked on official school holidays and festival leaves.
+              </span>
+            </div>
+          </div>
+        ) : isWeeklyOff ? (
+          <div
+            className="attendance-lock-banner weekend-lock"
+            role="alert"
+            style={{
+              background: '#fef3c7',
+              border: '1px solid #fde68a',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              color: '#92400e',
+              margin: '12px 0 16px 0',
+            }}
+          >
+            <AlertCircle size={20} />
+            <div>
+              <strong style={{ display: 'block', fontSize: '15px' }}>Weekly Off ({weekdayName})</strong>
+              <span style={{ fontSize: '13px', color: '#b45309' }}>
+                School is closed for weekly off. Staff attendance recording is disabled.
+              </span>
+            </div>
+          </div>
+        ) : null}
         <Panel>
           <div className="toolbar attendance-toolbar staff-register-toolbar">
             <label className="filter-label">
@@ -242,7 +310,7 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
           action={
             <Button
               variant="secondary"
-              disabled={!members.length}
+              disabled={!members.length || isDateLocked}
               onClick={() =>
                 setDraft(Object.fromEntries(members.map((member) => [member.id, 'present'])))
               }
@@ -332,7 +400,7 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
                 attendance
               </small>
             </div>
-            <Button disabled={!members.length} onClick={save}>
+            <Button disabled={!members.length || isDateLocked} onClick={save}>
               <AppIcon name="save" size={16} />
               Save staff attendance
             </Button>
