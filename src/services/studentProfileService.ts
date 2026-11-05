@@ -65,7 +65,7 @@ export async function loadStudentProfile(
   const data = schema.parse(
     await apiService.request(
       `/schools/${schoolId}/academic-years/${yearId}/students/${studentId}/profile`,
-      { signal },
+      { signal, fresh: true },
     ),
   );
   const state = data.snapshot.state;

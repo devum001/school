@@ -1,0 +1,141 @@
+Staff attendance, staff profiles, assignments, Quick Connect and permissions
+Verification report — 31 October 2026
+
+IMPLEMENTED
+- Initial school-account access preserved. New schools still receive all school permissions. No existing owner was demoted. Stored permissions remain authoritative; owner status is not a general permission bypass.
+- School attendance rollout date, school-local finalization cutoff, and individual staff activation date. Active linked accounts are required for activation. Application sign-in never records attendance. No automatic absence before school rollout/staff activation. Exempt/manual staff, leave and non-working days are handled separately.
+- Shared attendance calculation supplies register, staff directory, profile calendar and Quick Connect. Missing punch-in becomes provisional before cutoff and Absent after cutoff. An absence correction request preserves Absent while pending; no automatic salary or leave deduction is introduced.
+- Staff directory search by name/employee code/phone, daily attendance filters, profile links and permission-specific actions. Class/section controls belong to Staff assignments.
+- Assignment search and class/section/subject filters; revision-checked replacement and atomic batch assignment. Previous assignments are archived with audit events, preserving records. Student roster, contact, profile and document reads now check stored teacher assignment scope.
+- Staff profiles reuse existing panels, navigation, attendance calendar, salary setup, payslips, leave review and account creation. Real Overview, Attendance, Assignments, Leave, Salary and Account tabs appear according to permission/data availability. No Daily Records tab. Mobile header wraps contact/actions.
+- Actual student guardian phone and click-to-dial contact links. Quick Connect sidebar with Students, Teachers and Other Staff, scoped live data, search, attendance filters, 50-row paging and loading/error/empty states. Demo uses existing local data; there is no live-to-demo fallback. Invalid/placeholder phone values are not made dialable.
+- Grouped permission modules within existing View/Manage tabs, configurable role suggestions, sensitive delegation confirmation. New separate staff create/edit/archive, attendance view, leave approve/reject and contact-directory grants. Legacy staff.manage/attendance.manage remain umbrella grants for compatibility.
+
+HOW TO CHECK LOCALLY
+1. Restart the backend and frontend using their existing development commands; keep frontend in live mode for API testing. No environment values were changed.
+2. Sign in as the initial school account. Open School settings > Staff & Payroll > Work & Leave. Choose the school attendance tracking start date and finalization time (school local time).
+3. Open a teacher/staff profile. Create/link the school login first, then Set attendance start to today or a later date. Activation cannot be silently backdated; a started boundary cannot be moved through this action. Joining date alone does not enable automatic absence.
+4. Check the staff attendance register and teacher profile. After cutoff, a scheduled, active, activated punching staff member with no punch is Absent. Before activation, missing records are Unmarked. Leave/off/holiday records are not counted as absences. An ARS can correct an eligible finalized absence.
+5. Use Staff assignments from Teachers/Staff to add or replace assignments. Confirm the replacement; the old teacher loses that assignment's student access on the next API read. Independent class-teacher designations or other remaining valid assignments continue to grant their own access.
+6. Open Quick Connect, switch tabs, search by phone and follow profile/call links. Calling opens a dialer; it does not place a call automatically.
+7. In Roles & Permissions, create a staff role and explicitly grant the required View/Manage permissions. Quick Connect requires contacts.students.view plus students.view or teaching.self, or contacts.staff.view plus staff.view. Existing owners with the corresponding person-view grant retain contact access. Custom roles are not automatically broadened to the contact directory.
+8. Test demo separately using the existing demo mode command. Its data remains independent.
+
+APIS (relative to the existing API prefix)
+New:
+ GET /schools/:schoolId/contacts
+ GET /schools/:schoolId/staff-directory
+ PUT /schools/:schoolId/hr/staff/:id/attendance-activation
+ POST /schools/:schoolId/academic-years/:yearId/teaching-assignments-batch
+Extended existing APIs:
+ HR settings/workspace/attendance requests/staff attendance profile/leave review;
+ staff create/edit/archive; teaching assignments and relation lists;
+ student context, roster, counts, enrollment lists, profile and document reads.
+Existing authentication, school middleware, CSRF checks, transaction helpers and audit events are reused.
+
+MODEL / DATABASE CHANGES
+Additive optional/defaulted fields: HrSettings.trackingStartsOn, HrSettings.finalizeAfter, StaffProfile.attendanceStartsOn.
+No new collection or index and no initialization/migration script is required for these changes.
+Missing activation fields safely leave missing attendance Unmarked. Configure dates explicitly in the UI.
+No live database connection, migration, seed or live record mutation was performed by this task. All database tests used disposable local MongoDB instances.
+No dependencies, lockfiles, .env files or deployment settings changed. No commit/push/deploy performed.
+
+ACTUAL VERIFICATION
+Frontend:
+ npm run typecheck — passed.
+ npm run build — passed; Vite warns about existing chunks larger than 500 kB.
+ VITE_APP_MODE=demo npm test -- --maxWorkers=2 — 58 files, 333 tests passed.
+ Playwright tests/quick-connect.e2e.ts — 1 demo browser test passed.
+ Playwright --config playwright.staff-foundation.config.ts — 1 live browser test passed, using a disposable API/Mongo fixture, including profile tabs, navigation to salary processing, attendance register links, grouped permissions, phone links and 390px mobile checks. Screenshots were visually inspected and the clipped mobile header corrected; the live test then passed again.
+ ESLint on all changed/new TS/TSX files — passed.
+ Full ESLint src — still 5 pre-existing errors and 4 warnings in unchanged files: FeeOnboardingWorkspace.tsx (3), ImportJob.tsx (1), displayFormat.ts (1); existing UI fast-refresh warnings.
+Backend:
+ Full Jest --runInBand --cacheDirectory=/tmp/staff-jest-cache — 43 suites, 263 tests passed. This run took about 21.5 minutes under concurrent local test load; it is not an API latency benchmark.
+ After adding the absence/ARS regression and correcting its error text, targeted staffFoundation.integration.test.ts + attendanceAdjustments.integration.test.ts — 2 suites, 12 tests passed (includes one additional test beyond the full run).
+ tsc --noEmit — passed in staged and actual backend repository.
+ ESLint on all 28 changed/new backend files — passed.
+ Full backend ESLint — 27 existing errors remain in unchanged attendanceDayView.ts (1), communication.service.ts (8), feeWrite.service.ts (2), learningRead.service.ts (16). The untouched baseline had 57 errors and 1 warning; touched-file issues were repaired. Full lint is not green.
+ git diff --check — passed in both repositories.
+ Backend integration tests ran from an isolated source copy without .env; after verification, changed source/test files were copied into the real repository only after original hashes were checked. Copied hashes match tested files. Actual repository typecheck and changed-file lint then passed.
+Browser commands used the installed Chromium executable via PLAYWRIGHT_CHROME_PATH and SCHOOL_BACKEND_TEST_DIR pointing to the isolated backend source. No test used the user's Atlas database.
+
+LIMITS / FOLLOW-UP WORK
+- Missing-day absences are calculated on read, not written by a scheduled finalization job. Actual stored attendance/corrections remain intact. Changes to current work rules/account state can affect historical derived missing days; immutable policy-version/day snapshots are not implemented. Historical automatic absence is deliberately bounded by rollout and activation dates.
+- The contact directory batches reads (no per-person database loop), caps matching records at 10,000 and returns 50 per page. Attendance filtering/counting is performed over the bounded result set, not fully database-paginated. The existing monthly HR workspace still has its 500-staff limit. Larger-scale load testing and immutable attendance aggregation need separate work; no production latency guarantee is made.
+- Assignment eligibility uses existing active teaching-staff, academic structure and duplicate/conflict rules. There is no qualification matrix or timetable clash model in the existing application; these rules were not invented. Archived assignments/audit history are preserved; the assignment UI focuses on current allocations rather than introducing a new history viewer.
+- Existing manage permissions for some modules (including student/import/setup workflows) still group several operations. Staff actions and leave decisions were split in this work; not every action throughout the portal now has an independent grant. Existing account/role and payroll permissions remain separate.
+- Server authorization resolves current grants/assignments on requests; no push mechanism closes a page already displayed in another browser when an administrator changes access. Contact/student profile reads avoid stale cached authorization-dependent data. Previously downloaded information cannot be recalled.
+- Automated browser coverage verifies representative flows, not every screen/action combination in the portal. Only the new targeted demo/live browser tests were run, not the entire existing Playwright suite. Database regression tests exercised disposable MongoDB, not the deployed environment.
+
+CHANGED FRONTEND FILES
+playwright.staff-foundation.config.ts
+src/app/useDebouncedValue.ts
+src/components/shared/AttendanceStatus.tsx
+src/components/shared/ContactPhone.tsx
+src/features/contacts/QuickConnect.tsx
+src/features/contacts/contacts.css
+src/lib/attendanceOptions.ts
+src/lib/contactPhone.test.ts
+src/lib/contactPhone.ts
+src/services/contactDirectoryService.ts
+tests/quick-connect.e2e.ts
+tests/staff-foundation-live.e2e.ts
+playwright.config.ts
+src/app/demoRouter.tsx
+src/app/liveRouter.tsx
+src/components/layout/AppShell.tsx
+src/components/layout/DemoAppShell.tsx
+src/features/hr/AttendanceCalendar.tsx
+src/features/hr/HrActions.tsx
+src/features/hr/HrSettingsPanel.tsx
+src/features/hr/HrWorkspace.tsx
+src/features/hr/StaffAttendancePanel.tsx
+src/features/hr/attendanceCalendarModel.test.ts
+src/features/hr/attendanceCalendarModel.ts
+src/features/hr/staff-attendance.css
+src/features/live/LiveRoles.tsx
+src/features/live/permissionChoices.ts
+src/features/live/portalAccess.test.ts
+src/features/live/portalAccess.ts
+src/features/setup/PeopleRelations.tsx
+src/features/students/StudentProfilePage.tsx
+src/features/teachers/LiveStaff.tsx
+src/features/teachers/LiveStaffProfile.tsx
+src/features/teachers/TeacherProfilePage.tsx
+src/services/apiService.ts
+src/services/hrService.ts
+src/services/onboardingService.ts
+src/services/schoolAccessService.ts
+src/services/studentProfileService.ts
+
+docs/staff-foundation-verification.txt (this report)
+
+CHANGED BACKEND FILES
+src/api/controllers/hr.controller.ts
+src/api/controllers/people.controller.ts
+src/api/controllers/requests/hr.request.ts
+src/api/controllers/requests/roster.request.ts
+src/api/controllers/studentProfile.controller.ts
+src/api/models/hr.models.ts
+src/api/models/people.models.ts
+src/api/repositories/school.repository.ts
+src/api/services/attendanceActivation.service.ts
+src/api/services/attendanceAdjustment.service.ts
+src/api/services/contactDirectory.service.ts
+src/api/services/hrLeave.service.ts
+src/api/services/hrRead.service.ts
+src/api/services/hrRules.ts
+src/api/services/hrSettings.service.ts
+src/api/services/peopleDirectory.service.ts
+src/api/services/peopleRelations.service.ts
+src/api/services/productPeople.service.ts
+src/api/services/staffAttendanceProfile.service.ts
+src/api/services/staffAttendanceRegister.test.ts
+src/api/services/staffAttendanceRegister.ts
+src/api/services/studentAssignmentAccess.ts
+src/api/services/studentDocuments.service.ts
+src/api/services/studentProfile.service.ts
+src/security/permissions.ts
+src/security/product.integration.test.ts
+src/security/staffPermissions.test.ts
+src/test/staffFoundation.integration.test.ts

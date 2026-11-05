@@ -48,7 +48,7 @@ export function canRequestArs(day: Day | undefined, today: string, requests: Att
   return (
     !!day &&
     day.date <= today &&
-    ['half-day', 'invalid'].includes(day.status) &&
+    ['half-day', 'invalid', 'absent'].includes(day.status) &&
     !day.inProgress &&
     !requests.some((r) => r.date === day.date && r.status === 'pending')
   );

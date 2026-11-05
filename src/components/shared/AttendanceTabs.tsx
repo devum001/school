@@ -7,24 +7,33 @@ export default function AttendanceTabs({
   date,
   value,
   onChange,
+  studentsVisible = true,
+  staffVisible,
 }: {
   date: string;
   value?: 'student' | 'staff';
   onChange?: (tab: 'student' | 'staff') => void;
+  studentsVisible?: boolean;
+  staffVisible?: boolean;
 }) {
   const location = useLocation();
   const feature = useSchoolFeature();
   const showStaff =
-    !feature || (!feature.teacherScoped && feature.routeAllowed?.('/attendance/staff') !== false);
+    staffVisible ??
+    (!feature || (!feature.teacherScoped && feature.routeAllowed?.('/attendance/staff') !== false));
   const staff = location.pathname.endsWith('/staff');
   const activeValue = value ?? (staff ? 'staff' : 'student');
   const items = [
-    {
-      id: 'student',
-      label: 'Student Attendance',
-      icon: 'student' as const,
-      to: onChange ? undefined : `/attendance?date=${date}`,
-    },
+    ...(studentsVisible
+      ? [
+          {
+            id: 'student',
+            label: 'Student Attendance',
+            icon: 'student' as const,
+            to: onChange ? undefined : `/attendance?date=${date}`,
+          },
+        ]
+      : []),
     ...(showStaff
       ? [
           {

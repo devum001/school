@@ -326,6 +326,7 @@ function LearningContent({
       mode: 'live',
       teacherScoped: effective.teacherScoped,
       staffAttendanceSummary: effective.staffAttendanceSummary,
+      teacherAttendance: effective.teacherAttendance,
       attendanceGate: effective.attendanceGate,
       selectedDate: date,
       state: effective.state,

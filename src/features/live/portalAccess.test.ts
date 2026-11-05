@@ -87,3 +87,11 @@ it('linked teacher navigation hides the staff attendance route even when the rol
   expect(teacher.allowed('/attendance/staff')).toBe(false);
   expect(portalAccess(permissions).allowed('/attendance/staff')).toBe(true);
 });
+
+it('contact directory requires both explicit contact access and a matching person scope', () => {
+  expect(portalAccess(['students.view']).allowed('/contacts')).toBe(false);
+  expect(portalAccess(['contacts.students.view']).allowed('/contacts')).toBe(false);
+  expect(portalAccess(['contacts.students.view', 'teaching.self']).allowed('/contacts')).toBe(true);
+  expect(portalAccess(['contacts.staff.view', 'staff.view']).allowed('/contacts')).toBe(true);
+  expect(portalAccess(['contacts.staff.view', 'attendance.self']).allowed('/contacts')).toBe(false);
+});

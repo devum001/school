@@ -8,6 +8,7 @@ export default function DemoAppShell() {
   const state = useSchool();
   return (
     <AppShell
+      visibleRoute={(path) => path !== '/attendance/staff'}
       school={{ name: state.school.name, logo: schoolLogoFor(state) }}
       user={{ name: 'Dr. Nandita Rao', avatarName: 'Nandita Rao', detail: 'Principal' }}
       preferences={preferencesFor(state)}

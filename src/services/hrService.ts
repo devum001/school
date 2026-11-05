@@ -19,6 +19,7 @@ export const hrSettingsSchema = z.object({
   deductionBasis: z.enum(['basic', 'gross']),
   divisor: z.enum(['calendar', 'working', '30']),
   paidLeaveDays: z.number(),
+  absenceReducesLeave: z.boolean().optional(),
   maxAccuracy: z.number(),
   locations: z.array(
     z.object({ name: z.string(), latitude: z.number(), longitude: z.number(), radius: z.number() }),
@@ -56,6 +57,7 @@ const staff = z.object({
   email: z.string().optional(),
   phone: z.string().optional(),
   qualification: z.string().optional(),
+  photoDataUrl: z.string().optional(),
   userId: id.optional(),
 });
 const day = z.object({
@@ -69,6 +71,7 @@ const day = z.object({
   late: z.boolean().optional(),
   lateMinutes: z.number().optional(),
   workingMinutes: z.number().nullable().optional(),
+  attendanceExplanation: z.string().optional(),
   attendanceSource: z.enum(['ars', 'admin']).optional(),
   actualPunchIn: z.string().optional(),
   actualPunchOut: z.string().optional(),
@@ -144,7 +147,16 @@ const workspace = z.object({
   payroll: z.array(payroll),
   payments: z.array(payment),
   advances: z.array(payment),
-  leaveUsage: z.array(z.object({ staffId: id, used: z.number() })).optional(),
+  leaveUsage: z
+    .array(
+      z.object({
+        staffId: id,
+        used: z.number(),
+        absenceDays: z.number().optional(),
+        approvedLeaveDays: z.number().optional(),
+      }),
+    )
+    .optional(),
   advanceBalances: z
     .array(
       z.object({ staffId: id, issued: z.number(), recovered: z.number(), balance: z.number() }),
@@ -213,6 +225,11 @@ export const rupees = (paise: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(paise / 100);
 
 const staffProfileSchema = z.object({
+  workspace: workspace.nullable().optional(),
+  account: z
+    .object({ status: z.string(), role: z.string(), membershipId: z.string() })
+    .nullable()
+    .optional(),
   staff,
   attendance: workspace
     .pick({
@@ -235,7 +252,7 @@ export async function loadStaffAttendanceProfile(
   const result = staffProfileSchema.safeParse(
     await apiService.request(
       `/schools/${schoolId}/hr/staff/${encodeURIComponent(staffId)}/attendance-profile?month=${encodeURIComponent(month)}`,
-      { signal },
+      { signal, fresh: true },
     ),
   );
   if (

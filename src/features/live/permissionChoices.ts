@@ -35,3 +35,62 @@ export function togglePermission(
       ),
   );
 }
+
+export const permissionModule = (permission: string) => {
+  const key = permission.split('.')[0];
+  return (
+    (
+      {
+        overview: 'Dashboard',
+        teaching: 'Assigned teaching',
+        students: 'Students',
+        staff: 'Staff',
+        attendance: 'Staff attendance',
+        'student-attendance': 'Student attendance',
+        assignments: 'Staff assignments',
+        academics: 'Academics & reports',
+        leave: 'Leave management',
+        payroll: 'Payroll',
+        fees: 'Fees',
+        contacts: 'Quick Connect',
+        memberships: 'School accounts',
+        roles: 'Roles & permissions',
+        audit: 'Audit reports',
+        school: 'School settings',
+        'academic-years': 'Academic years',
+        classes: 'Classes',
+        sections: 'Sections',
+        subjects: 'Subjects',
+      } as Record<string, string>
+    )[key] || key
+  );
+};
+export const roleSuggestions: Record<string, string[]> = {
+  'Read-only school overview': [
+    'overview.view',
+    'students.view',
+    'staff.view',
+    'attendance.view',
+    'classes.view',
+    'sections.view',
+    'subjects.view',
+    'academics.view',
+  ],
+  Principal: [
+    'overview.view',
+    'students.view',
+    'staff.view',
+    'attendance.view',
+    'leave.approve',
+    'leave.reject',
+    'assignments.view',
+    'academics.view',
+  ],
+  Teacher: [
+    'teaching.self',
+    'attendance.self',
+    'student-attendance.assigned',
+    'academics.assigned.view',
+    'academics.assigned.manage',
+  ],
+};

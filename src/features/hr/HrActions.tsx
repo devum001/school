@@ -197,7 +197,8 @@ export function AttendanceDialog({
           />
         )}
         <TextField
-          label="Reason for decision / correction"
+          label="Reason for decision / correction (optional)"
+          required={false}
           value={draft.reason}
           onChange={(reason) => setDraft({ ...draft, reason })}
         />
@@ -206,6 +207,7 @@ export function AttendanceDialog({
   );
 }
 export function LeaveDialog({
+  decisions = ['approved', 'rejected'],
   adapter,
   data,
   leave,
@@ -214,6 +216,7 @@ export function LeaveDialog({
 }: {
   adapter: HrAdapter;
   data: HrWorkspace;
+  decisions?: string[];
   leave?: HrWorkspace['leaves'][number];
   close: () => void;
   saved: (start?: string) => void;
@@ -227,7 +230,7 @@ export function LeaveDialog({
   });
   const [review, setReview] = useState({
     revision: leave?.revision ?? 0,
-    status: 'approved',
+    status: decisions[0] || 'approved',
     paid: true,
     reviewNote: '',
   });
@@ -253,7 +256,7 @@ export function LeaveDialog({
             </p>
             <SelectField
               label="Decision"
-              options={['approved', 'rejected']}
+              options={decisions}
               value={review.status}
               onChange={(status) => setReview({ ...review, status })}
             />
@@ -264,7 +267,8 @@ export function LeaveDialog({
               onChange={(v) => setReview({ ...review, paid: v === 'Paid' })}
             />
             <TextField
-              label="Review reason"
+              label="Review reason (optional)"
+              required={false}
               value={review.reviewNote}
               onChange={(reviewNote) => setReview({ ...review, reviewNote })}
             />
@@ -293,7 +297,8 @@ export function LeaveDialog({
               onChange={(v) => setDraft({ ...draft, units: v === 'Full day' ? 1 : 0.5 })}
             />
             <TextField
-              label="Reason"
+              label="Reason (optional)"
+              required={false}
               value={draft.reason}
               onChange={(reason) => setDraft({ ...draft, reason })}
             />

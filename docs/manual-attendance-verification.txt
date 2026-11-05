@@ -1,0 +1,91 @@
+Manual staff attendance — verification, 2026-11-05
+
+Flow
+Attendance > Staff Attendance > Mark / correct. Select a date, then Punch-in only,
+Punch-out only, Both times, or Mark absent. Comments are optional for manual
+attendance, ARS requests/reviews, and leave requests/reviews. Financial correction
+requirements are unchanged.
+
+An admin-recorded open arrival today appears as on duty to the teacher and satisfies
+the student-attendance punch gate. The teacher can punch out normally, subject to
+existing school location and account rules. This does not sign in or impersonate
+the teacher's account. Omitted times preserve existing values; departure without
+arrival stays Invalid. Past open punches still require the normal correction flow.
+Original device timestamps and correction history are retained.
+
+Safety
+School scope, attendance.manage, self-review restriction, revision conflicts,
+approved full-day leave, employment dates, pending ARS and payroll locks are checked.
+New backend files were tested in /tmp/manual-staff-attendance and copied only after
+SHA256 verification against the actual repository's starting contents (19 files).
+No real database was connected, no migrations/seeds were run, and no environment,
+dependency or lockfile files were changed. Existing uncommitted work was preserved.
+
+Verification actually run
+- Backend: tsc --noEmit; passed in staging and again in the actual backend repository.
+- Backend: eslint for all 19 changed files; passed.
+- Backend: Jest --runInBand for manualAttendance.integration,
+  attendanceAdjustments.integration, hr.integration, firstPunchAttendance.integration,
+  attendanceTimeRules.test and automaticStaffAttendance.test: 41 passed, 6 suites.
+  Fixtures use disposable local MongoDB; no production database test is claimed.
+  The first new test initially used the wrong student endpoint; corrected to
+  /learning/attendance and rerun successfully.
+- Frontend: VITE_APP_MODE=demo npm test: 335 passed, 59 files.
+  Plain npm test with local live mode had two demo-fixture failures in
+  connectedLedgers and financeBranding; explicit demo mode resolves those.
+- Frontend: npm run build: passed, including TypeScript. Existing large-chunk warning.
+- Frontend: focused eslint on changed application files: passed.
+- Frontend: npm run lint: failed outside this change with five errors in
+  fees/onboarding/FeeOnboardingWorkspace.tsx (3 React hook errors),
+  setup/ImportJob.tsx (effect state update), lib/displayFormat.ts (escaped hyphen),
+  plus four React refresh warnings. These files were not changed for this task.
+- Playwright: SCHOOL_BACKEND_TEST_DIR=/tmp/manual-staff-attendance
+  PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome playwright test
+  --config=playwright.staff-foundation.config.ts --grep 'manual attendance records':
+  1 passed. Verified live admin arrival, teacher active state, departure-only,
+  preserving arrival, cross-month Both times, no comments and 390px mobile layout.
+  Initial run timed out on an incorrect date-field selector; corrected and passed.
+- Desktop/mobile screenshots inspected: /tmp/manual-attendance-desktop.png and
+  /tmp/manual-attendance-mobile.png. Modal scrolls vertically on smaller screens.
+- git diff --check: passed in both repositories.
+
+Deployment
+Restart backend and refresh frontend. No database initialization script is required.
+Teacher views refresh through the existing focus/periodic refresh mechanism;
+this change does not add polling. Payroll-approved months remain locked.
+
+Frontend files changed for this task
+  src/app/liveRouter.tsx
+  src/components/shared/AttendanceTabs.tsx
+  src/features/attendance/AttendancePage.tsx
+  src/features/hr/AttendanceTimeDialog.tsx
+  src/features/hr/LiveStaffAttendance.tsx
+  src/features/hr/manual-attendance.css
+  src/features/hr/HrWorkspace.tsx
+  src/features/hr/StaffAttendancePanel.tsx
+  src/features/hr/HrActions.tsx
+  src/features/hr/AttendanceRequests.tsx
+  src/features/hr/ArsRequestDialog.tsx
+  src/features/hr/TeacherPunchPage.tsx
+  tests/staff-foundation-live.e2e.ts
+
+Backend files changed for this task
+  src/test/manualAttendance.integration.test.ts
+  src/api/models/hr.models.ts
+  src/api/services/attendanceTimes.service.ts
+  src/api/services/learningRead.service.ts
+  src/api/services/attendanceRequestRead.ts
+  src/api/services/attendanceDayView.ts
+  src/api/services/hrPayroll.service.ts
+  src/api/services/automaticStaffAttendance.ts
+  src/api/services/manualAttendanceTimes.ts
+  src/api/services/attendanceTimeRules.ts
+  src/api/services/hrAttendance.service.ts
+  src/api/services/attendancePunchState.ts
+  src/api/services/hrRead.service.ts
+  src/api/services/hrLeave.service.ts
+  src/api/services/punchEligibility.ts
+  src/api/services/hrCommon.ts
+  src/api/services/attendanceAdjustment.service.ts
+  src/api/services/studentAttendance.service.ts
+  src/api/controllers/requests/hr.request.ts

@@ -44,11 +44,12 @@ it('keeps half-day attendance separate from a pending request for full-day credi
   expect(attendanceLabel('2026-10-19', '2026-10-20', day, [], settings)).toBe('half-day');
 });
 
-it('opens ARS only for eligible completed half days and invalid days without a pending request', () => {
+it('opens ARS only for eligible completed half days, absent days and invalid days without a pending request', () => {
   const day = { date: '2026-10-20', status: 'half-day' } as HrWorkspace['attendance'][number];
   expect(canRequestArs(day, '2026-10-20', [])).toBe(true);
+  expect(canRequestArs({ ...day, status: 'absent' }, '2026-10-20', [])).toBe(true);
   expect(canRequestArs({ ...day, status: 'invalid' }, '2026-10-20', [])).toBe(true);
-  for (const status of ['present', 'late', 'absent', 'unmarked', 'leave', 'holiday'])
+  for (const status of ['present', 'late', 'unmarked', 'leave', 'holiday'])
     expect(canRequestArs({ ...day, status }, '2026-10-20', [])).toBe(false);
   expect(canRequestArs({ ...day, inProgress: true }, '2026-10-20', [])).toBe(false);
   expect(canRequestArs(day, '2026-10-19', [])).toBe(false);
@@ -85,4 +86,24 @@ it('calendar cancellation selects the pending future request and never an approv
   expect(pendingLeaveOn('2026-10-30', '2026-10-30', [leave])).toBeUndefined();
   for (const status of ['approved', 'rejected', 'cancelled'])
     expect(pendingLeaveOn('2026-10-30', '2026-10-27', [{ ...leave, status }])).toBeUndefined();
+});
+
+it('shows server-derived absence while leave is pending, then the approved leave status', () => {
+  const pending = {
+    status: 'pending',
+    start: '2026-11-04',
+    end: '2026-11-04',
+    units: 1,
+  } as HrWorkspace['leaves'][number];
+  const day = { date: '2026-11-04', status: 'absent' } as HrWorkspace['attendance'][number];
+  expect(attendanceLabel(day.date, '2026-11-05', day, [pending], settings)).toBe('absent');
+  expect(
+    attendanceLabel(
+      day.date,
+      '2026-11-05',
+      { ...day, status: 'leave' },
+      [{ ...pending, status: 'approved' }],
+      settings,
+    ),
+  ).toBe('leave');
 });

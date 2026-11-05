@@ -1,10 +1,14 @@
+import { useDebouncedValue } from '../../app/useDebouncedValue';
+import { attendanceOptions } from '../../lib/attendanceOptions';
+import AttendanceStatus from '../../components/shared/AttendanceStatus';
+import ContactPhone from '../../components/shared/ContactPhone';
 import StaffLoginDialog from '../hr/StaffLoginDialog';
 import { autoCapitalizeName, titleCase } from '../../lib/displayFormat';
 import { AppIcon } from '../../components/ui/Primitives';
 import StaffDepartmentOptions from '../hr/StaffDepartmentOptions';
 import LiveHrWorkspace from '../hr/HrWorkspace';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useCallback, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Avatar,
   Badge,
@@ -16,7 +20,7 @@ import {
   LoadingOverlay,
 } from '../../components/ui/Primitives';
 import type { SchoolAccess } from '../../services/schoolAccessService';
-import { onboardingApi, type Person, type Relation } from '../../services/onboardingService';
+import { onboardingApi, type Person } from '../../services/onboardingService';
 import LiveStaffImport from './LiveStaffImport';
 import { productApi } from '../../services/productService';
 import { useSetupList } from '../setup/useSetupList';
@@ -48,6 +52,7 @@ export default function LiveStaff({
   yearId: string | null;
   teachersOnly?: boolean;
 }) {
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams(),
     [query, setQuery] = useState(''),
     [loginStaff, setLoginStaff] = useState<Person | null>(null),
@@ -59,66 +64,7 @@ export default function LiveStaff({
       nextStatus: 'active' | 'inactive' | 'archived';
     } | null>(null),
     [importing, setImporting] = useState(false),
-    [selectedClass, setSelectedClass] = useState(''),
-    [selectedSection, setSelectedSection] = useState(''),
-    [structure, setStructure] = useState<{
-      classes: { id: string; name: string }[];
-      children: { id: string; classId: string; name: string }[];
-    }>({ classes: [], children: [] }),
-    [assignments, setAssignments] = useState<Relation[]>([]);
-
-  useEffect(() => {
-    if (!yearId) return;
-    let active = true;
-    Promise.all([
-      onboardingApi.structure(access.schoolId, yearId, 'sections').catch(() => null),
-      onboardingApi.relations(access.schoolId, yearId, 'teaching-assignments').catch(() => null),
-    ]).then(([struct, rels]) => {
-      if (!active) return;
-      if (struct) {
-        setStructure({
-          classes: struct.classes || [],
-          children: struct.children || [],
-        });
-      }
-      if (rels) {
-        setAssignments(rels.items || []);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [access.schoolId, yearId]);
-
-  const classList = useMemo(() => {
-    const list = [...structure.classes];
-    for (const a of assignments) {
-      if (a.className && !list.some((c) => c.name.toLowerCase() === a.className.toLowerCase())) {
-        list.push({ id: a.className, name: a.className });
-      }
-    }
-    return list;
-  }, [structure.classes, assignments]);
-
-  const sectionList = useMemo(() => {
-    if (!selectedClass) return [];
-    const matchedClass = classList.find(
-      (c) => c.name.toLowerCase() === selectedClass.toLowerCase(),
-    );
-    const list = structure.children
-      .filter((s) => !matchedClass || s.classId === matchedClass.id)
-      .map((s) => ({ id: s.id, name: s.name }));
-    for (const a of assignments) {
-      if (
-        a.className.toLowerCase() === selectedClass.toLowerCase() &&
-        a.sectionName &&
-        !list.some((s) => s.name.toLowerCase() === a.sectionName.toLowerCase())
-      ) {
-        list.push({ id: a.sectionName, name: a.sectionName });
-      }
-    }
-    return list;
-  }, [selectedClass, classList, structure.children, assignments]);
+    [attendanceFilter, setAttendanceFilter] = useState('');
 
   const manage = access.permissions.includes('staff.manage'),
     requested = params.get('section');
@@ -127,34 +73,27 @@ export default function LiveStaff({
     ...(!teachersOnly && access.permissions.includes('attendance.manage')
       ? [{ id: 'leave', label: 'Leave' }]
       : []),
-    ...(!teachersOnly && access.permissions.includes('assignments.view')
+    ...(access.permissions.includes('assignments.view')
       ? [{ id: 'assignments', label: 'Staff assignments' }]
       : []),
   ];
   const section = items.find((i) => i.id === requested)?.id ?? 'directory';
+  const search = useDebouncedValue(query);
   const load = useCallback(
     (signal: AbortSignal, after?: string) =>
-      onboardingApi.people(access.schoolId, 'staff', signal, after, query, teachersOnly),
-    [access.schoolId, query, teachersOnly],
+      onboardingApi.staffDirectory(
+        access.schoolId,
+        signal,
+        after,
+        search,
+        teachersOnly,
+        attendanceFilter,
+      ),
+    [access.schoolId, search, teachersOnly, attendanceFilter],
   );
   const state = useSetupList(load);
 
-  const filteredStaff = useMemo(() => {
-    const items = state.data?.items ?? [];
-    if (!selectedClass) return items;
-    const matchingIds = new Set(
-      assignments
-        .filter((a) => a.status === 'active')
-        .filter(
-          (a) =>
-            a.className.trim().toLowerCase() === selectedClass.trim().toLowerCase() &&
-            (!selectedSection ||
-              a.sectionName.trim().toLowerCase() === selectedSection.trim().toLowerCase()),
-        )
-        .map((a) => a.personId),
-    );
-    return items.filter((p) => matchingIds.has(p.id));
-  }, [state.data?.items, selectedClass, selectedSection, assignments]);
+  const filteredStaff = state.data?.items ?? [];
   const loadingLabel = teachersOnly ? 'Loading teachers…' : 'Loading staff & HR…';
   return (
     <div className="ledger-stack">
@@ -204,43 +143,34 @@ export default function LiveStaff({
             title={teachersOnly ? 'Teachers' : 'Staff & HR'}
             action={
               <div className="panel-header-actions staff-header-toolbar">
-                <div className="staff-filters-row">
+                <label className="field">
+                  Today's attendance
                   <select
-                    className="staff-select-filter"
-                    aria-label="Filter by class"
-                    value={selectedClass}
+                    value={attendanceFilter}
                     onChange={(e) => {
-                      setSelectedClass(e.target.value);
-                      setSelectedSection('');
+                      state.first();
+                      setAttendanceFilter(e.target.value);
                     }}
                   >
-                    <option value="">All classes</option>
-                    {classList.map((c) => (
-                      <option key={c.id || c.name} value={c.name}>
-                        {c.name}
+                    <option value="">All attendance</option>
+                    {attendanceOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {titleCase(status.replaceAll('-', ' '))}
                       </option>
                     ))}
                   </select>
-                  <select
-                    className="staff-select-filter"
-                    aria-label="Filter by section"
-                    value={selectedSection}
-                    onChange={(e) => setSelectedSection(e.target.value)}
-                  >
-                    <option value="">All sections</option>
-                    {sectionList.map((s) => (
-                      <option key={s.id || s.name} value={s.name}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                </label>
                 <div className="staff-search-input">
                   <SearchInput
                     value={query}
-                    onChange={setQuery}
+                    onChange={(value) => {
+                      state.first();
+                      setQuery(value);
+                    }}
                     placeholder={
-                      teachersOnly ? 'Search teacher name or code…' : 'Search staff name or code…'
+                      teachersOnly
+                        ? 'Search teacher name, code or phone…'
+                        : 'Search staff name, code or phone…'
                     }
                   />
                 </div>
@@ -251,7 +181,7 @@ export default function LiveStaff({
                       {teachersOnly ? 'Import Teachers' : 'Import Staff'}
                     </Button>
                   )}
-                  {manage && (
+                  {(manage || access.permissions.includes('staff.create')) && (
                     <Button onClick={() => setEditing('new')}>
                       {teachersOnly ? 'Add Teacher' : 'Add Staff'}
                     </Button>
@@ -271,7 +201,7 @@ export default function LiveStaff({
                         <th>Department</th>
                         <th>Designation</th>
                         <th>Contact</th>
-                        <th>Status</th>
+                        <th>Employment / attendance</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -281,134 +211,154 @@ export default function LiveStaff({
                           <td colSpan={6} style={{ textAlign: 'center', padding: '36px' }}>
                             <EmptyState
                               title={teachersOnly ? 'No teachers found' : 'No staff members found'}
-                              description={
-                                selectedClass
-                                  ? `No ${teachersOnly ? 'teachers' : 'staff members'} assigned to ${selectedClass}${selectedSection ? ` - ${selectedSection}` : ''}.`
-                                  : 'No matching records found.'
-                              }
+                              description="No matching records found."
                             />
                           </td>
                         </tr>
                       ) : (
                         filteredStaff.map((p) => (
-                        <tr key={p.id}>
-                          <td>
-                            <div className="person">
-                              {p.photoDataUrl ? (
-                                <span className="avatar">
-                                  <img
-                                    src={p.photoDataUrl}
-                                    alt=""
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                  />
-                                </span>
-                              ) : (
-                                <Avatar name={p.name} />
-                              )}
-                              <div>
-                                <Link to={`/${p.teaching ? 'teachers' : 'staff'}/${p.id}`}>
-                                  <strong>{titleCase(p.name)}</strong>
+                          <tr key={p.id}>
+                            <td>
+                              <div className="person">
+                                <Link
+                                  aria-label={`Open ${p.name} profile`}
+                                  to={`/${p.teaching ? 'teachers' : 'staff'}/${p.id}`}
+                                >
+                                  {p.photoDataUrl ? (
+                                    <span className="avatar">
+                                      <img
+                                        src={p.photoDataUrl}
+                                        alt=""
+                                        style={{
+                                          width: '100%',
+                                          height: '100%',
+                                          objectFit: 'cover',
+                                        }}
+                                      />
+                                    </span>
+                                  ) : (
+                                    <Avatar name={p.name} />
+                                  )}
                                 </Link>
-                                <small>
-                                  {[
-                                    p.code,
-                                    titleCase(p.designation || '') ||
-                                      (p.teaching ? 'Teaching' : ''),
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' · ')}
-                                </small>
+                                <div>
+                                  <Link to={`/${p.teaching ? 'teachers' : 'staff'}/${p.id}`}>
+                                    <strong>{titleCase(p.name)}</strong>
+                                  </Link>
+                                  <small>
+                                    {[
+                                      p.code,
+                                      titleCase(p.designation || '') ||
+                                        (p.teaching ? 'Teaching' : ''),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' · ')}
+                                  </small>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td>{titleCase(p.department || '') || '—'}</td>
-                          <td>{titleCase(p.designation || '') || '—'}</td>
-                          <td>{p.email || p.phone || 'Not provided'}</td>
-                          <td>
-                            <Badge
-                              tone={
-                                p.status === 'active'
-                                  ? 'green'
-                                  : p.status === 'inactive'
-                                    ? 'amber'
-                                    : 'neutral'
-                              }
-                            >
-                              {p.status === 'inactive' ? 'Removed' : titleCase(p.status)}
-                            </Badge>
-                          </td>
-                          <td>
-                            {manage && (
-                              <div className="hr-actions staff-row-actions">
-                                <Button variant="secondary" onClick={() => setEditing(p)}>
-                                  Edit
-                                </Button>
-                                {access.permissions.includes('payroll.view') &&
-                                  access.permissions.includes('payroll.manage') && (
-                                    <Button
-                                      variant="secondary"
-                                      onClick={() =>
-                                        setParams((previous) => {
-                                          const next = new URLSearchParams(previous);
-                                          next.set('section', 'salary');
-                                          next.set('setupSalary', p.id);
-                                          return next;
-                                        })
-                                      }
-                                    >
-                                      Salary &amp; attendance
+                            </td>
+                            <td>{titleCase(p.department || '') || '—'}</td>
+                            <td>{titleCase(p.designation || '') || '—'}</td>
+                            <td className="staff-contact-cell">
+                              <ContactPhone phone={p.phone} name={p.name} />
+                              <small>{p.email}</small>
+                            </td>
+                            <td>
+                              <div className="staff-status-chips">
+                                <Badge
+                                  tone={
+                                    p.status === 'active'
+                                      ? 'green'
+                                      : p.status === 'inactive'
+                                        ? 'amber'
+                                        : 'neutral'
+                                  }
+                                >
+                                  {p.status === 'inactive' ? 'Removed' : titleCase(p.status)}
+                                </Badge>
+                                <AttendanceStatus status={p.attendanceStatus} />
+                              </div>
+                            </td>
+                            <td>
+                              {(manage ||
+                                access.permissions.includes('staff.edit') ||
+                                access.permissions.includes('staff.archive')) && (
+                                <div className="hr-actions staff-row-actions">
+                                  {(manage || access.permissions.includes('staff.edit')) && (
+                                    <Button variant="secondary" onClick={() => setEditing(p)}>
+                                      Edit
                                     </Button>
                                   )}
-                                {p.status === 'active' &&
-                                  !p.userId &&
-                                  access.permissions.includes('memberships.manage') &&
-                                  access.permissions.includes('roles.view') && (
-                                    <Button variant="secondary" onClick={() => setLoginStaff(p)}>
-                                      Enable login
-                                    </Button>
-                                  )}
-                                {p.userId && <Badge tone="green">Login linked</Badge>}
-                                {p.status === 'active' && (
-                                  <Button
-                                    variant="ghost"
-                                    className="staff-action-danger"
-                                    onClick={() => setChange({ person: p, nextStatus: 'inactive' })}
-                                  >
-                                    Remove
-                                  </Button>
-                                )}
-                                {p.status === 'inactive' && (
-                                  <>
-                                    <Button
-                                      variant="secondary"
-                                      onClick={() => setChange({ person: p, nextStatus: 'active' })}
-                                    >
-                                      Restore
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      className="staff-action-danger"
-                                      onClick={() =>
-                                        setChange({ person: p, nextStatus: 'archived' })
-                                      }
-                                    >
-                                      Archive
-                                    </Button>
-                                  </>
-                                )}
-                                {p.status === 'archived' && (
-                                  <Button
-                                    variant="secondary"
-                                    onClick={() => setChange({ person: p, nextStatus: 'active' })}
-                                  >
-                                    Restore
-                                  </Button>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      )))}
+                                  {access.permissions.includes('payroll.view') &&
+                                    access.permissions.includes('payroll.manage') && (
+                                      <Button
+                                        variant="secondary"
+                                        onClick={() =>
+                                          navigate(`/fees?tab=Salary+Expenses&setupSalary=${p.id}`)
+                                        }
+                                      >
+                                        Salary &amp; attendance
+                                      </Button>
+                                    )}
+                                  {p.status === 'active' &&
+                                    !p.userId &&
+                                    access.permissions.includes('memberships.manage') &&
+                                    access.permissions.includes('roles.view') && (
+                                      <Button variant="secondary" onClick={() => setLoginStaff(p)}>
+                                        Enable login
+                                      </Button>
+                                    )}
+                                  {p.userId && <Badge tone="green">Login linked</Badge>}
+                                  {p.status === 'active' &&
+                                    (manage || access.permissions.includes('staff.archive')) && (
+                                      <Button
+                                        variant="ghost"
+                                        className="staff-action-danger"
+                                        onClick={() =>
+                                          setChange({ person: p, nextStatus: 'inactive' })
+                                        }
+                                      >
+                                        Remove
+                                      </Button>
+                                    )}
+                                  {p.status === 'inactive' &&
+                                    (manage || access.permissions.includes('staff.archive')) && (
+                                      <>
+                                        <Button
+                                          variant="secondary"
+                                          onClick={() =>
+                                            setChange({ person: p, nextStatus: 'active' })
+                                          }
+                                        >
+                                          Restore
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          className="staff-action-danger"
+                                          onClick={() =>
+                                            setChange({ person: p, nextStatus: 'archived' })
+                                          }
+                                        >
+                                          Archive
+                                        </Button>
+                                      </>
+                                    )}
+                                  {p.status === 'archived' &&
+                                    (manage || access.permissions.includes('staff.archive')) && (
+                                      <Button
+                                        variant="secondary"
+                                        onClick={() =>
+                                          setChange({ person: p, nextStatus: 'active' })
+                                        }
+                                      >
+                                        Restore
+                                      </Button>
+                                    )}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -497,7 +447,7 @@ export default function LiveStaff({
     </div>
   );
 }
-function StaffEditor({
+export function StaffEditor({
   schoolId,
   person,
   teaching,
@@ -631,7 +581,15 @@ function StaffEditor({
                     maxLength={key === 'code' ? 40 : 100}
                     disabled={key === 'code' && !!person}
                     value={draft[key]}
-                    onChange={(e) => setDraft({ ...draft, [key]: (key === 'name' || key === 'designation') ? autoCapitalizeName(e.target.value) : e.target.value })}
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        [key]:
+                          key === 'name' || key === 'designation'
+                            ? autoCapitalizeName(e.target.value)
+                            : e.target.value,
+                      })
+                    }
                   />
                 </label>
               ))}

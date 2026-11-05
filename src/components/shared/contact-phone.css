@@ -1,0 +1,16 @@
+.contact-phone {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  white-space: nowrap;
+}
+.contact-phone svg {
+  flex-shrink: 0;
+}
+.guardian-card .contact-phone {
+  display: flex;
+  justify-content: center;
+  width: fit-content;
+  margin: 18px auto 0;
+}

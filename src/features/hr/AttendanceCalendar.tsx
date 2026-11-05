@@ -102,7 +102,7 @@ export default function AttendanceCalendar({
       </div>
       {ars && (
         <p className="attendance-calendar-hint">
-          Tap a half-day or invalid date to request a correction.
+          Tap an absent, half-day or invalid date to request a correction.
         </p>
       )}
       <AttendanceDayDetail date={date} day={day} status={status} timezone={data.timezone} />

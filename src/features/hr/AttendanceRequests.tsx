@@ -36,7 +36,8 @@ export default function AttendanceRequests({
           <div>
             <h3>Attendance requests (ARS)</h3>
             <p>
-              Review the requested attendance period. Approval updates the day and its working hours.
+              Review the requested attendance period. Approval updates the day and its working
+              hours.
             </p>
           </div>
           <Button variant="secondary" onClick={saved}>
@@ -93,7 +94,7 @@ export default function AttendanceRequests({
                     <small className="attendance-request-sub">{outcome(r)}</small>
                   </td>
                   <td data-label="Reason" className="request-reason">
-                    {r.reason}
+                    {r.reason || '—'}
                   </td>
                   <td data-label="Status">
                     <Badge
@@ -114,7 +115,8 @@ export default function AttendanceRequests({
                         Review request
                       </Button>
                     ) : (
-                      r.reviewNote || 'Awaiting administrator'
+                      r.reviewNote ||
+                      (r.status === 'pending' ? 'Awaiting administrator' : 'No comment')
                     )}
                   </td>
                 </tr>
@@ -155,8 +157,6 @@ function ReviewDialog({
       submitLabel="Save decision"
       close={close}
       submit={async () => {
-        if (reviewNote.trim().length < 5)
-          throw new Error('Add a brief decision reason (at least 5 characters).');
         await adapter.save(
           `/attendance-requests/${item.dayId}`,
           { revision: item.revision, requestKey: item.requestKey, status, reviewNote },
@@ -177,7 +177,12 @@ function ReviewDialog({
           <option value="rejected">Reject</option>
         </select>
       </label>
-      <TextField label="Decision reason" value={reviewNote} onChange={setNote} />
+      <TextField
+        required={false}
+        label="Decision comment (optional)"
+        value={reviewNote}
+        onChange={setNote}
+      />
       <p className="ars-form-note">
         {status === 'approved'
           ? 'Approved hours follow the school schedule: full day, the first half, or the second half. The accepted status replaces the earlier late or invalid result.'

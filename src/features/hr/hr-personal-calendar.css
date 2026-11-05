@@ -103,6 +103,7 @@
   background: #edf0f2;
   color: #5b6571;
 }
+.hr-day-status-pending,
 .hr-day-status-unmarked,
 .hr-day-status-upcoming {
   background: #fafcfb;

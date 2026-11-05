@@ -1,6 +1,6 @@
 import { useToday } from '../../app/useToday';
 import { useEffect, useState } from 'react';
-import { Link, useBlocker, useSearchParams } from 'react-router-dom';
+import { Link, useBlocker, useSearchParams, useNavigate } from 'react-router-dom';
 import { AlertCircle, CircleAlert, Clock, UserCheck, Users, UserX } from 'lucide-react';
 import StudentRecordLink from '../../components/shared/StudentRecordLink';
 import { useSchool } from '../../app/useSchool';
@@ -35,6 +35,7 @@ export default function AttendancePage() {
   return <AttendanceRegister key={params.toString()} />;
 }
 function AttendanceRegister() {
+  const navigate = useNavigate();
   const state = useSchool();
   const feature = useSchoolFeature(),
     data = feature ?? repository,
@@ -193,6 +194,10 @@ function AttendanceRegister() {
         date={date}
         value={register}
         onChange={(val) => {
+          if (feature && val === 'staff') {
+            navigate(`/attendance/staff?date=${date}`);
+            return;
+          }
           setParams((prev) => {
             const next = new URLSearchParams(prev);
             if (val === 'staff') {
@@ -249,219 +254,237 @@ function AttendanceRegister() {
               subjects in Staff & HR → Staff assignments.
             </p>
           )}
-      <div id="attendance-register-content">
-        <Panel>
-          <div className="toolbar attendance-toolbar">
-            <label className="filter-label">
-              <span>Attendance date</span>
-              <PickerInput
-                aria-label="Attendance date"
-                type="date"
-                value={date}
-                min={state.academicYear.start}
-                max={today}
-                onChange={(e) => {
-                  if (e.target.value) update('date', e.target.value);
-                }}
+          <div id="attendance-register-content">
+            <Panel>
+              <div className="toolbar attendance-toolbar">
+                <label className="filter-label">
+                  <span>Attendance date</span>
+                  <PickerInput
+                    aria-label="Attendance date"
+                    type="date"
+                    value={date}
+                    min={state.academicYear.start}
+                    max={today}
+                    onChange={(e) => {
+                      if (e.target.value) update('date', e.target.value);
+                    }}
+                  />
+                </label>
+                <ClassFilters
+                  classId={classId}
+                  sectionId={sectionId}
+                  onClassChange={(v) => update('class', v)}
+                  onSectionChange={(v) => update('section', v)}
+                  allowAll={false}
+                />
+                <div className="register-context">
+                  <AppIcon name="attendance" size={20} />
+                  <span>
+                    <strong>{state.academicYear.name}</strong>
+                    <small>Academic year</small>
+                  </span>
+                </div>
+              </div>
+              <div className="attendance-school-timing">
+                {timing ? (
+                  <>
+                    <span>
+                      School hours: {formatSchoolTime(timing.start)} –{' '}
+                      {formatSchoolTime(timing.end)}
+                    </span>
+                    <strong>
+                      Late cutoff:{' '}
+                      {studentLateCutoff(
+                        timing,
+                        (state.attendancePolicy ?? defaultAttendancePolicy).graceMinutes,
+                      )}
+                    </strong>
+                  </>
+                ) : hasAssignedTiming ? (
+                  <span>Not a school working day.</span>
+                ) : feature?.teacherScoped ? (
+                  <span>School timing has not been configured.</span>
+                ) : (
+                  <Link className="student-timing-link" to="/settings?section=timing">
+                    Set school timing
+                  </Link>
+                )}
+              </div>
+            </Panel>
+            <div className="attendance-summary stats-grid">
+              <StatCard
+                label="Total Students"
+                value={summary.total}
+                detail="Enrolled in section"
+                tone="blue"
+                icon={<Users size={16} />}
               />
-            </label>
-            <ClassFilters
-              classId={classId}
-              sectionId={sectionId}
-              onClassChange={(v) => update('class', v)}
-              onSectionChange={(v) => update('section', v)}
-              allowAll={false}
-            />
-            <div className="register-context">
-              <AppIcon name="attendance" size={20} />
-              <span>
-                <strong>{state.academicYear.name}</strong>
-                <small>Academic year</small>
-              </span>
+              <StatCard
+                label="Present"
+                value={summary.present}
+                detail={
+                  summary.total
+                    ? `${Math.round((summary.present / summary.total) * 100)}% present`
+                    : '0%'
+                }
+                tone="green"
+                icon={<UserCheck size={16} />}
+              />
+              <StatCard
+                label="Absent"
+                value={summary.absent}
+                detail={summary.absent > 0 ? `${summary.absent} absent` : 'No absentees'}
+                tone="red"
+                icon={<UserX size={16} />}
+              />
+              <StatCard
+                label="Late / Half day"
+                value={`${summary.late} / ${summary['half-day']}`}
+                detail={`${summary.late} late · ${summary['half-day']} half-day`}
+                tone="amber"
+                icon={<Clock size={16} />}
+              />
+              <StatCard
+                label="Not Marked"
+                value={summary.unmarked}
+                detail={summary.unmarked > 0 ? 'Pending recording' : 'All recorded'}
+                tone="neutral"
+                icon={<AlertCircle size={16} />}
+              />
             </div>
-          </div>
-          <div className="attendance-school-timing">
-            {timing ? (
-              <>
-                <span>
-                  School hours: {formatSchoolTime(timing.start)} – {formatSchoolTime(timing.end)}
-                </span>
-                <strong>
-                  Late cutoff:{' '}
-                  {studentLateCutoff(
-                    timing,
-                    (state.attendancePolicy ?? defaultAttendancePolicy).graceMinutes,
-                  )}
-                </strong>
-              </>
-            ) : hasAssignedTiming ? (
-              <span>Not a school working day.</span>
-            ) : feature?.teacherScoped ? (
-              <span>School timing has not been configured.</span>
-            ) : (
-              <Link className="student-timing-link" to="/settings?section=timing">
-                Set school timing
-              </Link>
-            )}
-          </div>
-        </Panel>
-        <div className="attendance-summary stats-grid">
-          <StatCard
-            label="Total Students"
-            value={summary.total}
-            detail="Enrolled in section"
-            tone="blue"
-            icon={<Users size={16} />}
-          />
-          <StatCard
-            label="Present"
-            value={summary.present}
-            detail={summary.total ? `${Math.round((summary.present / summary.total) * 100)}% present` : '0%'}
-            tone="green"
-            icon={<UserCheck size={16} />}
-          />
-          <StatCard
-            label="Absent"
-            value={summary.absent}
-            detail={summary.absent > 0 ? `${summary.absent} absent` : 'No absentees'}
-            tone="red"
-            icon={<UserX size={16} />}
-          />
-          <StatCard
-            label="Late / Half day"
-            value={`${summary.late} / ${summary['half-day']}`}
-            detail={`${summary.late} late · ${summary['half-day']} half-day`}
-            tone="amber"
-            icon={<Clock size={16} />}
-          />
-          <StatCard
-            label="Not Marked"
-            value={summary.unmarked}
-            detail={summary.unmarked > 0 ? 'Pending recording' : 'All recorded'}
-            tone="neutral"
-            icon={<AlertCircle size={16} />}
-          />
-        </div>
-        <Panel
-          title={`${state.classes.find((c) => c.id === classId)?.name ?? 'Class'}${sectionId ? ` · Section ${sections.find((s) => s.id === sectionId)?.name}` : ' · Whole class'}`}
-          subtitle={`${rows.length} active students · ${displayDate(date)}`}
-          action={
-            <Button
-              variant="secondary"
-              disabled={!canManage || saving || !rows.length}
-              onClick={() =>
-                setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])))
+            <Panel
+              title={`${state.classes.find((c) => c.id === classId)?.name ?? 'Class'}${sectionId ? ` · Section ${sections.find((s) => s.id === sectionId)?.name}` : ' · Whole class'}`}
+              subtitle={`${rows.length} active students · ${displayDate(date)}`}
+              action={
+                <Button
+                  variant="secondary"
+                  disabled={!canManage || saving || !rows.length}
+                  onClick={() =>
+                    setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])))
+                  }
+                >
+                  <AppIcon name="user-check" size={16} />
+                  Mark all present
+                </Button>
               }
             >
-              <AppIcon name="user-check" size={16} />
-              Mark all present
-            </Button>
-          }
-        >
-          <div className="info-banner inline">
-            <CircleAlert size={16} />
-            Not marked is a separate status. It is never counted as absent.
-          </div>
-          <div className="table-wrap">
-            <table className="attendance-table">
-              <thead>
-                <tr>
-                  <th>Roll no.</th>
-                  <th>Student</th>
-                  <th>Admission number</th>
-                  <th>Attendance status</th>
-                  <th>Record</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, rowIndex) => {
-                  const status = draft[r.enrollment.id] ?? statusFor(state, r.enrollment.id, date);
-                  return (
-                    <tr key={r.enrollment.id}>
-                      <td className="mono">{r.enrollment.rollNumber}</td>
-                      <td>
-                        <StudentRecordLink className="person" to={`/students/${r.student.id}`}>
-                          <Avatar name={r.student.name} />
-                          <strong>{r.student.name}</strong>
-                        </StudentRecordLink>
-                      </td>
-                      <td className="mono muted">{r.student.admissionNumber}</td>
-                      <td>
-                        <div
-                          className="status-options"
-                          role="group"
-                          aria-label={`${r.student.name} attendance`}
-                        >
-                          {statuses.map((s, statusIndex) => (
-                            <button
-                              key={s}
-                              type="button"
-                              disabled={!canManage || saving}
-                              aria-pressed={status === s}
-                              className={status === s ? `selected ${s}` : ''}
-                              onClick={() => setDraft((prev) => ({ ...prev, [r.enrollment.id]: s }))}
-                              onKeyDown={(e) => handleAttendanceKeyDown(e, rowIndex, statusIndex, r.enrollment.id)}
-                            >
-                              {STATUS_LABELS[s]}
-                            </button>
-                          ))}
-                        </div>
-                      </td>
-                      <td>
-                        <Badge tone={status}>{STATUS_LABELS[status]}</Badge>
-                      </td>
+              <div className="info-banner inline">
+                <CircleAlert size={16} />
+                Not marked is a separate status. It is never counted as absent.
+              </div>
+              <div className="table-wrap">
+                <table className="attendance-table">
+                  <thead>
+                    <tr>
+                      <th>Roll no.</th>
+                      <th>Student</th>
+                      <th>Admission number</th>
+                      <th>Attendance status</th>
+                      <th>Record</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="save-bar">
-            <div>
-              <span className={`status-dot ${dirty ? 'pending' : 'active'}`} />
-              <strong>{dirty ? 'Unsaved changes' : 'Register up to date'}</strong>
-              <small>
-                {summary.attended} attending / {summary.total} total · {summary.percentage}%
-                attendance
-              </small>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, rowIndex) => {
+                      const status =
+                        draft[r.enrollment.id] ?? statusFor(state, r.enrollment.id, date);
+                      return (
+                        <tr key={r.enrollment.id}>
+                          <td className="mono">{r.enrollment.rollNumber}</td>
+                          <td>
+                            <StudentRecordLink className="person" to={`/students/${r.student.id}`}>
+                              <Avatar name={r.student.name} />
+                              <strong>{r.student.name}</strong>
+                            </StudentRecordLink>
+                          </td>
+                          <td className="mono muted">{r.student.admissionNumber}</td>
+                          <td>
+                            <div
+                              className="status-options"
+                              role="group"
+                              aria-label={`${r.student.name} attendance`}
+                            >
+                              {statuses.map((s, statusIndex) => (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  disabled={!canManage || saving}
+                                  aria-pressed={status === s}
+                                  className={status === s ? `selected ${s}` : ''}
+                                  onClick={() =>
+                                    setDraft((prev) => ({ ...prev, [r.enrollment.id]: s }))
+                                  }
+                                  onKeyDown={(e) =>
+                                    handleAttendanceKeyDown(
+                                      e,
+                                      rowIndex,
+                                      statusIndex,
+                                      r.enrollment.id,
+                                    )
+                                  }
+                                >
+                                  {STATUS_LABELS[s]}
+                                </button>
+                              ))}
+                            </div>
+                          </td>
+                          <td>
+                            <Badge tone={status}>{STATUS_LABELS[status]}</Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="save-bar">
+                <div>
+                  <span className={`status-dot ${dirty ? 'pending' : 'active'}`} />
+                  <strong>{dirty ? 'Unsaved changes' : 'Register up to date'}</strong>
+                  <small>
+                    {summary.attended} attending / {summary.total} total · {summary.percentage}%
+                    attendance
+                  </small>
+                </div>
+                <Button
+                  disabled={!canManage || saving || !classId || !rows.length}
+                  onClick={() => void save()}
+                >
+                  <AppIcon name="save" size={16} />
+                  Save attendance
+                </Button>
+              </div>
+              {error && (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              )}
+            </Panel>
+            <div className="panel-note">
+              Choose a date to review attendance. Save changes to update student profiles and the
+              dashboard.
             </div>
-            <Button
-              disabled={!canManage || saving || !classId || !rows.length}
-              onClick={() => void save()}
-            >
-              <AppIcon name="save" size={16} />
-              Save attendance
-            </Button>
           </div>
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-        </Panel>
-        <div className="panel-note">
-          Choose a date to review attendance. Save changes to update student profiles and the
-          dashboard.
-        </div>
-      </div>
-      <Modal
-        open={blocker.state === 'blocked'}
-        onClose={() => blocker.state === 'blocked' && blocker.reset()}
-        title="Leave unsaved attendance?"
-        description="Your attendance changes have not been saved. Stay to save them, or discard this draft."
-      >
-        <div className="modal-actions">
-          <Button
-            variant="secondary"
-            onClick={() => blocker.state === 'blocked' && blocker.reset()}
+          <Modal
+            open={blocker.state === 'blocked'}
+            onClose={() => blocker.state === 'blocked' && blocker.reset()}
+            title="Leave unsaved attendance?"
+            description="Your attendance changes have not been saved. Stay to save them, or discard this draft."
           >
-            Keep editing
-          </Button>
-          <Button variant="danger" onClick={() => blocker.state === 'blocked' && blocker.proceed()}>
-            Discard and leave
-          </Button>
-        </div>
-      </Modal>
+            <div className="modal-actions">
+              <Button
+                variant="secondary"
+                onClick={() => blocker.state === 'blocked' && blocker.reset()}
+              >
+                Keep editing
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => blocker.state === 'blocked' && blocker.proceed()}
+              >
+                Discard and leave
+              </Button>
+            </div>
+          </Modal>
         </>
       )}
     </>

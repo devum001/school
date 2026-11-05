@@ -1,3 +1,4 @@
+import LiveQuickConnect from '../features/contacts/QuickConnect';
 import { lazy, Suspense } from 'react';
 const LiveFinanceWorkspace = lazy(() => import('../features/fees/LiveFinanceWorkspace'));
 const LiveNotificationsWorkspace = lazy(
@@ -6,6 +7,7 @@ const LiveNotificationsWorkspace = lazy(
 import LiveLearning from '../features/live/LiveLearning';
 import TeacherPunchPage from '../features/hr/TeacherPunchPage';
 import LiveHrWorkspace from '../features/hr/HrWorkspace';
+import LiveStaffAttendance from '../features/hr/LiveStaffAttendance';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import LiveApp from '../features/live/LiveApp';
 import LiveSchoolSettings from '../features/live/LiveSchoolSettings';
@@ -19,6 +21,7 @@ export const liveRouter = createBrowserRouter([
       { index: true, element: <LiveLearning area="overview" /> },
       { path: 'overview', element: <LiveLearning area="overview" /> },
       { path: 'login', element: <Navigate to="/" replace /> },
+      { path: 'contacts', element: <LiveQuickConnect /> },
       { path: 'settings', element: <LiveSchoolSettings /> },
       ...[
         'students',
@@ -33,7 +36,7 @@ export const liveRouter = createBrowserRouter([
       { path: 'attendance', element: <LiveLearning area="attendance" /> },
       { path: 'classes', element: <LiveLearning area="classes" /> },
       { path: 'academics', element: <LiveLearning area="academics" /> },
-      { path: 'attendance/staff', element: <Navigate replace to="/attendance?register=staff" /> },
+      { path: 'attendance/staff', element: <LiveStaffAttendance /> },
       {
         path: 'fees',
         element: (
@@ -57,4 +60,3 @@ export const liveRouter = createBrowserRouter([
     ],
   },
 ]);
-

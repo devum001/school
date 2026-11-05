@@ -74,7 +74,7 @@ const setupMessages: Record<string, string> = {
     'Your school has not configured a punch location. Ask your administrator to add the campus in Work & Leave settings.',
   HR_PUNCH_COMPLETE: 'Today’s punch-in and punch-out are already recorded.',
   HR_ADJUSTMENT_ELIGIBILITY:
-    'Only a completed half day or an invalid attendance day can be corrected through ARS.',
+    'Only a completed absent, half-day or invalid attendance day can be corrected through ARS.',
   HR_ATTENDANCE_TIMES:
     'Enter valid school-local times. Punch-out must be after punch-in and cannot be in the future.',
   HR_ADJUSTMENT_CLOSED:

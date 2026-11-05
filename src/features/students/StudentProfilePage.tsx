@@ -1,3 +1,4 @@
+import ContactPhone from '../../components/shared/ContactPhone';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { StudentProfileBridge } from './studentProfileBridge';
 import { useContext, useState } from 'react';
@@ -95,7 +96,19 @@ export default function StudentProfilePage() {
       r.examId === latestExam?.id,
   );
   const academic = result ? resultSummary(result) : null;
-  const localAccount = (state as unknown as { feeAccounts?: Array<{ studentId: string; transportActive?: boolean; transportFee?: number; transportRoute?: string; hostelActive?: boolean; hostelFee?: number; hostelRoom?: string }> }).feeAccounts?.find?.((a) => a.studentId === student.id);
+  const localAccount = (
+    state as unknown as {
+      feeAccounts?: Array<{
+        studentId: string;
+        transportActive?: boolean;
+        transportFee?: number;
+        transportRoute?: string;
+        hostelActive?: boolean;
+        hostelFee?: number;
+        hostelRoom?: string;
+      }>;
+    }
+  ).feeAccounts?.find?.((a) => a.studentId === student.id);
   const facilities = bridge?.facilities ?? {
     bus: Boolean(localAccount?.transportActive || (localAccount?.transportFee ?? 0) > 0),
     busRoute: localAccount?.transportRoute || '',
@@ -293,7 +306,8 @@ export default function StudentProfilePage() {
                         Hostel facility
                       </dt>
                       <dd>
-                        Allocated {facilities.hostelRoom ? `(Room/Block: ${facilities.hostelRoom})` : ''}
+                        Allocated{' '}
+                        {facilities.hostelRoom ? `(Room/Block: ${facilities.hostelRoom})` : ''}
                       </dd>
                     </div>
                   )}
@@ -306,9 +320,7 @@ export default function StudentProfilePage() {
                   </span>
                   <h3>{student.guardian.name}</h3>
                   <p>{student.guardian.relation} · Primary guardian</p>
-                  <Badge tone={student.guardian.contact ? 'green' : 'amber'}>
-                    {student.guardian.contact ? 'Contact on file' : 'Contact not available'}
-                  </Badge>
+                  <ContactPhone phone={student.guardian.contact} name={student.guardian.name} />
                 </div>
                 {bridge ? (
                   <p className="panel-bottom-link">Parent messaging is not available yet.</p>

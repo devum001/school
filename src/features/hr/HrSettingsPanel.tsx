@@ -171,7 +171,6 @@ export default function HrSettingsPanel({
                 </Rule>
                 <Rule label="Late after">{settings.lateAfter}</Rule>
                 <Rule label="Half day after">{settings.halfDayAfter || 'Not enabled'}</Rule>
-                <Rule label="Full-day minimum">{settings.halfDayMinutes} minutes</Rule>
               </dl>
             </div>
             <div className="settings-policy-card">
@@ -180,6 +179,9 @@ export default function HrSettingsPanel({
               </div>
               <dl className="staff-rule-list">
                 <Rule label="Paid leave">{settings.paidLeaveDays} days / calendar year</Rule>
+                <Rule label="Absence reduces leave">
+                  {settings.absenceReducesLeave ? 'Yes · one day per absence' : 'No'}
+                </Rule>
                 <Rule label="Approval">Administrator review required</Rule>
                 <Rule label="Holidays">{settings.holidays.length} configured</Rule>
               </dl>
@@ -385,11 +387,31 @@ function SettingsEditor({
               value={draft.halfDayAfter ?? ''}
               onChange={(halfDayAfter) => setDraft({ ...draft, halfDayAfter })}
             />
-            {(['halfDayMinutes', 'paidLeaveDays', 'maxAccuracy'] as const).map((k) => (
+            <label className="field">
+              Absence reduces leave balance
+              <select
+                aria-label="Absence reduces leave balance"
+                value={draft.absenceReducesLeave ? 'yes' : 'no'}
+                onChange={(e) =>
+                  setDraft({ ...draft, absenceReducesLeave: e.target.value === 'yes' })
+                }
+              >
+                <option value="no">No — keep leave balance unchanged</option>
+                <option value="yes">Yes — use one leave day per absence</option>
+              </select>
+              <small>
+                Applies to the calendar-year balance. Approved leave or an attendance correction
+                recalculates usage without counting a date twice. Salary approval remains separate.
+              </small>
+            </label>
+            <p className="panel-note">
+              Tracking starts at the first successful punch-in. Missed working days become Absent
+              after school closes; pending leave counts only after approval.
+            </p>
+            {(['paidLeaveDays', 'maxAccuracy'] as const).map((k) => (
               <label className="field" key={k}>
                 {
                   {
-                    halfDayMinutes: 'Minimum minutes for a full day',
                     paidLeaveDays: 'Annual paid leave days',
                     maxAccuracy: 'Maximum GPS uncertainty (metres)',
                   }[k]
@@ -405,8 +427,9 @@ function SettingsEditor({
             ))}
           </div>
           <p>
-            Arriving after the half-day cutoff counts as half-day, even when minimum working hours
-            are met. Leave it empty to use working hours only. Changes apply to new punches.
+            Only arrival after the half-day cutoff counts as half-day. Working hours are recorded
+            but do not change the status. Leave the cutoff empty to disable automatic half-day
+            classification. Changes apply to new punches.
           </p>
           <fieldset className="hr-workdays">
             <legend>Working days</legend>

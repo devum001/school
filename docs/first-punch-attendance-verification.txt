@@ -1,0 +1,49 @@
+First-punch attendance and leave balance — 5 November 2026
+
+Behavior
+- The first successful, location-verified punch-in starts tracking automatically. Logging in or a rejected punch never starts tracking. There are no activation screens or manual start-date settings.
+- New punches save an internal firstPunchedOn date in the same transaction. Existing teachers use their earliest successful punch event. No database migration is required.
+- Working days before the first punch remain unmarked. After tracking begins, a missing punch is pending until the school's end time, then Absent. Future dates never become absent. Manual/exempt attendance policies and employment dates remain respected.
+- Holidays and weekly off remain non-working days. Approved leave appears as leave. Pending leave does not excuse an absence; later approval updates the shared read model. Existing reviewed attendance or real punches still require administrator conflict resolution before leave approval.
+- Missing punch-out remains Invalid, rather than Absent. The existing ARS approval workflow now accepts automatically derived absences. Pending ARS does not turn an absence into invalid; approval recalculates the outcome and balance.
+- School settings > Staff & Payroll > Work & Leave has Absence reduces leave balance: No (default) / Yes. When Yes, one full absence day uses one annual leave day. Changing this setting recalculates calendar-year usage; approved paid leave and absence cannot charge the same date twice. Corrections reverse absence usage. Remaining leave is clamped to zero in the existing UI. Salary decisions and approved payroll are not rewritten.
+- Staff calendar, register, directory/Quick Connect, profile and overview use the shared attendance resolver. Absences use existing red calendar styling. Status updates appear when data is loaded/refreshed; no cron job or per-second API polling is required.
+- The teacher overview chart now has a ring, labeled bars and clear counts. Present includes Late and Half Day once; those appear as separate detail chips. No Unmarked chart category. Teachers without tracking and those awaiting a punch are explained separately without falsely counting them absent. Existing student attendance behavior remains unchanged.
+
+Verification actually executed
+- Frontend: VITE_APP_MODE=demo npm test -- --maxWorkers=2 — 59 suites, 335 tests passed.
+- Backend: isolated MongoDB/HTTP tests for staffAttendanceRegister, firstPunchAttendance integration, attendanceSetup integration, attendanceAdjustments integration, HR integration and staffFoundation integration — 6 suites, 34 tests passed.
+- Final focused backend rerun after refactoring: staffAttendanceRegister, firstPunchAttendance integration, attendanceSetup integration, attendanceAdjustments integration — 4 suites, 16 tests passed. Includes rejected GPS not activating tracking, successful punch activation, old punch-event compatibility, absence across multiple API views, pending-to-approved leave, no double deduction and ARS reversal.
+- Browser: overview chart/assignment regression passed on desktop and 390px mobile; screenshots inspected. Separate Work & Leave policy edit/save/reload test passed. These were separate runs, one test in each.
+- Frontend npm run build passed. Backend tsc --noEmit passed. Affected-file ESLint passed for both repositories. git diff --check passed. Full-repository lint was not run; the frontend retains its existing large-chunk build warning.
+
+Safety and operation
+Existing uncommitted changes preserved using source-hash checks. No production database queries, writes, migrations, seeds or destructive commands. No credentials, .env, dependencies or lockfiles changed. Test data was isolated and disposable. No commit, deployment or push.
+Restart the backend and refresh the frontend. No script required. Enable absence deductions in Work & Leave only if the school wants them. Earlier punch history is used automatically; existing teachers may therefore show absences since their first recorded punch. No historical attendance rows are inserted by this calculation.
+
+Backend changed files
+src/test/firstPunchAttendance.integration.test.ts
+src/test/attendanceSetup.integration.test.ts
+src/api/models/hr.models.ts
+src/api/models/people.models.ts
+src/api/services/learningRead.service.ts
+src/api/services/staffAttendanceRegister.test.ts
+src/api/services/staffAttendanceRegister.ts
+src/api/services/hrAttendance.service.ts
+src/api/services/hrRead.service.ts
+src/api/services/hrLeave.service.ts
+src/api/services/staffLeaveBalance.ts
+src/api/services/attendanceAdjustment.service.ts
+src/api/controllers/requests/hr.request.ts
+
+Frontend changed files
+src/features/dashboard/TeacherAttendanceChart.tsx
+src/features/dashboard/teacher-attendance-chart.css
+src/features/dashboard/DashboardPage.tsx
+src/features/hr/HrSettingsPanel.tsx
+src/features/hr/HrWorkspace.tsx
+src/features/hr/hr-personal-calendar.css
+src/features/hr/attendanceCalendarModel.test.ts
+src/features/teachers/LiveStaffProfile.tsx
+src/services/hrService.ts
+tests/staff-foundation-live.e2e.ts

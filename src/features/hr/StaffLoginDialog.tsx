@@ -16,7 +16,7 @@ export default function StaffLoginDialog({
   saved,
 }: {
   schoolId: string;
-  staff: { id: string; name: string; email?: string };
+  staff: { id: string; name: string; email?: string; teaching?: boolean };
   permissions: readonly string[];
   close: () => void;
   saved: () => void;
@@ -73,6 +73,7 @@ export default function StaffLoginDialog({
             <span className="password-input-wrap">
               <input
                 type={showPassword ? 'text' : 'password'}
+                aria-label="Password"
                 autoComplete="new-password"
                 required
                 minLength={8}
@@ -91,7 +92,12 @@ export default function StaffLoginDialog({
           </label>
           <label className="field">
             School role
-            <select required value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+            <select
+              aria-label="School role"
+              required
+              value={roleId}
+              onChange={(e) => setRoleId(e.target.value)}
+            >
               <option value="">Select a role</option>
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>

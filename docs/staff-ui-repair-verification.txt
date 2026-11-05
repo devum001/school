@@ -1,0 +1,35 @@
+Staff overview and assignment UI repair — 2 November 2026
+
+Changes
+- Removed the Staff attendance requests panel from Overview. Requests remain available in the attendance workflow.
+- Added a responsive Teacher attendance distribution chart for the selected date. Present, Late, Half day, Absent, Unmarked and applicable other statuses are distinct. Live counts use the same backend calculation as the attendance register; demo counts use local records. Teacher-scoped overview does not show this school-wide chart.
+- Removed the separate Staff attendance sidebar link. The existing Attendance entry remains; users with staff-attendance-only access are routed through that entry to the staff register.
+- Split Edit and Replace teacher. Edit retains the full assignment form. Replace teacher has one teacher selector and a current/new confirmation, preserving class, section and subject. It uses the existing atomic, revision-checked replacement API and leaves other assignments intact.
+- Corrected phone/email spacing, employment/attendance badge spacing, guardian contact styling and the Overview breadcrumb. Fixed the staff row salary action to open the existing Finance salary workflow. Corrected the student attendance chart axis to include 0–100%.
+- Kept existing layout, routes, permissions, CSRF checks, tenant boundaries and uncommitted work. No credentials, dependency changes, live database mutations, migrations, commits or deployment.
+
+Backend
+Changed src/api/services/learningRead.service.ts, added src/api/services/teacherAttendanceSummary.ts, extended src/test/staffFoundation.integration.test.ts.
+The existing learning snapshot API now includes optional teacherAttendance { date, total, counts } when permitted. No new client API request, collection, index or migration. The existing staff/punch gate was extracted unchanged to keep the service readable and satisfy lint.
+The shared attendance calculation retains its existing policy/activation behavior and limits. This change does not introduce immutable attendance history or remove existing register limits.
+
+Frontend
+Changed AppShell, DashboardPage, AttendanceTrend, schoolFeatureContext, LiveLearning, learningService, PeopleRelations, SetupControls, LiveStaff, StudentProfilePage, ContactPhone, hr.css, contacts.css and the two focused browser tests.
+Added TeacherAttendanceChart with its stylesheet, ReplaceTeacherDialog with its stylesheet, and a shared contact-phone stylesheet.
+
+Verification actually executed
+- Frontend npm run typecheck: passed.
+- Backend tsc --noEmit: passed in isolated source copy and actual repository.
+- Frontend npm run build: passed; existing large-chunk warning remains.
+- VITE_APP_MODE=demo npm test -- --maxWorkers=2: 58 files / 333 tests passed.
+- Backend Jest staffFoundation.integration.test.ts + security/learning.integration.test.ts: 2 suites / 13 tests passed, using disposable local MongoDB. Covers selected-date chart data, exclusion of non-teaching staff, attendance permission revocation, hidden school-wide data for teachers, assignment scope revocation, and retaining the replacement teacher's other class.
+- Live Playwright staff-foundation configuration: 2 tests passed. Includes separate Edit/Replace dialogs, one-select replacement, retained assignments in the recipient teacher's own Overview, absent sidebar/request panel, and mobile layout checks.
+- Demo Playwright quick-connect.e2e.ts: 1 test passed on the existing root overview route, contact/profile links and mobile layout. No live API fallback.
+- ESLint for this repair's changed/new TS/TSX files: passed in both repositories. Full repository lint was not rerun; pre-existing failures are documented in staff-foundation-verification.txt.
+- git diff --check: passed in both repositories.
+- Desktop directory/Overview and mobile Overview/replacement screenshots visually inspected.
+Backend test source was staged without .env. Only three verified files were copied back after checking hashes against the working tree to preserve prior changes.
+
+Use
+Restart the backend and refresh the frontend. Open Overview for the new teacher chart. Open Teachers or Staff & HR > Staff assignments: use Edit to change assignment details, or Replace teacher to transfer only that assignment.
+No database script or manual data adjustment is required.

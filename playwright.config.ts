@@ -5,6 +5,7 @@ export default defineConfig({
   testMatch: '**/*.e2e.ts',
   testIgnore: [
     'live-api.e2e.ts',
+    'staff-foundation-live.e2e.ts',
     'fees-live.e2e.ts',
     'teacher-workspace-live.e2e.ts',
     'attendance-ars-live.e2e.ts',

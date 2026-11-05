@@ -14,6 +14,7 @@ export interface SchoolFeatureData {
   routeAllowed?: (path: string) => boolean;
   canMarkAttendance?: boolean;
   teacherScoped?: boolean;
+  teacherAttendance?: { date: string; total: number; counts: Record<string, number> };
   staffAttendanceSummary?: {
     onDuty: number;
     late: number;

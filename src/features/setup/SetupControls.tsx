@@ -46,12 +46,12 @@ export function Paging({
   return (
     <div className="live-actions">
       {hasPrevious && (
-        <Button variant="secondary" onClick={first}>
+        <Button type="button" variant="secondary" onClick={first}>
           First page
         </Button>
       )}
       {nextCursor && (
-        <Button variant="secondary" onClick={next}>
+        <Button type="button" variant="secondary" onClick={next}>
           Next page
         </Button>
       )}

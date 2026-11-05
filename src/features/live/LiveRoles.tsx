@@ -1,4 +1,10 @@
-import { permissionGroup, permissionDependencies, togglePermission } from './permissionChoices';
+import {
+  permissionModule,
+  roleSuggestions,
+  permissionGroup,
+  permissionDependencies,
+  togglePermission,
+} from './permissionChoices';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { titleCase } from '../../lib/displayFormat';
 import { useCallback, useState } from 'react';
@@ -147,8 +153,8 @@ export default function LiveRoles({
         >
           <div className="live-content">
             <p>
-              Delete {deleting?.name}? {deleting?.memberCount ?? 0} school members currently use this
-              role.
+              Delete {deleting?.name}? {deleting?.memberCount ?? 0} school members currently use
+              this role.
             </p>
             {error && (
               <p role="alert" className="form-error">
@@ -200,6 +206,7 @@ function RoleEditor({
   saved: () => void;
 }) {
   const [permissionTab, setPermissionTab] = useState('view');
+  const [confirmed, setConfirmed] = useState(false);
   const [name, setName] = useState(role?.name ?? '');
   const [description, setDescription] = useState(role?.description || '');
   const [permissions, setPermissions] = useState(role?.permissions ?? []);
@@ -218,7 +225,17 @@ function RoleEditor({
         className="live-form"
         onSubmit={async (event) => {
           event.preventDefault();
-          if (!name.trim() || busy) return;
+          if (
+            !name.trim() ||
+            busy ||
+            (!confirmed &&
+              permissions.some(
+                (p) =>
+                  ['roles.manage', 'memberships.manage'].includes(p) &&
+                  !role?.permissions.includes(p),
+              ))
+          )
+            return;
           setBusy(true);
           setError('');
           try {
@@ -267,35 +284,81 @@ function RoleEditor({
           {permissions.length} permissions selected across both tabs. View allows reading; Manage
           allows changes. Salary approval and payment are separate choices.
         </p>
-        <fieldset disabled={busy}>
-          <legend>Permissions</legend>
-          {catalog.permissions
-            .filter((p) => permissionGroup(p) === permissionTab)
-            .map((permission) => (
-              <label className="live-check" key={permission}>
-                <input
-                  type="checkbox"
-                  checked={permissions.includes(permission)}
-                  disabled={
-                    !permissionDependencies(permission, catalog.permissions).every((p) =>
-                      access.permissions.includes(p),
-                    )
-                  }
-                  onChange={(event) =>
-                    setPermissions((current) =>
-                      togglePermission(
-                        current,
-                        permission,
-                        event.target.checked,
-                        catalog.permissions,
-                      ),
-                    )
-                  }
-                />
-                {permissionLabel(permission)}
-              </label>
+        {!role && (
+          <div className="live-actions">
+            {Object.entries(roleSuggestions).map(([label, keys]) => (
+              <Button
+                key={label}
+                type="button"
+                variant="secondary"
+                onClick={() =>
+                  setPermissions(
+                    keys.filter(
+                      (p) => catalog.permissions.includes(p) && access.permissions.includes(p),
+                    ),
+                  )
+                }
+              >
+                {label}
+              </Button>
             ))}
-        </fieldset>
+          </div>
+        )}
+        <p className="panel-note">
+          The initial school owner keeps full access. These presets create configurable staff roles.
+          Broad Manage permissions include their related actions; select individual actions for
+          narrower access.
+        </p>
+        <div className="permission-modules">
+          {[...new Set(catalog.permissions.map(permissionModule))].map((module) => {
+            const choices = catalog.permissions.filter(
+              (p) => permissionModule(p) === module && permissionGroup(p) === permissionTab,
+            );
+            return choices.length ? (
+              <fieldset key={module} disabled={busy}>
+                <legend>{module}</legend>
+                {choices.map((permission) => (
+                  <label className="live-check" key={permission}>
+                    <input
+                      type="checkbox"
+                      checked={permissions.includes(permission)}
+                      disabled={
+                        !permissionDependencies(permission, catalog.permissions).every((p) =>
+                          access.permissions.includes(p),
+                        )
+                      }
+                      onChange={(event) => {
+                        setConfirmed(false);
+                        setPermissions((current) =>
+                          togglePermission(
+                            current,
+                            permission,
+                            event.target.checked,
+                            catalog.permissions,
+                          ),
+                        );
+                      }}
+                    />
+                    {permissionLabel(permission)}
+                  </label>
+                ))}
+              </fieldset>
+            ) : null;
+          })}
+        </div>
+        {permissions.some(
+          (p) =>
+            ['roles.manage', 'memberships.manage'].includes(p) && !role?.permissions.includes(p),
+        ) && (
+          <label className="live-check">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+            />
+            I understand this role can change school accounts or delegate permissions it holds.
+          </label>
+        )}
         <p>Manage and view are separate permissions. These shortcuts select both when available.</p>
         <div className="live-actions">
           {Object.entries(catalog.presets).map(([name, preset]) => (

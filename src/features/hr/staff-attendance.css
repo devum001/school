@@ -103,8 +103,21 @@
 }
 .staff-profile-hero {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
   align-items: center;
+}
+.staff-profile-identity {
+  flex: 1 1 180px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.staff-profile-overview .staff-profile-details {
+  padding: 20px;
+  margin: 0;
+}
+.staff-profile-overview > .button {
+  margin: 0 20px;
 }
 .staff-profile-details {
   display: grid;
@@ -142,7 +155,7 @@
   padding: 26px;
 }
 .staff-profile-hero {
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 .staff-profile-hero h2 {
   margin: 0 0 6px;

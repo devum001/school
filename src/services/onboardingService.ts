@@ -30,6 +30,7 @@ export const personSchema = z.object({
   name: z.string().transform(titleCase),
   status: z.enum(['active', 'inactive', 'archived']),
   revision: z.number(),
+  attendanceStatus: z.string().optional(),
   teaching: z.boolean().optional(),
   userId: id.optional(),
   department: z.string().transform(titleCase).optional(),
@@ -93,6 +94,9 @@ const detailSchema = summarySchema.extend({
 });
 export type ImportDetail = z.infer<typeof detailSchema>;
 const relationSchema = z.object({
+  classId: z.string().optional(),
+  sectionId: z.string().optional(),
+  subjectId: z.string().optional(),
   id,
   schoolId: id,
   academicYearId: id,
@@ -120,17 +124,62 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   return result.data;
 }
 export const onboardingApi = {
+  assignBatch(
+    schoolId: string,
+    yearId: string,
+    items: {
+      staffId: string;
+      classId: string;
+      sectionId: string;
+      subjectId: string;
+      replaceId?: string;
+      revision?: number;
+    }[],
+  ) {
+    return apiService.request(
+      `${root(schoolId)}/academic-years/${yearId}/teaching-assignments-batch`,
+      { method: 'POST', body: { items } },
+    );
+  },
+  async staffDirectory(
+    schoolId: string,
+    signal: AbortSignal,
+    after: string | undefined,
+    search: string,
+    teaching: boolean,
+    status: string,
+  ) {
+    const query = new URLSearchParams({
+      kind: teaching ? 'teachers' : 'all-staff',
+      search,
+      status,
+      offset: after || '0',
+    });
+    const data = parse(
+      z.object({ items: z.array(personSchema), nextOffset: z.number().nullable() }),
+      await apiService.request(`${root(schoolId)}/staff-directory?${query}`, {
+        signal,
+        fresh: true,
+      }),
+    );
+    data.items.forEach((item) => scoped(item, schoolId));
+    return {
+      items: data.items,
+      nextCursor: data.nextOffset == null ? null : String(data.nextOffset),
+    };
+  },
   async relations(
     schoolId: string,
     yearId: string,
     kind: RelationKind,
     signal?: AbortSignal,
     after?: string,
+    filters: Record<string, string> = {},
   ) {
     const data = parse(
       z.object({ items: z.array(relationSchema), nextCursor: id.nullable(), year: yearSchema }),
       await apiService.request(
-        `${root(schoolId)}/academic-years/${yearId}/${kind}${after ? `?after=${after}` : ''}`,
+        `${root(schoolId)}/academic-years/${yearId}/${kind}?${new URLSearchParams({ ...filters, ...(after ? { after } : {}) })}`,
         { signal },
       ),
     );

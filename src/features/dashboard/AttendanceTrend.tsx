@@ -21,7 +21,10 @@ export function AttendanceTrend({
       title="Attendance trend"
       action={
         <div className="attendance-trend-summary">
-          <strong>{attendance.percentage}<span>%</span></strong>
+          <strong>
+            {attendance.percentage}
+            <span>%</span>
+          </strong>
           <span>selected day</span>
         </div>
       }
@@ -48,8 +51,8 @@ export function AttendanceTrend({
               dy={8}
             />
             <YAxis
-              domain={[70, 100]}
-              ticks={[70, 80, 90, 100]}
+              domain={[0, 100]}
+              ticks={[0, 25, 50, 75, 100]}
               tickFormatter={(n) => `${n}%`}
               axisLine={false}
               tickLine={false}

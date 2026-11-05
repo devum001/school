@@ -119,6 +119,9 @@ const stateSchema = z.object({
 });
 export const snapshotSchema = z.object({
   teacherScoped: z.boolean().optional(),
+  teacherAttendance: z
+    .object({ date: z.string(), total: z.number(), counts: z.record(z.string(), z.number()) })
+    .optional(),
   staffAttendanceSummary: z
     .object({
       onDuty: z.number(),

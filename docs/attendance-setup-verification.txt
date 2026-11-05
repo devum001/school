@@ -1,0 +1,114 @@
+Current status — attendance setup removed at user request (2 November 2026)
+The implementation below is a historical verification record; its activation/setup sections are superseded.
+
+Restored flow: create or link the school login, then use existing Punch In / Punch Out.
+Removed: auto-start checkbox/payload, profile activation action/dialog, school/staff start-date fields, finalization setting, activation API/service, setup validation and automatic absence derivation based on tracking dates.
+Missing working days remain unmarked; recorded attendance, approved leave, school days off, ARS and existing punch safeguards remain. Present still includes Late and Half Day; arrival cutoff remains the Half Day rule. Existing database records were not changed or deleted, including historical attendance. Previously stored setup properties have no application effect; no cleanup script is needed.
+The shared register stays for profiles, contacts and overview, with three unnecessary account/employment queries removed.
+
+Verification for removal:
+- 59 frontend suites / 334 tests passed (VITE_APP_MODE=demo npm test -- --maxWorkers=2).
+- 7 backend suites / 41 tests passed: staffAttendanceRegister, automaticStaffAttendance, attendanceTimeRules, attendanceSetup integration, staffFoundation integration, attendanceAdjustments integration, HR integration.
+- Final attendanceSetup suite rerun: 2 passed, including actual login-to-punch-in/punch-out with no activation step, and inclusive Present filtering.
+- Focused live browser case passed: login dialog has no activation option; teacher profile has no Start attendance action; Present/Late behavior preserved.
+- Frontend build and backend typecheck passed. Affected-file lint passed in both repositories. Existing frontend large-chunk warning remains. Full-repository lint was not run.
+- Isolated local MongoDB and HTTP fixtures only. No deployed/live database access or environment changes.
+
+Backend changed files:
+src/test/staffFoundation.integration.test.ts
+src/test/attendanceSetup.integration.test.ts
+src/api/models/hr.models.ts
+src/api/models/people.models.ts
+src/api/controllers/hr.controller.ts
+src/api/services/learningRead.service.ts
+src/api/services/staffAttendanceRegister.test.ts
+src/api/services/staffAttendanceRegister.ts
+src/api/services/hrSettings.service.ts
+src/api/services/peopleDirectory.service.ts
+src/api/services/attendanceActivation.service.ts
+src/api/services/staffLogin.service.ts
+src/api/services/hrRules.ts
+src/api/services/attendanceAdjustment.service.ts
+src/api/controllers/requests/hr.request.ts
+
+Frontend changed files:
+src/features/hr/StaffLoginDialog.tsx
+src/features/hr/HrSettingsPanel.tsx
+src/features/hr/hr.css
+src/features/teachers/LiveStaffProfile.tsx
+src/services/hrService.ts
+src/services/onboardingService.ts
+src/services/apiService.ts
+tests/staff-foundation-live.e2e.ts
+
+--- Historical verification follows ---
+
+Attendance setup and arrival-only half-day rules — 2 November 2026
+
+User decision: use arrival cutoff only, not minimum working hours.
+
+Implemented
+- Login creation has a default-on Start attendance automatically checkbox when the staff member is a teacher, the creator has attendance.manage, and the selected role has attendance.self.
+- Account, membership, staff link and tracking activation happen in one transaction. An activation error rolls back the new account as well. Opt-out preserves the existing login-only behavior.
+- First explicit activation initializes the school's tracking date automatically. A new teacher starts on the latest of today, their joining date and an existing future school tracking date. Earlier dates are never automatically backfilled as absent. Existing linked teachers can use Start attendance without first setting a separate school date.
+- School timings/location remain a one-time school setup. Advanced tracking/cutoff fields are collapsed; minimum-hours classification has been removed from the settings UI.
+- Automatic punches and administrator time corrections use arrival time only. With lateAfter=10:26 and halfDayAfter=14:26, 11:00–16:00 is Late (included in Present). Only arrival strictly after 14:26 automatically becomes Half Day. Working duration is still recorded.
+- Present register/profile/directory counts and filters include Late. Late remains a distinct flag/subset. Half Day is separate. Stacked charts retain disjoint segments so the same teacher is never counted twice in the bar; legend text explains the overlapping Present/Late counts.
+- Late rows display Present plus Late badges. Half Day no longer shows an extra Late badge and can show an explanation from the saved attendance record.
+- Unreviewed automatic historical half-day records with saved rules are projected using arrival-only classification, without rewriting the database. Explicit administrator decisions and ARS records stay intact. Older records without saved rules are not guessed. Per-day saved arrival cutoffs are preserved when school settings change later.
+- Attendance register links now honor the requested date within the selected month.
+
+Compatibility and safety
+No database script, migration or data reset is required. Existing halfDayMinutes/fullDayMinutes fields remain for stored-record and older-client compatibility but no longer drive automatic half-day classification. No salary, leave balance, or approved payroll record was rewritten. No credentials/configuration/dependency changes or live database access. Existing uncommitted work preserved via hash checks. No commit/push/deploy.
+
+Executed verification
+- Backend: 6 suites / 43 tests passed (automaticStaffAttendance, attendanceTimeRules, attendanceSetup integration, attendanceAdjustments integration, staffFoundation integration, HR integration). Disposable local MongoDB only.
+- Frontend: 59 files / 334 unit tests passed using VITE_APP_MODE=demo npm test -- --maxWorkers=2.
+- Live browser: prior two profile/assignment tests passed; new combined-login and Present/Late test passed after correcting input accessibility labels, the test settings payload and date navigation. New test confirms no separate activation step and one late teacher visible in both Present and Late filters. These three cases passed across runs; the final targeted run contained one case.
+- Frontend and actual-backend typechecks passed. Affected-file ESLint passed in both repositories. Full-repository lint was not rerun; existing unrelated failures remain documented in earlier reports.
+- Frontend build passed with the existing large-chunk warning. git diff --check passed in both repositories.
+- Login dialog screenshot inspected. No deployed/Atlas database test was performed.
+
+Backend files changed this task
+src/api/controllers/requests/hr.request.ts
+src/api/services/attendanceActivation.service.ts
+src/api/services/attendanceDayView.ts
+src/api/services/attendanceTimeRules.test.ts
+src/api/services/attendanceTimeRules.ts
+src/api/services/attendanceTimes.service.ts
+src/api/services/automaticStaffAttendance.test.ts
+src/api/services/automaticStaffAttendance.ts
+src/api/services/contactDirectory.service.ts
+src/api/services/hrRules.ts
+src/api/services/staffLogin.service.ts
+src/test/attendanceAdjustments.integration.test.ts
+src/test/attendanceSetup.integration.test.ts
+
+Frontend files changed this task
+src/features/hr/StaffLoginDialog.tsx
+src/features/hr/HrSettingsPanel.tsx
+src/features/hr/StaffAttendancePanel.tsx
+src/features/hr/HrWorkspace.tsx
+src/features/hr/hr.css
+src/features/teachers/LiveStaffProfile.tsx
+src/features/dashboard/TeacherAttendanceChart.tsx
+src/features/contacts/QuickConnect.tsx
+src/components/shared/AttendanceStatus.tsx
+src/components/shared/attendance-status.css
+src/components/shared/contact-phone.css
+src/lib/staffAttendanceSummary.ts
+src/lib/staffAttendanceSummary.test.ts
+src/services/hrService.ts
+src/services/apiService.ts
+tests/staff-foundation-live.e2e.ts
+
+Use: restart the backend and refresh the frontend. Configure school timing/location once; when creating a teacher login, leave Start attendance automatically selected. No scripts to run.
+
+Follow-up: Half Day is included in Present (2026-11-02)
+- Present totals and filters include present, late and half-day, once per person.
+- Half Day retains its own filter and Present / Half Day badges; chart segments remain exclusive.
+- Updated staff register, profile, overview chart, demo contacts and backend staff directory.
+- Attendance duration, saved status, salary and student attendance rules unchanged.
+- Focused frontend test: 1 passed. Backend attendanceSetup integration tests: 5 passed using disposable MongoDB.
+- Frontend build, backend typecheck and affected-file lint passed. Build retains existing chunk-size warning.
+- No production database access, migration or environment changes.

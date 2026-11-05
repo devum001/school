@@ -136,9 +136,12 @@ export default function AppShell({
       });
   }, [preferences.landingPage, location.pathname, navigate]);
   const current = [
+    { to: '/overview', label: 'Overview' },
+    { to: '/attendance/staff', label: 'Attendance' },
     { to: '/staff/punch', label: 'Punch in & out' },
     { to: '/staff/self', label: 'My attendance & salary' },
     ...navigation,
+    { to: '/contacts', label: 'Quick Connect' },
     { to: '/notifications', label: 'Notifications' },
     { to: '/settings', label: 'School settings' },
   ].find((n) => (n.to === '/' ? location.pathname === '/' : location.pathname.startsWith(n.to)));
@@ -180,6 +183,11 @@ export default function AppShell({
         <div className="nav-label">WORKSPACE</div>
         <nav aria-label="Main navigation">
           {navigation
+            .map((n) =>
+              n.to === '/attendance' && !visibleRoute(n.to) && visibleRoute('/attendance/staff')
+                ? { ...n, to: '/attendance/staff' }
+                : n,
+            )
             .filter((n) => visibleRoute(n.to))
             .map((n) => (
               <NavLink
@@ -197,6 +205,12 @@ export default function AppShell({
         </nav>
         <div className="nav-label second">COMMUNICATION & ADMIN</div>
         <nav aria-label="Administration">
+          {visibleRoute('/contacts') && (
+            <NavLink className="nav-link" to="/contacts" onClick={() => setMobile(false)}>
+              <AppIcon name="staff" size={20} />
+              Quick Connect
+            </NavLink>
+          )}
           {visibleRoute('/notifications') && (
             <NavLink className="nav-link" to="/notifications" onClick={() => setMobile(false)}>
               <AppIcon name="notifications" size={20} />

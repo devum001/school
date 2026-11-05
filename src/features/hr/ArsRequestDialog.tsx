@@ -41,14 +41,12 @@ export default function ArsRequestDialog({
           draft.reasonCode === 'other'
             ? draft.other.trim()
             : reasons.find(([code]) => code === draft.reasonCode)?.[1];
-        if (!reason || reason.length < 5)
-          throw new Error('Select a reason, or explain Other reason in at least 5 characters.');
         await adapter.save('/attendance-requests', {
           requestKey: draft.requestKey,
           date: day.date,
           requestedPeriod: draft.requestedPeriod,
-          reasonCode: draft.reasonCode,
-          reason,
+          ...(draft.reasonCode ? { reasonCode: draft.reasonCode } : {}),
+          reason: reason || '',
         });
         saved();
       }}
@@ -72,16 +70,13 @@ export default function ArsRequestDialog({
         </select>
       </label>
       <label className="field">
-        Reason
+        Reason (optional)
         <select
           aria-label="ARS reason"
-          required
           value={draft.reasonCode}
           onChange={(e) => setDraft({ ...draft, reasonCode: e.target.value })}
         >
-          <option value="" disabled>
-            Select a reason
-          </option>
+          <option value="">No reason selected</option>
           {reasons.map(([code, label]) => (
             <option key={code} value={code}>
               {label}
@@ -91,7 +86,8 @@ export default function ArsRequestDialog({
       </label>
       {draft.reasonCode === 'other' && (
         <TextField
-          label="Other reason"
+          label="Other reason (optional)"
+          required={false}
           value={draft.other}
           onChange={(other) => setDraft({ ...draft, other })}
         />
@@ -99,7 +95,7 @@ export default function ArsRequestDialog({
       <p className="ars-form-note">
         {day.status === 'half-day'
           ? 'Your attendance stays Half day while this request is reviewed. Only approval changes it to the requested attendance.'
-          : 'Your administrator will review this request. The missed-punch day remains Invalid until approved.'}
+          : 'Your administrator will review this request. The existing attendance status stays until approval.'}
       </p>
     </HrForm>
   );

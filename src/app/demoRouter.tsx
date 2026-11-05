@@ -1,3 +1,4 @@
+import { DemoQuickConnect } from '../features/contacts/QuickConnect';
 import { lazy } from 'react';
 import { createBrowserRouter, Link, Navigate } from 'react-router-dom';
 import AppShell from '../components/layout/DemoAppShell';
@@ -33,11 +34,16 @@ export const demoRouter = createBrowserRouter([
           { path: 'teachers', element: <Teachers /> },
           { path: 'teachers/:teacherId', element: <TeacherProfile /> },
           { path: 'staff', element: <Staff /> },
+          { path: 'staff/:staffId', element: <TeacherProfile /> },
           { path: 'attendance', element: <Attendance /> },
-          { path: 'attendance/staff', element: <Navigate replace to="/attendance?register=staff" /> },
+          {
+            path: 'attendance/staff',
+            element: <Navigate replace to="/attendance?register=staff" />,
+          },
           { path: 'fees', element: <Fees /> },
           { path: 'academics', element: <Academics /> },
           { path: 'notifications', element: <Notifications /> },
+          { path: 'contacts', element: <DemoQuickConnect /> },
           { path: 'settings', element: <Settings /> },
           {
             path: '*',

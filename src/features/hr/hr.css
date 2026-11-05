@@ -187,7 +187,9 @@
   cursor: pointer;
   min-width: 130px;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .staff-select-filter:focus {
   border-color: #0f766e;
@@ -393,4 +395,25 @@
   color: #64748b;
   max-width: 420px;
   line-height: 1.5;
+}
+
+.staff-contact-cell .contact-phone {
+  display: flex;
+  width: fit-content;
+  padding: 0;
+  margin-bottom: 6px;
+}
+.staff-contact-cell small {
+  display: block;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.staff-status-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.staff-header-toolbar {
+  align-items: flex-end;
 }

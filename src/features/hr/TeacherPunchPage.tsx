@@ -115,7 +115,9 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
                 : data.punchOut
                   ? 'School day completed'
                   : data.attendanceClosed
-                    ? 'Attendance correction'
+                    ? data.attendanceSource === 'admin'
+                      ? 'Attendance recorded by administrator'
+                      : 'Attendance correction'
                     : 'Ready to start your day'}
           </span>
           <p className="punch-date">
@@ -138,7 +140,9 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
             School hours {data ? `${data.schedule.start} – ${data.schedule.end}` : '—'}
           </p>
         </div>
-        <div className={`punch-clock-action ${data?.state.code === 'HR_ON_LEAVE' ? 'on-leave' : ''}`}>
+        <div
+          className={`punch-clock-action ${data?.state.code === 'HR_ON_LEAVE' ? 'on-leave' : ''}`}
+        >
           <div className="punch-action-symbol">
             {data?.punchOut ? (
               <CheckCircle2 size={34} />
@@ -152,7 +156,9 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
             {data?.state.code === 'HR_ON_LEAVE'
               ? 'On approved leave today'
               : data?.attendanceClosed
-                ? 'Attendance correction'
+                ? data.attendanceSource === 'admin'
+                  ? 'Attendance recorded by administrator'
+                  : 'Attendance correction'
                 : data?.punchOut
                   ? 'You’re all set for today'
                   : data?.active
@@ -163,7 +169,9 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
             {data?.state.code === 'HR_ON_LEAVE'
               ? 'Your leave is approved for today. Punch in and punch out are disabled while on leave.'
               : data?.attendanceClosed
-                ? 'View your correction in the ARS tab.'
+                ? data.attendanceSource === 'admin'
+                  ? 'Your administrator recorded these times. View them in your attendance calendar.'
+                  : 'View your correction in the ARS tab.'
                 : data?.punchOut
                   ? 'Your arrival and departure have been recorded.'
                   : data?.active

@@ -1,3 +1,7 @@
+import { matchesStaffAttendance } from '../../lib/staffAttendanceSummary';
+import { attendanceOptions } from '../../lib/attendanceOptions';
+import ContactPhone from '../../components/shared/ContactPhone';
+import AttendanceStatus from '../../components/shared/AttendanceStatus';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Badge, Button } from '../../components/ui/Primitives';
@@ -41,6 +45,7 @@ export default function StaffAttendancePanel({
   calendar,
   live,
   canViewProfile,
+  canManage = true,
 }: {
   data: HrWorkspace;
   staff: HrStaff[];
@@ -51,30 +56,55 @@ export default function StaffAttendancePanel({
   calendar: (staff: HrStaff) => void;
   live: boolean;
   canViewProfile: boolean;
+  canManage?: boolean;
 }) {
   const [params] = useSearchParams();
-  const [view, setView] = useState(params.get('view') === 'requests' ? 'requests' : 'register'),
+  const [view, setView] = useState(
+      canManage && params.get('view') === 'requests' ? 'requests' : 'register',
+    ),
     [filter, setFilter] = useState('all');
   const requests = (data.attendanceRequests ?? []).filter((r) =>
     staff.some((s) => s.id === r.staffId),
   );
   const pending = requests.filter((r) => r.status === 'pending').length;
-  const rows = staff
-    .map((person) => ({
-      person,
-      day: data.attendance.find((d) => d.staffId === person.id && d.date === date),
-    }))
-    .filter(
-      ({ day }) =>
-        filter === 'all' ||
-        (filter === 'late'
-          ? !!day && wasLate(day)
-          : filter === 'on-duty'
-            ? day?.inProgress
-            : (day?.status ?? 'unmarked') === filter),
-    );
+  const [search, setSearch] = useState('');
+  const days = new Map(data.attendance.filter((d) => d.date === date).map((d) => [d.staffId, d]));
+  const searched = staff
+    .filter((p) =>
+      `${p.name} ${p.code} ${p.phone || ''}`.toLowerCase().includes(search.toLowerCase()),
+    )
+    .map((person) => ({ person, day: days.get(person.id) }));
+  const rows = searched.filter(({ day }) => matchesStaffAttendance(day?.status, filter));
   return (
     <>
+      {view === 'register' && (
+        <>
+          <label className="field">
+            Find staff
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Name, employee ID or phone"
+            />
+          </label>
+          <div className="hr-summary">
+            {['present', 'absent', 'late', 'half-day', 'unmarked'].map((status) => (
+              <Button
+                key={status}
+                variant={filter === status ? 'primary' : 'secondary'}
+                onClick={() => setFilter(filter === status ? 'all' : status)}
+              >
+                {titleCase(status.replaceAll('-', ' '))} ·{' '}
+                {searched.filter((r) => matchesStaffAttendance(r.day?.status, status)).length}
+              </Button>
+            ))}
+          </div>
+          <p className="attendance-count-note">
+            Present includes late arrivals and half days. Each person is counted once; Late and Half
+            Day also have their own filters.
+          </p>
+        </>
+      )}
       <div className="staff-attendance-tools">
         <div className="staff-attendance-views">
           <Button variant="secondary" onClick={saved}>
@@ -86,7 +116,7 @@ export default function StaffAttendancePanel({
           >
             Daily register
           </Button>
-          {live && (
+          {live && canManage && (
             <Button
               variant={view === 'requests' ? 'primary' : 'secondary'}
               onClick={() => setView('requests')}
@@ -100,12 +130,11 @@ export default function StaffAttendancePanel({
             Attendance filter
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="all">All staff</option>
-              <option value="on-duty">On duty</option>
-              <option value="late">Late arrivals</option>
-              <option value="half-day">Half day</option>
-              <option value="absent">Absent</option>
-              <option value="invalid">Invalid / missed punch</option>
-              <option value="unmarked">Not marked</option>
+              {attendanceOptions.map((status) => (
+                <option key={status} value={status}>
+                  {titleCase(status.replaceAll('-', ' '))}
+                </option>
+              ))}
             </select>
           </label>
         )}
@@ -128,6 +157,7 @@ export default function StaffAttendancePanel({
                 <th>Attendance</th>
                 <th>Punch times</th>
                 <th>Actions</th>
+                <th>Contact</th>
               </tr>
             </thead>
             <tbody>
@@ -149,32 +179,15 @@ export default function StaffAttendancePanel({
                   </td>
                   <td>
                     <div className="staff-attendance-badges">
-                      <Badge
-                        tone={
-                          day?.status === 'invalid'
-                            ? 'red'
-                            : day?.status === 'absent'
-                              ? 'red'
-                              : ['half-day', 'late'].includes(day?.status ?? '')
-                                ? 'amber'
-                                : day?.status === 'present'
-                                  ? 'green'
-                                  : 'neutral'
-                        }
-                      >
-                        {titleCase(
-                          day?.status === 'present'
-                            ? day.inProgress
-                              ? 'Present'
-                              : 'Full day'
-                            : (day?.status ?? 'Unmarked'),
-                        )}
-                      </Badge>
-                      {day && wasLate(day) && day.status !== 'late' && (
+                      <AttendanceStatus status={day?.status} />
+                      {day && wasLate(day) && day.status === 'present' && (
                         <Badge tone="amber">Late</Badge>
                       )}
                       {day?.inProgress && <Badge tone="neutral">On duty</Badge>}
                     </div>
+                    {day?.attendanceExplanation && (
+                      <small className="attendance-request-sub">{day.attendanceExplanation}</small>
+                    )}
                     {day?.missedPunchOut && (
                       <small className="attendance-request-sub">
                         Missed punch-out · request needed
@@ -191,15 +204,21 @@ export default function StaffAttendancePanel({
                     <Button variant="ghost" onClick={() => calendar(person)}>
                       Calendar
                     </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => correct(person)}
-                      disabled={requests.some(
-                        (r) => r.date === date && r.staffId === person.id && r.status === 'pending',
-                      )}
-                    >
-                      Correct attendance
-                    </Button>
+                    {canManage && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => correct(person)}
+                        disabled={requests.some(
+                          (r) =>
+                            r.date === date && r.staffId === person.id && r.status === 'pending',
+                        )}
+                      >
+                        Mark / correct
+                      </Button>
+                    )}
+                  </td>
+                  <td>
+                    <ContactPhone phone={person.phone} name={person.name} />
                   </td>
                 </tr>
               ))}

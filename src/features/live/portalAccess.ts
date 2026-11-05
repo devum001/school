@@ -7,6 +7,11 @@ export function portalAccess(
   const own = (key: string) => context.selfLinked !== false && can(key);
   const allowed = (path: string) => {
     if (path === '/' || path === '/overview') return can('overview.view') || own('teaching.self');
+    if (path === '/contacts')
+      return (
+        (can('contacts.students.view') && (can('students.view') || own('teaching.self'))) ||
+        (can('contacts.staff.view') && can('staff.view'))
+      );
     if (path === '/classes') return can('classes.view') || own('teaching.self');
     if (path === '/academics') return can('academics.view') || own('academics.assigned.view');
     if (path === '/attendance') return can('student-attendance.view') || own('teaching.self');
@@ -15,7 +20,8 @@ export function portalAccess(
     if (path.startsWith('/teachers') || path === '/staff' || path.startsWith('/staff/'))
       return can('staff.view');
     if (path === '/fees') return can('fees.view') || can('payroll.view');
-    if (path === '/attendance/staff') return !context.teacherScoped && can('attendance.manage');
+    if (path === '/attendance/staff')
+      return !context.teacherScoped && (can('attendance.manage') || can('attendance.view'));
     if (path === '/notifications')
       return !context.teacherScoped && (can('overview.view') || can('school.profile.view'));
     return path === '/settings';

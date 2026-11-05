@@ -14,17 +14,19 @@ import '../../styles/ledgers.css';
 export default function TeacherProfilePage() {
   const state = useSchool(),
     today = useToday(),
-    { teacherId } = useParams(),
+    { teacherId, staffId } = useParams(),
     [params, setParams] = useSearchParams();
   const [month, setMonth] = useState(today.slice(0, 7)),
     config = state.staffPayroll ?? defaultStaffPayroll;
-  const member = staffDirectory(state, config).find(
-    (item) => (item.id === teacherId || item.teacherId === teacherId) && !!item.teacherId,
+  const member = staffDirectory(state, config).find((item) =>
+    staffId
+      ? item.id === staffId
+      : (item.id === teacherId || item.teacherId === teacherId) && !!item.teacherId,
   );
   if (!member)
     return (
       <EmptyState
-        title="Teacher not found"
+        title={staffId ? 'Staff member not found' : 'Teacher not found'}
         description="Open the teaching staff directory to choose a record."
         action={
           <Link className="button primary" to="/teachers">
@@ -47,8 +49,8 @@ export default function TeacherProfilePage() {
   );
   return (
     <div className="ledger-stack">
-      <Link className="back-link" to="/teachers">
-        ← Teacher List
+      <Link className="back-link" to={staffId ? '/staff' : '/teachers'}>
+        ← {staffId ? 'Staff list' : 'Teacher list'}
       </Link>
       <SectionNavigation
         label="Teacher detail"

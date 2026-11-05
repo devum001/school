@@ -1,3 +1,4 @@
+import TeacherAttendanceChart from './TeacherAttendanceChart';
 import { useToday } from '../../app/useToday';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -136,7 +137,7 @@ export default function DashboardPage() {
                 ? 'Staff attendance access is required'
                 : feature?.staffAttendanceSummary
                   ? `${feature.staffAttendanceSummary.onDuty} on duty · ${feature.staffAttendanceSummary.late} late`
-                  : `${staffAttendance.percentage}% of total · ${staffAttendance.unmarked} unmarked`
+                  : `${staffAttendance.percentage}% attending`
             }
             href={
               feature && !feature.routeAllowed?.('/attendance/staff')
@@ -146,16 +147,32 @@ export default function DashboardPage() {
           />
         )}
       </div>
-      {!!feature?.staffAttendanceSummary?.pendingRequests && (
-        <Panel title="Staff attendance requests">
-          <p>
-            {feature.staffAttendanceSummary.pendingRequests} day(s) need an attendance correction
-            decision.
-          </p>
-          <Link className="button secondary" to="/attendance/staff?view=requests">
-            Review attendance requests
-          </Link>
-        </Panel>
+      {!teacherOnly && (!feature || feature.teacherAttendance) && (
+        <TeacherAttendanceChart
+          summary={
+            feature
+              ? feature.teacherAttendance!
+              : {
+                  date,
+                  total: state.teachers.filter((t) => t.status === 'active' && t.joinedOn <= date)
+                    .length,
+                  counts: state.teachers
+                    .filter((t) => t.status === 'active' && t.joinedOn <= date)
+                    .reduce<Record<string, number>>((counts, t) => {
+                      const status = staffStatusFor(state, t.id, date);
+                      counts[status] = (counts[status] || 0) + 1;
+                      return counts;
+                    }, {}),
+                }
+          }
+          registerUrl={
+            !feature
+              ? `/attendance?register=staff&date=${date}`
+              : feature.routeAllowed?.('/attendance/staff')
+                ? `/attendance/staff?date=${date}`
+                : undefined
+          }
+        />
       )}
       <div className="dashboard-main">
         <AttendanceTrend attendance={attendance} trend={trend} />

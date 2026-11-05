@@ -2,7 +2,6 @@ import CancelLeaveDialog from './CancelLeaveDialog';
 import AttendanceTimeDialog from './AttendanceTimeDialog';
 import AttendanceRequests from './AttendanceRequests';
 import StaffAttendancePanel from './StaffAttendancePanel';
-import { wasLate } from './attendanceDisplay';
 import StaffLoginDialog from './StaffLoginDialog';
 import AttendanceCalendar from './AttendanceCalendar';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -115,7 +114,7 @@ export function HrWorkspace({
         setInternalMonth(m);
         onMonthChange?.(m);
       },
-      [onMonthChange],
+      [onMonthChange, setInternalMonth],
     ),
     [tab, setTab] = useState(
       section ??
@@ -133,7 +132,12 @@ export function HrWorkspace({
       ? can('attendance.self')
       : tab === 'salary'
         ? can('payroll.view')
-        : can('attendance.manage');
+        : tab === 'leave'
+          ? can('attendance.manage') ||
+            can('leave.approve') ||
+            can('leave.reject') ||
+            can('attendance.view')
+          : can('attendance.manage') || can('attendance.view');
   const load = useCallback(
     async (signal: AbortSignal) =>
       allowed
@@ -156,7 +160,10 @@ export function HrWorkspace({
   }, [punchSchoolId, reload]);
   const items = [
     ...(can('payroll.view') ? [{ id: 'salary', label: 'Salary Expenses' }] : []),
-    ...(can('attendance.manage')
+    ...(can('attendance.manage') ||
+    can('attendance.view') ||
+    can('leave.approve') ||
+    can('leave.reject')
       ? [
           { id: 'attendance', label: 'Attendance' },
           { id: 'leave', label: 'Leave' },
@@ -337,9 +344,18 @@ function HrContent({
   )
     ? params.get('view')!
     : 'attendance';
-  const [selectedStaff, setSelectedStaff] = useState('');
+  const [selectedStaff, setSelectedStaff] = useState(params.get('staff') || '');
+  const requestedDate = params.get('date') || '';
+  const initialDate =
+    /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
+    requestedDate.startsWith(month) &&
+    requestedDate <= data.today
+      ? requestedDate
+      : month === data.today.slice(0, 7)
+        ? data.today
+        : `${month}-01`;
   const [department, setDepartment] = useState(''),
-    [date, setDate] = useState(month === data.today.slice(0, 7) ? data.today : `${month}-01`),
+    [date, setDate] = useState(initialDate),
     [action, setAction] = useState<Action | null>(
       initialStaff && can('payroll.manage') ? { kind: 'employment', staff: initialStaff } : null,
     ),
@@ -429,78 +445,6 @@ function HrContent({
           }
         />
       )}
-      {tab === 'attendance' && (
-        <div className="hr-summary">
-          {[
-            [
-              'Present',
-              staff.filter((p) =>
-                data.attendance.some(
-                  (d) =>
-                    d.staffId === p.id &&
-                    d.date === date &&
-                    (d.status === 'present' || d.status === 'late'),
-                ),
-              ).length,
-            ],
-            [
-              'Late',
-              staff.filter((p) =>
-                data.attendance.some(
-                  (d) =>
-                    d.staffId === p.id &&
-                    d.date === date &&
-                    (wasLate(d) || d.status === 'late'),
-                ),
-              ).length,
-            ],
-            [
-              'Absent',
-              staff.filter((p) =>
-                data.attendance.some(
-                  (d) => d.staffId === p.id && d.date === date && d.status === 'absent',
-                ),
-              ).length,
-            ],
-            [
-              'Currently punched in',
-              staff.filter((p) =>
-                data.attendance.some(
-                  (d) =>
-                    d.staffId === p.id &&
-                    d.date === date &&
-                    (d.inProgress ??
-                      (d.date === data.today && !!d.punchIn && !d.punchOut && !d.attendanceClosed)),
-                ),
-              ).length,
-            ],
-            [
-              'Invalid / missed punch',
-              staff.filter((p) =>
-                data.attendance.some(
-                  (d) =>
-                    d.staffId === p.id &&
-                    d.date === date &&
-                    ['review', 'invalid'].includes(d.status),
-                ),
-              ).length,
-            ],
-            [
-              'Pending leave',
-              data.leaves.filter(
-                (l) => l.status === 'pending' && staff.some((p) => p.id === l.staffId),
-              ).length,
-            ],
-          ].map(([label, count]) => (
-            <StatCard
-              key={label}
-              label={String(label)}
-              value={count}
-              detail="For the selected staff and period"
-            />
-          ))}
-        </div>
-      )}
       {tab === 'salary' && (
         <div className="hr-summary">
           <StatCard
@@ -530,7 +474,7 @@ function HrContent({
         subtitle={
           tab === 'self'
             ? selfView === 'requests'
-              ? 'Request corrections by selecting a half-day or invalid date in your attendance calendar.'
+              ? 'Request corrections by selecting an absent, half-day or invalid date in your attendance calendar.'
               : selfView === 'leave'
                 ? 'Apply for leaves, track approval status, and view remaining paid leave allowance.'
                 : selfView === 'salary'
@@ -568,9 +512,7 @@ function HrContent({
                 Refresh requests
               </Button>
             ) : selfView === 'leave' ? (
-              <Button onClick={() => setAction({ kind: 'leave' })}>
-                Request leave
-              </Button>
+              <Button onClick={() => setAction({ kind: 'leave' })}>Request leave</Button>
             ) : undefined
           ) : (
             <div className="hr-header-filters">
@@ -922,6 +864,7 @@ function HrContent({
             saved={reload}
             live={Boolean(liveSchoolId)}
             canViewProfile={can('staff.view')}
+            canManage={can('attendance.manage')}
             correct={(staff) => setAction({ kind: 'attendance', staff })}
             calendar={(staff) => setAction({ kind: 'calendar', staff })}
           />
@@ -935,149 +878,184 @@ function HrContent({
             today={data.today}
           />
         )}
-        {(tab === 'leave' || (tab === 'self' && selfView === 'leave')) && (() => {
-          const userLeaves = [...data.leaves]
-            .sort(
-              (a, b) =>
-                Number(b.status === 'pending') - Number(a.status === 'pending') ||
-                a.start.localeCompare(b.start),
-            )
-            .filter((l) => staff.some((p) => p.id === l.staffId));
-          const pendingLeaves = userLeaves.filter((l) => l.status === 'pending');
-          const approvedLeaves = userLeaves.filter((l) => l.status !== 'pending');
-          const displayedLeaves = leaveStatusTab === 'pending' ? pendingLeaves : approvedLeaves;
+        {(tab === 'leave' || (tab === 'self' && selfView === 'leave')) &&
+          (() => {
+            const userLeaves = [...data.leaves]
+              .sort(
+                (a, b) =>
+                  Number(b.status === 'pending') - Number(a.status === 'pending') ||
+                  a.start.localeCompare(b.start),
+              )
+              .filter((l) => staff.some((p) => p.id === l.staffId));
+            const pendingLeaves = userLeaves.filter((l) => l.status === 'pending');
+            const approvedLeaves = userLeaves.filter((l) => l.status !== 'pending');
+            const displayedLeaves = leaveStatusTab === 'pending' ? pendingLeaves : approvedLeaves;
 
-          return (
-            <div className="attendance-requests" style={{ padding: 0 }}>
-              {tab === 'self' && (
-                <div className="hr-leave-balance-card" style={{ margin: '0 0 16px' }}>
-                  <div className="hr-leave-stat-pill">
-                    <span className="hr-leave-stat-num">
-                      {Math.max(
-                        0,
-                        data.settings.paidLeaveDays -
-                          (data.leaveUsage?.find((l) => staff.some((p) => p.id === l.staffId))?.used ?? 0),
-                      )}
-                    </span>
-                    <span className="hr-leave-stat-label">Paid days remaining</span>
-                  </div>
-                  <div className="hr-leave-info-text">
-                    <strong>Annual Paid Leave Allowance: {data.settings.paidLeaveDays} days ({month.slice(0, 4)})</strong>
-                    <p>Pending requests from every month are shown. Decided requests follow the selected month.</p>
-                  </div>
-                </div>
-              )}
-              <div
-                className="hr-leave-subnav-row"
-                style={{ padding: '0 22px', borderBottom: '1px solid var(--border-subtle, #e5e7eb)' }}
-              >
-                <SectionNavigation
-                  variant="secondary"
-                  label="Leave status"
-                  items={[
-                    { id: 'pending', label: 'Pending', badge: pendingLeaves.length },
-                    { id: 'approved', label: 'Approved', badge: approvedLeaves.length },
-                  ]}
-                  value={leaveStatusTab}
-                  onChange={(val) => setLeaveStatusTab(val as 'pending' | 'approved')}
-                />
-              </div>
-              {displayedLeaves.length === 0 ? (
-                <div className="hr-empty-box">
-                  <CalendarDays size={36} className="hr-empty-icon" />
-                  <p className="hr-empty-title">
-                    {leaveStatusTab === 'pending'
-                      ? 'No pending leave requests'
-                      : 'No approved leave requests for this month'}
-                  </p>
-                  <span className="hr-empty-desc">
-                    {leaveStatusTab === 'pending'
-                      ? (tab === 'self'
-                          ? 'You haven\'t submitted any pending leave requests. Click "Request leave" above to apply for time off.'
-                          : 'No pending staff leave requests requiring review.')
-                      : 'Approved and decided leave requests will appear here.'}
-                  </span>
-                </div>
-              ) : (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        {tab !== 'self' && <th>Staff</th>}
-                        <th>Dates</th>
-                        <th>Reason</th>
-                        <th>Status</th>
-                        <th>Decision</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayedLeaves.map((l) => {
-                        const staffMember = data.staff.find((p) => p.id === l.staffId);
-                        const remaining = Math.max(
+            return (
+              <div className="attendance-requests" style={{ padding: 0 }}>
+                {tab === 'self' && (
+                  <div className="hr-leave-balance-card" style={{ margin: '0 0 16px' }}>
+                    <div className="hr-leave-stat-pill">
+                      <span className="hr-leave-stat-num">
+                        {Math.max(
                           0,
                           data.settings.paidLeaveDays -
-                            (data.leaveUsage?.find((u) => u.staffId === l.staffId)?.used ?? 0),
-                        );
-                        return (
-                          <tr key={l.id}>
-                            {tab !== 'self' && (
-                              <td>
-                                <div style={{ fontWeight: 600 }}>{staffMember?.name ?? 'Unknown staff'}</div>
-                                <small style={{ color: '#047857', display: 'block', marginTop: '2px', fontSize: '11.5px', fontWeight: 500 }}>
-                                  {remaining} paid days remaining
-                                </small>
-                              </td>
-                            )}
-                            <td>
-                              <strong>{formatCalendarDate(l.start)}</strong>
-                              {l.start !== l.end && <> to <strong>{formatCalendarDate(l.end)}</strong></>}
-                            </td>
-                            <td>{l.reason}</td>
-                            <td>
-                              <Badge
-                                tone={
-                                  l.status === 'approved'
-                                    ? 'green'
-                                    : l.status === 'rejected'
-                                      ? 'red'
-                                      : 'amber'
-                                }
-                              >
-                                {titleCase(l.status)}{' '}
-                                {l.status === 'approved' ? (l.paid ? '· Paid' : '· Unpaid') : ''}
-                              </Badge>
-                            </td>
-                            <td>
-                              {l.status === 'pending' && tab !== 'self' && can('attendance.manage') ? (
-                                <Button onClick={() => setAction({ kind: 'leave', leave: l })}>
-                                  Review
-                                </Button>
-                              ) : (
-                                <>
-                                  {l.reviewNote || '—'}
-                                  {tab === 'self' &&
-                                    (l.status === 'pending' || l.status === 'approved') &&
-                                    l.end >= data.today && (
-                                      <Button
-                                        variant="ghost"
-                                        onClick={() => setAction({ kind: 'cancelLeave', leave: l })}
-                                      >
-                                        {l.status === 'approved' ? 'Cancel leave' : 'Cancel request'}
-                                      </Button>
-                                    )}
-                                </>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                            (data.leaveUsage?.find((l) => staff.some((p) => p.id === l.staffId))
+                              ?.used ?? 0),
+                        )}
+                      </span>
+                      <span className="hr-leave-stat-label">Paid days remaining</span>
+                    </div>
+                    <div className="hr-leave-info-text">
+                      <strong>
+                        Annual Paid Leave Allowance: {data.settings.paidLeaveDays} days (
+                        {month.slice(0, 4)})
+                      </strong>
+                      <p>
+                        {data.settings.absenceReducesLeave
+                          ? `${data.leaveUsage?.find((l) => staff.some((p) => p.id === l.staffId))?.absenceDays ?? 0} absence days included in usage. Approval or correction recalculates this balance.`
+                          : 'Only approved paid leave reduces this balance.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div
+                  className="hr-leave-subnav-row"
+                  style={{
+                    padding: '0 22px',
+                    borderBottom: '1px solid var(--border-subtle, #e5e7eb)',
+                  }}
+                >
+                  <SectionNavigation
+                    variant="secondary"
+                    label="Leave status"
+                    items={[
+                      { id: 'pending', label: 'Pending', badge: pendingLeaves.length },
+                      { id: 'approved', label: 'Approved', badge: approvedLeaves.length },
+                    ]}
+                    value={leaveStatusTab}
+                    onChange={(val) => setLeaveStatusTab(val as 'pending' | 'approved')}
+                  />
                 </div>
-              )}
-            </div>
-          );
-        })()}
+                {displayedLeaves.length === 0 ? (
+                  <div className="hr-empty-box">
+                    <CalendarDays size={36} className="hr-empty-icon" />
+                    <p className="hr-empty-title">
+                      {leaveStatusTab === 'pending'
+                        ? 'No pending leave requests'
+                        : 'No approved leave requests for this month'}
+                    </p>
+                    <span className="hr-empty-desc">
+                      {leaveStatusTab === 'pending'
+                        ? tab === 'self'
+                          ? 'You haven\'t submitted any pending leave requests. Click "Request leave" above to apply for time off.'
+                          : 'No pending staff leave requests requiring review.'
+                        : 'Approved and decided leave requests will appear here.'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          {tab !== 'self' && <th>Staff</th>}
+                          <th>Dates</th>
+                          <th>Reason</th>
+                          <th>Status</th>
+                          <th>Decision</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedLeaves.map((l) => {
+                          const staffMember = data.staff.find((p) => p.id === l.staffId);
+                          const remaining = Math.max(
+                            0,
+                            data.settings.paidLeaveDays -
+                              (data.leaveUsage?.find((u) => u.staffId === l.staffId)?.used ?? 0),
+                          );
+                          return (
+                            <tr key={l.id}>
+                              {tab !== 'self' && (
+                                <td>
+                                  <div style={{ fontWeight: 600 }}>
+                                    {staffMember?.name ?? 'Unknown staff'}
+                                  </div>
+                                  <small
+                                    style={{
+                                      color: '#047857',
+                                      display: 'block',
+                                      marginTop: '2px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {remaining} paid days remaining
+                                  </small>
+                                </td>
+                              )}
+                              <td>
+                                <strong>{formatCalendarDate(l.start)}</strong>
+                                {l.start !== l.end && (
+                                  <>
+                                    {' '}
+                                    to <strong>{formatCalendarDate(l.end)}</strong>
+                                  </>
+                                )}
+                              </td>
+                              <td>{l.reason}</td>
+                              <td>
+                                <Badge
+                                  tone={
+                                    l.status === 'approved'
+                                      ? 'green'
+                                      : l.status === 'rejected'
+                                        ? 'red'
+                                        : 'amber'
+                                  }
+                                >
+                                  {titleCase(l.status)}{' '}
+                                  {l.status === 'approved' ? (l.paid ? '· Paid' : '· Unpaid') : ''}
+                                </Badge>
+                              </td>
+                              <td>
+                                {l.status === 'pending' &&
+                                tab !== 'self' &&
+                                (can('attendance.manage') ||
+                                  can('leave.approve') ||
+                                  can('leave.reject')) ? (
+                                  <Button onClick={() => setAction({ kind: 'leave', leave: l })}>
+                                    Review
+                                  </Button>
+                                ) : (
+                                  <>
+                                    {l.reviewNote || '—'}
+                                    {tab === 'self' &&
+                                      (l.status === 'pending' || l.status === 'approved') &&
+                                      l.end >= data.today && (
+                                        <Button
+                                          variant="ghost"
+                                          onClick={() =>
+                                            setAction({ kind: 'cancelLeave', leave: l })
+                                          }
+                                        >
+                                          {l.status === 'approved'
+                                            ? 'Cancel leave'
+                                            : 'Cancel request'}
+                                        </Button>
+                                      )}
+                                  </>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         {!staff.length && (
           <p>
             No staff found. Add staff individually or use the existing Excel import in Staff & HR.
@@ -1132,7 +1110,25 @@ function HrContent({
       )}
       {action?.kind === 'attendance' &&
         (liveSchoolId ? (
-          <AttendanceTimeDialog {...shared} staff={action.staff} date={date} />
+          <AttendanceTimeDialog
+            {...shared}
+            staff={action.staff}
+            date={date}
+            saved={(selected) => {
+              if (selected) {
+                setDate(selected);
+                if (!selected.startsWith(month)) changeMonth(selected.slice(0, 7));
+                setParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.set('date', selected);
+                  next.set('month', selected.slice(0, 7));
+                  return next;
+                });
+              }
+              close();
+              reload();
+            }}
+          />
         ) : (
           <AttendanceDialog {...shared} staff={action.staff} date={date} />
         ))}
@@ -1140,6 +1136,10 @@ function HrContent({
         <LeaveDialog
           {...shared}
           leave={action.leave}
+          decisions={[
+            ...(can('attendance.manage') || can('leave.approve') ? ['approved'] : []),
+            ...(can('attendance.manage') || can('leave.reject') ? ['rejected'] : []),
+          ]}
           saved={(start) => {
             if (start) changeMonth(start.slice(0, 7));
             if (tab === 'self')
