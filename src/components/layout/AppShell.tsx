@@ -12,26 +12,33 @@ import {
   AppIcon,
   type IconName,
 } from '../ui/Primitives';
+
 const hindiLabels: Record<string, string> = {
   Overview: 'अवलोकन',
   Students: 'विद्यार्थी',
   Teachers: 'शिक्षक',
   'Staff & HR': 'स्टाफ एवं एचआर',
   Attendance: 'उपस्थिति',
+  'Punch in & out': 'पंच इन / आउट',
+  'Salary & Leaves': 'वेतन और अवकाश',
   Finance: 'वित्त',
   'Test and Result': 'परीक्षा और परिणाम',
   Notifications: 'सूचनाएँ',
   'School settings': 'स्कूल सेटिंग्स',
 };
+
 const navigation: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/', label: 'Overview', icon: 'overview' },
   { to: '/students', label: 'Students', icon: 'student' },
   { to: '/teachers', label: 'Teachers', icon: 'teacher' },
   { to: '/staff', label: 'Staff & HR', icon: 'staff' },
   { to: '/attendance', label: 'Attendance', icon: 'attendance' },
+  { to: '/staff/punch', label: 'Punch in & out', icon: 'user-check' },
+  { to: '/staff/self', label: 'Salary & Leaves', icon: 'wallet' },
   { to: '/fees', label: 'Finance', icon: 'fees' },
   { to: '/academics', label: 'Test and Result', icon: 'document' },
 ];
+
 function loadingMessageForRoute(pathname: string, search: string): string {
   const params = new URLSearchParams(search);
   if (pathname === '/' || pathname === '/overview') return 'Loading overview…';
@@ -42,7 +49,7 @@ function loadingMessageForRoute(pathname: string, search: string): string {
   if (pathname.startsWith('/teachers/')) return 'Loading teacher profile…';
   if (pathname.startsWith('/teachers')) return 'Loading teachers…';
   if (pathname === '/staff/punch') return 'Loading punch in & out…';
-  if (pathname === '/staff/self') return 'Loading my attendance & salary…';
+  if (pathname === '/staff/self') return 'Loading salary & leaves…';
   if (pathname.startsWith('/staff')) return 'Loading staff & HR…';
   if (pathname.startsWith('/attendance')) return 'Loading attendance…';
   if (pathname.startsWith('/fees')) return 'Loading finance & fees…';
@@ -63,6 +70,7 @@ function loadingMessageForRoute(pathname: string, search: string): string {
   }
   return 'Loading workspace…';
 }
+
 export interface AppShellProps {
   overviewUrl?: string;
   visibleRoute?: (path: string) => boolean;
@@ -76,10 +84,11 @@ export interface AppShellProps {
   children?: ReactNode;
   studentSearchUrl?: (query: string) => string;
 }
+
 export default function AppShell({
   overviewUrl = '/',
   school,
-  visibleRoute = () => true,
+  visibleRoute = (path) => path !== '/staff/punch' && path !== '/staff/self',
   user,
   preferences,
   attentionCount,
@@ -107,26 +116,32 @@ export default function AppShell({
   const isAutomated = typeof navigator !== 'undefined' && navigator.webdriver === true;
   const [prevPathname, setPrevPathname] = useState(location.pathname);
   const [routeLoading, setRouteLoading] = useState(false);
+
   if (location.pathname !== prevPathname) {
     setPrevPathname(location.pathname);
     if (!isAutomated && !children) {
       setRouteLoading(true);
     }
   }
+
   useEffect(() => {
     if (!routeLoading) return;
     const timer = window.setTimeout(() => setRouteLoading(false), 380);
     return () => window.clearTimeout(timer);
   }, [routeLoading, location.pathname]);
+
   useEffect(() => {
     if (!location.hash && !focusPending) window.scrollTo({ top: 0, behavior: 'instant' });
   }, [featureRoute, location.hash, focusPending]);
+
   const initialNavigation = useRef(false);
   const label = (value: string) =>
     preferences.language === 'Hindi' ? (hindiLabels[value] ?? value) : value;
+
   useEffect(() => {
     document.documentElement.lang = preferences.language === 'Hindi' ? 'hi' : 'en';
   }, [preferences.language]);
+
   useEffect(() => {
     if (initialNavigation.current) return;
     initialNavigation.current = true;
@@ -135,17 +150,20 @@ export default function AppShell({
         replace: true,
       });
   }, [preferences.landingPage, location.pathname, navigate]);
+
   const current = [
     { to: '/overview', label: 'Overview' },
     { to: '/attendance/staff', label: 'Attendance' },
     { to: '/staff/punch', label: 'Punch in & out' },
-    { to: '/staff/self', label: 'My attendance & salary' },
+    { to: '/staff/self', label: 'Salary & Leaves' },
     ...navigation,
     { to: '/contacts', label: 'Quick Connect' },
     { to: '/notifications', label: 'Notifications' },
     { to: '/settings', label: 'School settings' },
   ].find((n) => (n.to === '/' ? location.pathname === '/' : location.pathname.startsWith(n.to)));
+
   const loadingMessage = loadingMessageForRoute(location.pathname, location.search);
+
   return (
     <div className="app-shell">
       {mobile && (
@@ -199,7 +217,6 @@ export default function AppShell({
               >
                 <AppIcon name={n.icon} size={20} />
                 <span>{label(n.label)}</span>
-                {n.to === '/attendance' && <span className="nav-dot" />}
               </NavLink>
             ))}
         </nav>
@@ -208,13 +225,13 @@ export default function AppShell({
           {visibleRoute('/contacts') && (
             <NavLink className="nav-link" to="/contacts" onClick={() => setMobile(false)}>
               <AppIcon name="staff" size={20} />
-              Quick Connect
+              <span>Quick Connect</span>
             </NavLink>
           )}
           {visibleRoute('/notifications') && (
             <NavLink className="nav-link" to="/notifications" onClick={() => setMobile(false)}>
               <AppIcon name="notifications" size={20} />
-              {label('Notifications')}
+              <span>{label('Notifications')}</span>
               {attentionCount !== null && attentionCount > 0 && (
                 <span className="nav-count">{attentionCount}</span>
               )}
@@ -222,10 +239,10 @@ export default function AppShell({
           )}
           <NavLink className="nav-link" to="/settings" onClick={() => setMobile(false)}>
             <AppIcon name="settings" size={20} />
-            {label('School settings')}
+            <span>{label('School settings')}</span>
           </NavLink>
+          {extraNavigation}
         </nav>
-        {extraNavigation}
         <div className="sidebar-bottom">
           <button className="sidebar-user" onClick={() => navigate('/settings')}>
             <Avatar name={user.avatarName ?? user.name} />

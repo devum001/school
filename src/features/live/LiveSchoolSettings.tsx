@@ -81,7 +81,18 @@ export default function LiveSchoolSettings() {
     return <Navigate to={{ pathname: '/settings', search: next.toString() }} replace />;
   }
   const { access, schoolId, status, reload } = context;
+  const isTeacherScoped =
+    !access.owner &&
+    Boolean(status.selfTeaching || status.selfLinked || access.permissions.includes('teaching.self'));
   const can = (p: string) => access.permissions.includes(p);
+  const canManageCommunication =
+    !isTeacherScoped && (access.owner || can('school.profile.manage'));
+  const canManageTemplates =
+    !isTeacherScoped &&
+    (access.owner ||
+      can('school.profile.manage') ||
+      can('fees.manage') ||
+      can('payroll.manage'));
   const denied = (
     <Panel>
       <p>Your role does not include access to this feature.</p>
@@ -94,13 +105,13 @@ export default function LiveSchoolSettings() {
           ? undefined
           : [
               ...(can('school.profile.view') ? ['General'] : []),
-              ...(can('classes.view') ? ['Classes, Sections & Grades'] : []),
-              ...(can('payroll.view') && can('payroll.manage') ? ['Staff & Payroll'] : []),
-              ...(can('school.profile.view') || can('overview.view') ? ['Communication'] : []),
+              ...(can('classes.view') && !isTeacherScoped ? ['Classes, Sections & Grades'] : []),
+              ...(can('payroll.view') && can('payroll.manage') && !isTeacherScoped ? ['Staff & Payroll'] : []),
+              ...(canManageCommunication ? ['Communication'] : []),
               ...(can('roles.view') || can('memberships.view') ? ['Roles & Permissions'] : []),
-              'Templates',
+              ...(canManageTemplates ? ['Templates'] : []),
               'Data & Security',
-              ...(can('academic-years.view') ? ['Preferences'] : []),
+              ...(can('academic-years.view') && !isTeacherScoped ? ['Preferences'] : []),
             ]
       }
       renderTab={(tab) => {
@@ -125,12 +136,17 @@ export default function LiveSchoolSettings() {
             denied
           );
         if (tab === 'Communication')
-          return access.owner || can('school.profile.view') || can('overview.view') ? (
+          return canManageCommunication ? (
             <LiveNotificationsWorkspace settingsMode />
           ) : (
             denied
           );
-        if (tab === 'Templates') return <TemplatesSettings />;
+        if (tab === 'Templates')
+          return canManageTemplates ? (
+            <TemplatesSettings />
+          ) : (
+            denied
+          );
         const items = sections[tab].filter((item) => {
             if (tab === 'Roles & Permissions')
               return can(item.id === 'roles' ? 'roles.view' : 'memberships.view');

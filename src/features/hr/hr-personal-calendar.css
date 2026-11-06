@@ -16,6 +16,7 @@
 .hr-personal-calendar-heading span {
   color: var(--muted);
   font-size: 12px;
+  margin-left: auto;
 }
 .hr-personal-calendar-grid {
   display: grid;
@@ -28,29 +29,62 @@
   color: var(--muted);
   padding: 6px 0;
 }
+.hr-calendar-weekday.is-sunday {
+  color: #ef4444;
+  font-weight: 600;
+}
 .hr-calendar-day {
   position: relative;
   border: 1px solid #e0e6e3;
   border-radius: 12px;
-  padding: 12px 4px;
-  min-height: 54px;
+  padding: 8px 4px 6px;
+  min-height: 56px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   cursor: pointer;
-  transition: box-shadow 0.15s;
+  transition: box-shadow 0.15s, border-color 0.15s;
 }
 .hr-pending-leave-dot {
   position: absolute;
-  bottom: 4px;
-  width: 5px;
-  height: 5px;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #a83d70;
 }
 .hr-calendar-day strong {
   font-size: 14px;
   font-weight: 600;
+  line-height: 1.2;
+}
+.hr-calendar-day .hr-day-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 550;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  max-width: 94%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.95;
+}
+.hr-calendar-day.is-sunday:not(.hr-day-status-holiday) strong {
+  color: #ef4444;
+}
+.hr-calendar-day.hr-day-status-absent strong,
+.hr-calendar-day.hr-day-status-leave strong,
+.hr-calendar-day.hr-day-status-half-day strong,
+.hr-calendar-day.hr-day-status-invalid strong {
+  color: #ffffff;
+}
+.hr-calendar-day.hr-day-status-holiday strong,
+.hr-calendar-day.hr-day-status-holiday .hr-day-label {
+  color: #633610;
 }
 .hr-calendar-day[aria-current='date'] {
   outline: 2px solid #285e60;
@@ -63,9 +97,18 @@
   outline: 3px solid #285e60;
   outline-offset: 2px;
 }
-.hr-day-status-present {
-  background: #e1f2e7;
-  color: #235b3f;
+.hr-day-status-present,
+.hr-calendar-day.hr-day-status-present {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+.hr-calendar-day.hr-day-status-present strong {
+  color: #166534;
+}
+.hr-calendar-day.hr-day-status-present .hr-day-label {
+  color: #15803d;
+  font-weight: 600;
 }
 .hr-day-status-late {
   background: #f9dc79;
@@ -88,11 +131,15 @@
   color: #fff;
   border-color: #694191;
 }
-.hr-day-status-holiday {
+
+/* School holiday: warm uniform orange matching the legend */
+.hr-day-status-holiday,
+.hr-calendar-day.hr-day-status-holiday {
   background: #efa662;
   color: #633610;
   border-color: #da8b46;
 }
+
 .hr-day-status-invalid,
 .hr-day-status-review {
   background: #2b3035;
@@ -100,8 +147,19 @@
   border-color: #1f2428;
 }
 .hr-day-status-off {
-  background: #edf0f2;
-  color: #5b6571;
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+.hr-calendar-day.hr-day-status-off strong {
+  color: #64748b;
+}
+.hr-calendar-day.hr-day-status-off.is-sunday strong {
+  color: #ef4444;
+}
+.hr-calendar-day.hr-day-status-off .hr-day-label {
+  color: #64748b;
+  font-weight: 600;
 }
 .hr-day-status-pending,
 .hr-day-status-unmarked,
@@ -125,6 +183,38 @@
   width: 11px;
   height: 11px;
   border-radius: 4px;
+}
+.hr-calendar-legend i.hr-day-status-present {
+  background: #22c55e;
+  border: 1px solid #16a34a;
+}
+.hr-calendar-legend i.hr-day-status-holiday {
+  background: #efa662;
+  border: 1px solid #da8b46;
+}
+.hr-calendar-legend i.hr-day-status-off {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+}
+.hr-request-leave-btn {
+  background-color: #12373b !important;
+  color: #ffffff !important;
+  border: 1px solid #12373b !important;
+  font-weight: 600 !important;
+  border-radius: 8px;
+  padding: 8px 16px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(18, 55, 59, 0.18);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.hr-request-leave-btn:hover {
+  background-color: #19494d !important;
+  border-color: #19494d !important;
+  box-shadow: 0 2px 6px rgba(18, 55, 59, 0.28);
 }
 .attendance-calendar-hint {
   color: var(--muted);
@@ -155,9 +245,12 @@
 }
 .attendance-day-pill {
   border-radius: 20px;
-  padding: 6px 11px;
+  padding: 6px 12px;
   font-size: 11px;
   font-weight: 600;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
 }
 .attendance-day-punches {
   display: grid;
@@ -193,12 +286,12 @@
 .attendance-day-duration {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  justify-content: flex-start;
+  gap: 14px;
   background: #edf5f2;
   color: #285e60;
   border-radius: 12px;
-  padding: 15px;
+  padding: 14px 18px;
 }
 .attendance-day-duration div {
   display: grid;
@@ -273,12 +366,17 @@
     gap: 5px;
   }
   .hr-calendar-day {
-    min-height: 41px;
-    padding: 9px 0;
+    min-height: 48px;
+    padding: 6px 2px 4px;
     border-radius: 9px;
+    gap: 1px;
   }
   .hr-calendar-day strong {
     font-size: 12px;
+  }
+  .hr-calendar-day .hr-day-label {
+    font-size: 8px;
+    max-width: 98%;
   }
   .hr-calendar-legend {
     gap: 12px;
@@ -297,4 +395,155 @@
   .attendance-day-punches span {
     font-size: 11px;
   }
+}
+
+
+/* 2-Column Layout for My Attendance (Matching Photo 2) */
+.hr-personal-calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .hr-personal-calendar-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hr-personal-calendar-main {
+  background: var(--surface-panel, #ffffff);
+  border: 1px solid var(--border, #e0e6e3);
+  border-radius: 18px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(18, 55, 59, 0.04);
+}
+
+.hr-calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.hr-calendar-month-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hr-calendar-month-heading h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  color: var(--text-main, #12373b);
+}
+
+.hr-month-arrows {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hr-month-arrow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #d4deda;
+  background: #ffffff;
+  color: #4a5c57;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hr-month-arrow-btn:hover {
+  background: #f0f5f3;
+  color: #12373b;
+  border-color: #b8c8c2;
+}
+
+.hr-calendar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hr-calendar-actions input[type='month'] {
+  height: 38px;
+  padding: 6px 12px;
+  border: 1px solid #d4deda;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+  color: var(--text-main, #263b3a);
+}
+
+.hr-personal-calendar-sidebar {
+  min-width: 0;
+}
+
+.hr-personal-calendar-sidebar .attendance-day-card {
+  margin-top: 0;
+  box-shadow: 0 1px 3px rgba(18, 55, 59, 0.04);
+}
+
+.attendance-day-card-subtitle {
+  display: block;
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+  margin-bottom: 2px;
+}
+
+.attendance-day-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 18px 0 20px;
+  position: relative;
+}
+
+.attendance-timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.attendance-timeline-point {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--muted, #6b7280);
+  flex-shrink: 0;
+}
+
+.attendance-timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.attendance-timeline-label {
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+}
+
+.attendance-timeline-content strong {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--text-main, #12373b);
+}
+
+.attendance-timeline-line {
+  width: 1px;
+  height: 22px;
+  background: #d4deda;
+  margin: 4px 0 4px 11px;
 }

@@ -32,12 +32,16 @@ export default function LiveStaffAttendance() {
       <LiveHrWorkspace
         section="attendance"
         hideNavigation
+        hideMonthCorner
         month={month}
         onMonthChange={(value) =>
           setParams((prev) => {
             const next = new URLSearchParams(prev);
             next.set('month', value);
-            next.set('date', value === today.slice(0, 7) ? today : `${value}-01`);
+            const curDate = prev.get('date');
+            if (!curDate || !curDate.startsWith(value)) {
+              next.set('date', value === today.slice(0, 7) ? today : `${value}-01`);
+            }
             return next;
           })
         }

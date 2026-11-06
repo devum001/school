@@ -1,7 +1,9 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useSchoolFeature } from '../../app/schoolFeatureContext';
 import SectionNavigation from './SectionNavigation';
 import '../../styles/admin-settings.css';
+
+export type AttendanceTabType = 'student' | 'staff' | 'self' | 'ars';
 
 export default function AttendanceTabs({
   date,
@@ -11,18 +13,33 @@ export default function AttendanceTabs({
   staffVisible,
 }: {
   date: string;
-  value?: 'student' | 'staff';
-  onChange?: (tab: 'student' | 'staff') => void;
+  value?: AttendanceTabType;
+  onChange?: (tab: AttendanceTabType) => void;
   studentsVisible?: boolean;
   staffVisible?: boolean;
 }) {
   const location = useLocation();
+  const [params] = useSearchParams();
   const feature = useSchoolFeature();
+  const isTeacher = Boolean(feature?.teacherScoped);
   const showStaff =
     staffVisible ??
     (!feature || (!feature.teacherScoped && feature.routeAllowed?.('/attendance/staff') !== false));
-  const staff = location.pathname.endsWith('/staff');
-  const activeValue = value ?? (staff ? 'staff' : 'student');
+
+  const registerParam = params.get('register');
+  const viewParam = params.get('view');
+  const isStaffPath = location.pathname.endsWith('/staff');
+
+  const activeValue: AttendanceTabType =
+    value ??
+    (registerParam === 'ars' || viewParam === 'requests'
+      ? 'ars'
+      : isTeacher && (registerParam === 'self' || viewParam === 'attendance')
+        ? 'self'
+        : isStaffPath || registerParam === 'staff'
+          ? 'staff'
+          : 'student');
+
   const items = [
     ...(studentsVisible
       ? [
@@ -44,12 +61,29 @@ export default function AttendanceTabs({
           },
         ]
       : []),
+    ...(isTeacher
+      ? [
+          {
+            id: 'self',
+            label: 'My attendance',
+            icon: 'attendance' as const,
+            to: onChange ? undefined : `/attendance?register=self&view=attendance`,
+          },
+        ]
+      : []),
+    {
+      id: 'ars',
+      label: 'ARS',
+      icon: 'document' as const,
+      to: onChange ? undefined : `/attendance?register=ars&view=requests`,
+    },
   ];
+
   return (
     <SectionNavigation
       label="Attendance registers"
       value={activeValue}
-      onChange={onChange ? (id) => onChange(id as 'student' | 'staff') : undefined}
+      onChange={onChange ? (id) => onChange(id as AttendanceTabType) : undefined}
       items={items}
     />
   );

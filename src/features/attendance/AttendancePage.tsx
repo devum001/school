@@ -1,7 +1,7 @@
 import { useToday } from '../../app/useToday';
 import { useEffect, useState } from 'react';
 import { Link, useBlocker, useSearchParams, useNavigate } from 'react-router-dom';
-import { AlertCircle, CalendarX2, CircleAlert, Clock, UserCheck, Users, UserX } from 'lucide-react';
+import { AlertCircle, CalendarX2, CircleAlert, Clock } from 'lucide-react';
 import StudentRecordLink from '../../components/shared/StudentRecordLink';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
@@ -46,7 +46,16 @@ function AttendanceRegister() {
   const today = useToday();
   const notify = useFeedback();
   const [params, setParams] = useSearchParams();
-  const register = params.get('register') === 'staff' ? 'staff' : 'student';
+  const isTeacher = Boolean(feature?.teacherScoped);
+  const registerParam = params.get('register');
+  const register: 'student' | 'staff' | 'self' | 'ars' =
+    registerParam === 'ars'
+      ? 'ars'
+      : registerParam === 'staff' && !isTeacher
+        ? 'staff'
+        : isTeacher && registerParam === 'self'
+          ? 'self'
+          : 'student';
   const requested = params.get('class');
   const classId = state.classes.some((c) => c.id === requested)
     ? requested!
@@ -197,8 +206,42 @@ function AttendanceRegister() {
       <PageHeading
         title="Attendance register"
         actions={
-          <>
-            {(!feature || feature.routeAllowed?.('/notifications')) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {timing ? (
+              <div className="attendance-header-timing">
+                <span className="timing-chip">
+                  <Clock size={15} style={{ color: '#2c816e' }} />
+                  <span>
+                    School hours: <strong>{formatSchoolTime(timing.start)} – {formatSchoolTime(timing.end)}</strong>
+                  </span>
+                </span>
+                <span className="timing-divider" />
+                <span className="timing-chip cutoff">
+                  <span>
+                    Late cutoff:{' '}
+                    <strong>
+                      {studentLateCutoff(
+                        timing,
+                        (state.attendancePolicy ?? defaultAttendancePolicy).graceMinutes,
+                      )}
+                    </strong>
+                  </span>
+                </span>
+              </div>
+            ) : hasAssignedTiming ? (
+              <div className="attendance-header-timing">
+                <span className="timing-chip">Not a school working day</span>
+              </div>
+            ) : feature?.teacherScoped ? (
+              <div className="attendance-header-timing">
+                <span className="timing-chip">School timing not configured</span>
+              </div>
+            ) : (
+              <Link className="button secondary" to="/settings?section=timing">
+                Set school timing
+              </Link>
+            )}
+            {(!feature || feature.routeAllowed?.('/notifications')) && register === 'student' && (
               <Link
                 className="button secondary"
                 to={`/notifications?date=${date}&class=${classId}&section=${sectionId}&event=Student+Absent&focus=pending`}
@@ -207,7 +250,7 @@ function AttendanceRegister() {
                 Review notifications
               </Link>
             )}
-          </>
+          </div>
         }
       />
       <AttendanceTabs
@@ -222,8 +265,16 @@ function AttendanceRegister() {
             const next = new URLSearchParams(prev);
             if (val === 'staff') {
               next.set('register', 'staff');
+              next.delete('view');
+            } else if (val === 'self') {
+              next.set('register', 'self');
+              next.set('view', 'attendance');
+            } else if (val === 'ars') {
+              next.set('register', 'ars');
+              next.set('view', 'requests');
             } else {
               next.delete('register');
+              next.delete('view');
             }
             return next;
           });
@@ -235,6 +286,10 @@ function AttendanceRegister() {
         ) : (
           <StaffAttendancePage embedded />
         )
+      ) : register === 'ars' ? (
+        <LiveHrWorkspace section={isTeacher ? 'self' : 'ars'} hideNavigation />
+      ) : register === 'self' ? (
+        <LiveHrWorkspace section="self" hideNavigation />
       ) : (
         <>
           {isTeacherOnLeave ? (
@@ -256,16 +311,6 @@ function AttendanceRegister() {
                   editing are disabled for your account while on leave.
                 </span>
               </div>
-            </Panel>
-          ) : feature?.attendanceGate?.required && !feature.attendanceGate.active ? (
-            <Panel title="Punch in before taking attendance">
-              <p className="panel-note">
-                Open Punch in & out from the sidebar when you arrive at school. You can review your
-                assigned students here; saving is enabled while you are punched in today.
-              </p>
-              <Link className="button secondary" to="/staff/punch">
-                Open Punch in & out
-              </Link>
             </Panel>
           ) : null}
           {feature && !state.classes.length && (
@@ -326,69 +371,12 @@ function AttendanceRegister() {
                 </div>
               </div>
             ) : null}
-            <Panel>
-              <div className="toolbar attendance-toolbar">
-                <label className="filter-label">
-                  <span>Attendance date</span>
-                  <PickerInput
-                    aria-label="Attendance date"
-                    type="date"
-                    value={date}
-                    min={state.academicYear.start}
-                    max={today}
-                    onChange={(e) => {
-                      if (e.target.value) update('date', e.target.value);
-                    }}
-                  />
-                </label>
-                <ClassFilters
-                  classId={classId}
-                  sectionId={sectionId}
-                  onClassChange={(v) => update('class', v)}
-                  onSectionChange={(v) => update('section', v)}
-                  allowAll={false}
-                />
-                <div className="register-context">
-                  <AppIcon name="attendance" size={20} />
-                  <span>
-                    <strong>{state.academicYear.name}</strong>
-                    <small>Academic year</small>
-                  </span>
-                </div>
-              </div>
-              <div className="attendance-school-timing">
-                {timing ? (
-                  <>
-                    <span>
-                      School hours: {formatSchoolTime(timing.start)} –{' '}
-                      {formatSchoolTime(timing.end)}
-                    </span>
-                    <strong>
-                      Late cutoff:{' '}
-                      {studentLateCutoff(
-                        timing,
-                        (state.attendancePolicy ?? defaultAttendancePolicy).graceMinutes,
-                      )}
-                    </strong>
-                  </>
-                ) : hasAssignedTiming ? (
-                  <span>Not a school working day.</span>
-                ) : feature?.teacherScoped ? (
-                  <span>School timing has not been configured.</span>
-                ) : (
-                  <Link className="student-timing-link" to="/settings?section=timing">
-                    Set school timing
-                  </Link>
-                )}
-              </div>
-            </Panel>
             <div className="attendance-summary stats-grid">
               <StatCard
                 label="Total Students"
                 value={summary.total}
                 detail="Enrolled in section"
                 tone="blue"
-                icon={<Users size={16} />}
               />
               <StatCard
                 label="Present"
@@ -399,50 +387,65 @@ function AttendanceRegister() {
                     : '0%'
                 }
                 tone="green"
-                icon={<UserCheck size={16} />}
               />
               <StatCard
                 label="Absent"
                 value={summary.absent}
                 detail={summary.absent > 0 ? `${summary.absent} absent` : 'No absentees'}
                 tone="red"
-                icon={<UserX size={16} />}
               />
               <StatCard
                 label="Late / Half day"
                 value={`${summary.late} / ${summary['half-day']}`}
                 detail={`${summary.late} late · ${summary['half-day']} half-day`}
                 tone="amber"
-                icon={<Clock size={16} />}
               />
               <StatCard
                 label="Not Marked"
                 value={summary.unmarked}
                 detail={summary.unmarked > 0 ? 'Pending recording' : 'All recorded'}
                 tone="neutral"
-                icon={<AlertCircle size={16} />}
               />
             </div>
             <Panel
+              className="attendance-register-panel"
               title={`${state.classes.find((c) => c.id === classId)?.name ?? 'Class'}${sectionId ? ` · Section ${sections.find((s) => s.id === sectionId)?.name}` : ' · Whole class'}`}
               subtitle={`${rows.length} active students · ${displayDate(date)}`}
               action={
-                <Button
-                  variant="secondary"
-                  disabled={!canManage || saving || !rows.length || isDateLocked}
-                  onClick={() =>
-                    setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])))
-                  }
-                >
-                  <AppIcon name="user-check" size={16} />
-                  Mark all present
-                </Button>
+                <div className="attendance-register-controls">
+                  <label className="filter-label">
+                    <span>Attendance date</span>
+                    <PickerInput
+                      aria-label="Attendance date"
+                      type="date"
+                      value={date}
+                      min={state.academicYear.start}
+                      max={today}
+                      onChange={(e) => {
+                        if (e.target.value) update('date', e.target.value);
+                      }}
+                    />
+                  </label>
+                  <ClassFilters
+                    classId={classId}
+                    sectionId={sectionId}
+                    onClassChange={(v) => update('class', v)}
+                    onSectionChange={(v) => update('section', v)}
+                    allowAll={false}
+                  />
+                  <Button
+                    variant="secondary"
+                    disabled={!canManage || saving || !rows.length || isDateLocked}
+                    onClick={() =>
+                      setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])))
+                    }
+                  >
+                    <AppIcon name="user-check" size={16} />
+                    Mark all present
+                  </Button>
+                </div>
               }
             >
-              <div className="info-banner inline">
-                <CircleAlert size={16} />
-                Not marked is a separate status. It is never counted as absent.
-              </div>
               <div className="table-wrap">
                 <table className="attendance-table">
                   <thead>

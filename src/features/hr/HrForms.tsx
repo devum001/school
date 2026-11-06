@@ -11,6 +11,7 @@ export function HrForm({
   children,
   submitLabel = 'Save',
   className,
+  submitDisabled = false,
 }: {
   title: string;
   description: string;
@@ -19,6 +20,7 @@ export function HrForm({
   children: ReactNode;
   submitLabel?: string;
   className?: string;
+  submitDisabled?: boolean;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -73,7 +75,7 @@ export function HrForm({
               <Button type="button" variant="secondary" onClick={guard.requestClose}>
                 Cancel
               </Button>
-              <Button disabled={busy}>{busy ? 'Saving…' : submitLabel}</Button>
+              <Button disabled={busy || submitDisabled}>{busy ? 'Saving…' : submitLabel}</Button>
             </div>
           </fieldset>
         </form>

@@ -36,9 +36,17 @@ const operationalFields = [
 ] as const;
 export type ProfileViewValue = School &
   Partial<Record<(typeof operationalFields)[number][0], string>>;
+export interface AcademicYearInfo {
+  id?: string;
+  name: string;
+  start?: string;
+  end?: string;
+  revision?: number;
+}
+
 export interface SchoolProfileViewProps {
   school: ProfileViewValue;
-  academicYear: { name: string } | null;
+  academicYear: AcademicYearInfo | null;
   hours?: SchoolHours;
   schoolLogo?: string;
   canManage?: boolean;
@@ -47,6 +55,7 @@ export interface SchoolProfileViewProps {
   showOperationalFields?: boolean;
   validate: (school: ProfileViewValue) => Record<string, string>;
   save: (school: ProfileViewValue, hours?: SchoolHours) => Promise<void> | void;
+  onSaveAcademicYear?: (yearData: { name: string; start: string; end: string }) => Promise<void> | void;
   holidays?: string[];
   onSaveHolidays?: (holidays: string[]) => Promise<void> | void;
 }
@@ -87,7 +96,7 @@ export default function SchoolProfileView({
     ['Board / Affiliation', school.board],
     ['Affiliation number', school.affiliationNumber],
     ['Principal', school.principal],
-    ['Academic year', academicYear?.name ?? 'Not configured'],
+    ['Academic year (Session)', academicYear?.name ?? 'Not configured'],
     ["Today's date", displayDate(today)],
     ['Phone', school.phone],
     ['Email', school.email],
@@ -110,9 +119,7 @@ export default function SchoolProfileView({
             workingDays={
               hours?.days && hours.days.length > 0
                 ? hours.days
-                    .map((d) => SCHOOL_WEEKDAYS.indexOf(d))
-                    .filter((i) => i >= 0)
-                : [1, 2, 3, 4, 5, 6]
+                : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
             }
             onSave={onSaveHolidays}
             canManage={canManage}
@@ -148,19 +155,21 @@ export default function SchoolProfileView({
               </div>
             </div>
           </div>
-          <Button
-            variant="secondary"
-            disabled={!canManage}
-            className="settings-edit"
-            onClick={() => {
-              setDraft({ ...school });
-              setDraftHours(hours ? structuredClone(hours) : { start: '', end: '', days: [] });
-              setErrors({});
-            }}
-          >
-            <AppIcon name="edit" size={14} />
-            {section === 'timing' ? 'Edit Timing' : 'Edit Details'}
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <Button
+              variant="secondary"
+              disabled={!canManage}
+              className="settings-edit"
+              onClick={() => {
+                setDraft({ ...school });
+                setDraftHours(hours ? structuredClone(hours) : { start: '', end: '', days: [] });
+                setErrors({});
+              }}
+            >
+              <AppIcon name="edit" size={14} />
+              {section === 'timing' ? 'Edit Timing' : 'Edit Details'}
+            </Button>
+          </div>
         </div>
         <dl id="school-hours" tabIndex={-1} className="detail-list settings-profile-details">
           {rows
@@ -280,6 +289,7 @@ export default function SchoolProfileView({
                         </Button>
                       )}
                     </div>
+
                     <div className="settings-form-grid">
                       {[...fields, ...(showOperationalFields ? operationalFields : [])].map(
                         ([key, label]) => (
@@ -399,6 +409,7 @@ export default function SchoolProfileView({
           )
         )}
       </Modal>
-    </>
+
+      </>
   );
 }

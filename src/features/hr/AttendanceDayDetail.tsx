@@ -1,7 +1,9 @@
-import { ArrowRight, Clock3, LogIn, LogOut } from 'lucide-react';
+import { Clock3, LogIn, LogOut } from 'lucide-react';
 import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import type { HrWorkspace } from '../../services/hrService';
+
 export type AttendanceDay = Partial<HrWorkspace['attendance'][number]> & { date: string };
+
 function attendanceTime(value?: string, timezone?: string) {
   return value
     ? new Intl.DateTimeFormat('en-IN', {
@@ -12,52 +14,73 @@ function attendanceTime(value?: string, timezone?: string) {
       }).format(new Date(value))
     : 'Not available';
 }
+
 export default function AttendanceDayDetail({
   date,
   day,
   status,
   timezone,
+  ars = true,
+  pending,
 }: {
   date: string;
-  day?: AttendanceDay;
+  day?: Partial<HrWorkspace['attendance'][number]> | undefined;
   status: string;
   timezone?: string;
+  ars?: boolean;
+  pending?: boolean;
 }) {
   const minutes =
     day?.workingMinutes ??
     (day?.punchIn && day.punchOut
       ? Math.floor((Date.parse(day.punchOut) - Date.parse(day.punchIn)) / 60000)
       : null);
+
+  const displayStatus =
+    status === 'holiday'
+      ? 'Holiday'
+      : status === 'off'
+        ? 'Weekly holiday'
+        : status === 'half-day-leave'
+          ? 'Half day'
+          : status;
+
   return (
     <section className="attendance-day-card" aria-label="Selected day details">
       <div className="attendance-day-card-heading">
         <div>
-          <span>Attendance details</span>
+          <span className="attendance-day-card-subtitle">Attendance details</span>
           <h3>{formatCalendarDate(date)}</h3>
         </div>
         <span className={`attendance-day-pill hr-day-status-${status}`}>
-          {titleCase(
-            status === 'off' ? 'Weekly holiday' : status === 'half-day-leave' ? 'Half day' : status,
-          )}
+          {titleCase(displayStatus)}
         </span>
       </div>
-      <div className="attendance-day-punches">
-        <div>
-          <span>
-            <LogIn size={15} /> Punch in
-          </span>
-          <strong>{attendanceTime(day?.punchIn, timezone)}</strong>
+
+      <div className="attendance-day-timeline">
+        <div className="attendance-timeline-item">
+          <div className="attendance-timeline-point">
+            <LogIn size={15} />
+          </div>
+          <div className="attendance-timeline-content">
+            <span className="attendance-timeline-label">Punch In</span>
+            <strong>{attendanceTime(day?.punchIn, timezone)}</strong>
+          </div>
         </div>
-        <ArrowRight className="attendance-day-arrow" size={22} aria-hidden="true" />
-        <div>
-          <span>
-            <LogOut size={15} /> Punch out
-          </span>
-          <strong>{attendanceTime(day?.punchOut, timezone)}</strong>
+        <div className="attendance-timeline-line" />
+        <div className="attendance-timeline-item">
+          <div className="attendance-timeline-point">
+            <LogOut size={15} />
+          </div>
+          <div className="attendance-timeline-content">
+            <span className="attendance-timeline-label">Punch Out</span>
+            <strong>{attendanceTime(day?.punchOut, timezone)}</strong>
+          </div>
         </div>
       </div>
+
       <div className="attendance-day-duration">
-        <Clock3 size={22} />
+        <Clock3 size={20} />
         <div>
           <span>{day?.attendanceSource ? 'Approved working hours' : 'Working hours'}</span>
           <strong>
@@ -65,6 +88,7 @@ export default function AttendanceDayDetail({
           </strong>
         </div>
       </div>
+
       {day?.attendanceSource && (
         <p className="attendance-day-source">
           {day.attendanceSource === 'ars'
@@ -72,7 +96,15 @@ export default function AttendanceDayDetail({
             : 'Times corrected by your administrator.'}
         </p>
       )}
-      {status === 'holiday' && <p className="attendance-day-source">School holiday</p>}
+      {pending && (
+        <p className="ars-pending-note">ARS pending · awaiting administrator approval</p>
+      )}
+
+      {ars && (
+        <p className="attendance-calendar-hint">
+          Tap an absent, half-day or invalid date to request a correction.
+        </p>
+      )}
     </section>
   );
 }

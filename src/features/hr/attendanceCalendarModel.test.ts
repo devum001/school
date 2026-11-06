@@ -1,16 +1,19 @@
 import { expect, it } from 'vitest';
 import { attendanceLabel, canRequestArs, pendingLeaveOn } from './attendanceCalendarModel';
 import type { HrWorkspace } from '../../services/hrService';
+
 const settings = {
   workingDays: [1, 2, 3, 4, 5],
   holidays: ['2026-10-20'],
 } as HrWorkspace['settings'];
+
 it('does not turn missing records into absences and distinguishes future dates and off days', () => {
-  expect(attendanceLabel('2026-10-19', '2026-10-20', undefined, [], settings)).toBe('unmarked');
+  expect(attendanceLabel('2026-10-15', '2026-10-20', undefined, [], settings)).toBe('unmarked');
   expect(attendanceLabel('2026-10-21', '2026-10-20', undefined, [], settings)).toBe('upcoming');
-  expect(attendanceLabel('2026-10-18', '2026-10-20', undefined, [], settings)).toBe('off');
+  expect(attendanceLabel('2026-10-11', '2026-10-20', undefined, [], settings)).toBe('off');
   expect(attendanceLabel('2026-10-20', '2026-10-20', undefined, [], settings)).toBe('holiday');
 });
+
 it('uses approved leave dates even if the school calendar changes', () => {
   const leave = {
     status: 'approved',
@@ -33,15 +36,15 @@ it('uses approved leave dates even if the school calendar changes', () => {
 
 it('keeps a pending correction invalid until an explicit approved attendance outcome arrives', () => {
   const day = { status: 'invalid', late: true } as HrWorkspace['attendance'][number];
-  expect(attendanceLabel('2026-10-19', '2026-10-20', day, [], settings)).toBe('invalid');
+  expect(attendanceLabel('2026-10-15', '2026-10-20', day, [], settings)).toBe('invalid');
   expect(
-    attendanceLabel('2026-10-19', '2026-10-20', { ...day, status: 'half-day' }, [], settings),
+    attendanceLabel('2026-10-15', '2026-10-20', { ...day, status: 'half-day' }, [], settings),
   ).toBe('half-day');
 });
 
 it('keeps half-day attendance separate from a pending request for full-day credit', () => {
   const day = { status: 'half-day', late: true } as HrWorkspace['attendance'][number];
-  expect(attendanceLabel('2026-10-19', '2026-10-20', day, [], settings)).toBe('half-day');
+  expect(attendanceLabel('2026-10-15', '2026-10-20', day, [], settings)).toBe('half-day');
 });
 
 it('opens ARS only for eligible completed half days, absent days and invalid days without a pending request', () => {
@@ -64,9 +67,10 @@ it('opens ARS only for eligible completed half days, absent days and invalid day
     >),
   ).toBe(true);
 });
+
 it('weekends follow school working days rather than fixed Saturday and Sunday rules', () => {
   expect(
-    attendanceLabel('2026-10-18', '2026-10-20', undefined, [], {
+    attendanceLabel('2026-10-11', '2026-10-20', undefined, [], {
       ...settings,
       workingDays: [0, 1, 2, 3, 4, 5, 6],
     }),
@@ -106,4 +110,18 @@ it('shows server-derived absence while leave is pending, then the approved leave
       settings,
     ),
   ).toBe('leave');
+});
+
+it('recognizes marked school holidays in the attendance calendar and ignores unmarked festivals', () => {
+  const markedSettings = {
+    ...settings,
+    holidays: ['2026-11-08', '2026-11-09', '2026-11-10'],
+  };
+  // Marked holidays
+  expect(attendanceLabel('2026-11-08', '2026-11-05', undefined, [], markedSettings)).toBe('holiday');
+  expect(attendanceLabel('2026-11-09', '2026-11-05', undefined, [], markedSettings)).toBe('holiday');
+  expect(attendanceLabel('2026-11-10', '2026-11-05', undefined, [], markedSettings)).toBe('holiday');
+
+  // Without marking, 2026-11-09 (Monday) is a normal working day ('unmarked')
+  expect(attendanceLabel('2026-11-09', '2026-11-15', undefined, [], settings)).toBe('unmarked');
 });

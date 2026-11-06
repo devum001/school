@@ -2,10 +2,10 @@ import { portalAccess } from './portalAccess';
 import TopbarControls from '../../components/layout/TopbarControls';
 import { useCallback, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronsUpDown, Clock3, LogOut } from 'lucide-react';
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ChevronsUpDown, LogOut } from 'lucide-react';
 import AppShell from '../../components/layout/AppShell';
-import { Button, LoadingOverlay, Modal, PageHeading, Panel } from '../../components/ui/Primitives';
+import { AppIcon, Button, LoadingOverlay, Modal, PageHeading, Panel } from '../../components/ui/Primitives';
 import { getSchoolProfile } from '../../services/schoolProfileService';
 import { schoolAccessService } from '../../services/schoolAccessService';
 import { setupApi } from '../../services/schoolSetupService';
@@ -15,6 +15,7 @@ import { SchoolContext, type SchoolContextValue } from './schoolContext';
 import { useRemote } from './useRemote';
 import LiveAccount from './LiveAccount';
 import '../../components/layout/topbar-controls.css';
+
 export default function LiveSchoolWorkspace({ schoolId }: { schoolId: string | null }) {
   if (!schoolId)
     return (
@@ -25,6 +26,7 @@ export default function LiveSchoolWorkspace({ schoolId }: { schoolId: string | n
     );
   return <VerifiedSchool key={schoolId} schoolId={schoolId} />;
 }
+
 function VerifiedSchool({ schoolId }: { schoolId: string }) {
   const { session } = useSession();
   const location = useLocation();
@@ -79,12 +81,42 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
         teacherScoped: !access.owner && status.selfTeaching,
       })
     : { allowed: () => true, home: '/overview' };
+
+  const isTeacherScoped = !access.owner && Boolean(status.selfTeaching || status.selfLinked);
+
+  const isRouteAllowed = (path: string): boolean => {
+    if (path === '/staff/punch') {
+      return Boolean(
+        access.owner ||
+          (access.permissions.includes('attendance.self') && status.selfTeaching) ||
+          access.permissions.includes('staff.view'),
+      );
+    }
+    if (path === '/staff/self') {
+      return Boolean(
+        access.owner ||
+          (access.permissions.includes('attendance.self') && status.selfLinked) ||
+          access.permissions.includes('staff.view'),
+      );
+    }
+    return Boolean(navigation.allowed(path));
+  };
+
+  const isNavVisible = (path: string): boolean => {
+    // Punch in & out and Salary & Leaves are personal teacher/staff features,
+    // they should never appear in the School Workspace (admin/owner view) sidebar.
+    if (path === '/staff/punch' || path === '/staff/self') {
+      return isTeacherScoped;
+    }
+    return Boolean(navigation.allowed(path));
+  };
+
   const context = { schoolId, access, profile, status, reload: state.reload };
   return (
     <SchoolContext.Provider value={context}>
       <AppShell
         overviewUrl="/overview"
-        visibleRoute={navigation.allowed}
+        visibleRoute={isNavVisible}
         school={{ name: schoolName, logo: profile?.school.logoDataUrl }}
         user={{ name: session.user.name, detail: session.user.email }}
         preferences={{ language: 'English', landingPage: 'Dashboard' }}
@@ -95,25 +127,14 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
         }
         topbar={state.data ? <SessionControls context={context} /> : null}
         extraNavigation={
-          state.data ? (
-            <>
-              {access.permissions.includes('attendance.self') && status.selfTeaching && (
-                <NavLink className="nav-link" to="/staff/punch">
-                  <Clock3 size={19} />
-                  Punch in & out
-                </NavLink>
-              )}
-              {access.permissions.includes('attendance.self') && status.selfLinked && (
-                <Link className="nav-link" to="/staff/self">
-                  My attendance & salary
-                </Link>
-              )}
-              {session.user.platformRole === 'super_admin' && (
-                <Link className="nav-link" to="/platform">
-                  Super Admin
-                </Link>
-              )}
-            </>
+          state.data && session.user.platformRole === 'super_admin' ? (
+            <NavLink
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              to="/platform"
+            >
+              <AppIcon name="security" size={20} />
+              <span>Super Admin</span>
+            </NavLink>
           ) : undefined
         }
       >
@@ -135,7 +156,7 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
         ) : (location.pathname === '/' || location.pathname === '/login') &&
           navigation.home === '/staff/punch' ? (
           <Navigate to="/staff/punch" replace />
-        ) : navigation.allowed(location.pathname) ? (
+        ) : isRouteAllowed(location.pathname) ? (
           <Outlet />
         ) : (
           <Navigate to={navigation.home} replace />
@@ -144,6 +165,7 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
     </SchoolContext.Provider>
   );
 }
+
 function SchoolPicker({ name, logo, schoolId }: { name: string; logo?: string; schoolId: string }) {
   const { session } = useSession(),
     navigate = useNavigate(),
@@ -204,6 +226,7 @@ function SchoolPicker({ name, logo, schoolId }: { name: string; logo?: string; s
     </>
   );
 }
+
 function SessionControls({ context }: { context: SchoolContextValue }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');

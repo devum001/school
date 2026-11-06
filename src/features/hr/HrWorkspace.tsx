@@ -18,7 +18,7 @@ import {
   AppIcon,
 } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import type { IconName } from '../../components/ui/Primitives';
 const HR_NAV_ICONS: Record<string, IconName> = {
@@ -228,20 +228,50 @@ export function HrWorkspace({
             />
           )}
           {!hideMonthCorner && tab !== 'leave' && (
-            <label className="hr-month-corner">
-              <span className="sr-only">
-                {self ? 'Calendar / salary month' : 'Salary / attendance month'}
-              </span>
-              <PickerInput
-                type="month"
-                required
-                aria-label={self ? 'Calendar / salary month' : 'Salary / attendance month'}
-                value={month}
-                onChange={(e) => {
-                  if (e.target.value) setMonth(e.target.value);
+            <div className="hr-month-controls" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                type="button"
+                className="button secondary"
+                title="Previous month"
+                aria-label="Previous month"
+                style={{ padding: '6px 8px', height: '36px', minWidth: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => {
+                  const d = new Date(`${month}-01T12:00:00Z`);
+                  d.setUTCMonth(d.getUTCMonth() - 1);
+                  setMonth(d.toISOString().slice(0, 7));
                 }}
-              />
-            </label>
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <label className="hr-month-corner" style={{ margin: 0 }}>
+                <span className="sr-only">
+                  {self ? 'Calendar / salary month' : 'Salary / attendance month'}
+                </span>
+                <PickerInput
+                  type="month"
+                  required
+                  aria-label={self ? 'Calendar / salary month' : 'Salary / attendance month'}
+                  value={month}
+                  onChange={(e) => {
+                    if (e.target.value) setMonth(e.target.value);
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="button secondary"
+                title="Next month"
+                aria-label="Next month"
+                style={{ padding: '6px 8px', height: '36px', minWidth: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => {
+                  const d = new Date(`${month}-01T12:00:00Z`);
+                  d.setUTCMonth(d.getUTCMonth() + 1);
+                  setMonth(d.toISOString().slice(0, 7));
+                }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -312,7 +342,7 @@ type Action =
       item?: HrPayroll;
     }
   | { kind: 'leave' | 'cancelLeave'; leave?: Workspace['leaves'][number] }
-  | { kind: 'slip' | 'approve'; item: HrPayroll }
+  | { kind: 'slip' | 'approve'; item: HrPayroll; staff?: HrStaff }
   | { kind: 'advanceHistory'; staff: HrStaff };
 function HrContent({
   adapter,
@@ -362,6 +392,69 @@ function HrContent({
     ),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
+
+  const [priorMonthDue, setPriorMonthDue] = useState<{
+    month: string;
+    label: string;
+    dueDate: string;
+    unpreparedCount: number;
+    draftCount: number;
+    outstandingAmount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (tab !== 'salary') {
+      setPriorMonthDue(null);
+      return;
+    }
+    const currentCalMonth = data.today.slice(0, 7);
+    if (month >= currentCalMonth) {
+      const prevD = new Date(`${currentCalMonth}-01T12:00:00Z`);
+      prevD.setUTCMonth(prevD.getUTCMonth() - 1);
+      const prevMonthStr = prevD.toISOString().slice(0, 7);
+
+      const abortCtrl = new AbortController();
+      adapter
+        .load(prevMonthStr, false, abortCtrl.signal)
+        .then((prevData) => {
+          if (abortCtrl.signal.aborted) return;
+          const targetStaff = prevData.staff.filter(
+            (p) => (!department || p.department === department) && (!selectedStaff || p.id === selectedStaff),
+          );
+          const unprepared = targetStaff.filter((s) => !prevData.payroll.some((p) => p.staffId === s.id));
+          const drafts = prevData.payroll.filter(
+            (p) => p.status === 'draft' && targetStaff.some((s) => s.id === p.staffId),
+          );
+          const approvedPayrolls = prevData.payroll.filter(
+            (p) => p.status === 'approved' && targetStaff.some((s) => s.id === p.staffId),
+          );
+          const outstanding = approvedPayrolls.reduce(
+            (sum, p) => sum + Math.max(0, p.net - payrollPaid(p, prevData)),
+            0,
+          );
+
+          if (unprepared.length > 0 || drafts.length > 0 || outstanding > 0) {
+            const day = prevData.settings.paymentDay || 5;
+            const due = `${currentCalMonth}-${String(day).padStart(2, '0')}`;
+            const monthLabel = prevD.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+            setPriorMonthDue({
+              month: prevMonthStr,
+              label: monthLabel,
+              dueDate: due,
+              unpreparedCount: unprepared.length,
+              draftCount: drafts.length,
+              outstandingAmount: outstanding,
+            });
+          } else {
+            setPriorMonthDue(null);
+          }
+        })
+        .catch(() => {});
+      return () => abortCtrl.abort();
+    } else {
+      setPriorMonthDue(null);
+    }
+  }, [tab, month, data.today, adapter, department, selectedStaff]);
   const staff = data.staff.filter(
       (p) =>
         (!department || p.department === department) && (!selectedStaff || p.id === selectedStaff),
@@ -445,6 +538,54 @@ function HrContent({
             })
           }
         />
+      )}
+      {tab === 'salary' && priorMonthDue && (
+        <div
+          className="hr-pending-alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            background: '#fffbeb',
+            border: '1px solid #fcd34d',
+            borderRadius: '10px',
+            padding: '14px 18px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <AlertCircle size={24} style={{ color: '#d97706', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '14px', color: '#92400e' }}>
+                Pending Previous Month Salary: {priorMonthDue.label}
+              </div>
+              <div style={{ fontSize: '13px', color: '#b45309', marginTop: '2px' }}>
+                Payment was due on {formatCalendarDate(priorMonthDue.dueDate)}.
+                {priorMonthDue.unpreparedCount > 0 &&
+                  ` ${priorMonthDue.unpreparedCount} staff salaries not prepared yet.`}
+                {priorMonthDue.draftCount > 0 &&
+                  ` ${priorMonthDue.draftCount} drafts awaiting approval.`}
+                {priorMonthDue.outstandingAmount > 0 &&
+                  ` Unpaid balance: ${rupees(priorMonthDue.outstandingAmount)}.`}
+              </div>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => changeMonth(priorMonthDue.month)}
+            style={{
+              borderColor: '#d97706',
+              color: '#92400e',
+              background: '#ffffff',
+              fontWeight: 600,
+            }}
+          >
+            Open {priorMonthDue.label} Payroll →
+          </Button>
+        </div>
       )}
       {tab === 'salary' && (
         <div className="hr-summary">
@@ -803,13 +944,21 @@ function HrContent({
                             </Button>
                           )}
                           {item?.status === 'draft' && can('payroll.approve') && (
-                            <Button onClick={() => setAction({ kind: 'approve', item })}>
+                            <Button onClick={() => setAction({ kind: 'approve', item, staff: p })}>
                               Review & approve
                             </Button>
                           )}
                           {item?.status === 'approved' && outstanding > 0 && can('payroll.pay') && (
                             <Button onClick={() => setAction({ kind: 'payment', staff: p, item })}>
                               Record payment
+                            </Button>
+                          )}
+                          {can('payroll.pay') && (
+                            <Button
+                              variant="ghost"
+                              onClick={() => setAction({ kind: 'advance', staff: p })}
+                            >
+                              Give advance
                             </Button>
                           )}
                           {item && item.status === 'approved' && (
@@ -1148,37 +1297,130 @@ function HrContent({
         </Modal>
       )}
       {action?.kind === 'slip' && <Payslip item={action.item} data={data} close={close} />}
-      {action?.kind === 'approve' && (
-        <HrForm
-          title="Approve payroll?"
-          description="This freezes the salary calculation. Payment is recorded separately. Changes afterwards require an adjustment in a later period."
-          close={close}
-          submit={async () => {
-            await adapter.save(`/payroll/${action.item.id}/approve`, {
-              revision: action.item.revision,
-            });
-            reload();
-          }}
-        >
-          <p>
-            {action.item.name} · {month} · Net {rupees(action.item.net)}
-          </p>
-          <p>
-            Gross {rupees(action.item.gross)} − attendance {rupees(action.item.leaveDeduction)} −
-            regular deduction {rupees(action.item.manualDeduction)} + adjustment{' '}
-            {rupees(action.item.adjustment)} − advance recovery{' '}
-            {rupees(action.item.advanceRecovery)}
-          </p>
-          <ul>
-            {action.item.unresolved.map((v) => (
-              <li key={v}>{v}</li>
-            ))}
-          </ul>
-          <p>
-            Approval is available after the month ends and every attendance issue has been reviewed.
-          </p>
-        </HrForm>
-      )}
+      {action?.kind === 'approve' && (() => {
+        const isMonthEnded = month < data.today.slice(0, 7);
+
+        const unresolvedList = action.item.unresolved || [];
+        return (
+          <HrForm
+            title="Review & Approve Payroll"
+            description={
+              isMonthEnded
+                ? "This freezes the salary calculation. Payment is recorded separately. Changes afterwards require an adjustment in a later period."
+                : `Payroll for ${month} can be approved early now, or you can give a Salary Advance.`
+            }
+            submitLabel={isMonthEnded ? "Approve payroll" : "Approve early"}
+            submitDisabled={false}
+            close={close}
+            submit={async () => {
+              const currentItem = data.payroll.find((p) => p.id === action.item.id) || action.item;
+              try {
+                await adapter.save(`/payroll/${currentItem.id}/approve`, {
+                  revision: currentItem.revision,
+                });
+                reload();
+              } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : String(err);
+                const isStale =
+                  message.includes('changed') ||
+                  message.includes('Refresh') ||
+                  message.includes('stale') ||
+                  message.includes('HR_STALE');
+                if (isStale) {
+                  const updatedDraft: any = await adapter.save(
+                    `/staff/${currentItem.staffId}/payroll`,
+                    {
+                      month,
+                      revision: currentItem.revision,
+                      adjustment: currentItem.adjustment || 0,
+                      advanceRecovery: currentItem.advanceRecovery || 0,
+                      note: currentItem.note || 'Synced before approval',
+                    },
+                  );
+                  await adapter.save(`/payroll/${updatedDraft?.id || currentItem.id}/approve`, {
+                    revision: updatedDraft?.revision ?? (currentItem.revision + 1),
+                  });
+                  reload();
+                } else {
+                  throw err;
+                }
+              }
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div
+                style={{
+                  background: 'var(--surface-sunken, #f8fafc)',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-subtle, #e2e8f0)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <strong>{action.item.name}</strong>
+                  <Badge tone={isMonthEnded ? 'green' : 'amber'}>
+                    {isMonthEnded ? 'Ready for approval' : 'Month in progress'}
+                  </Badge>
+                </div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted, #64748b)' }}>
+                  Salary Month: <strong>{month}</strong> · Net Salary: <strong style={{ color: 'var(--text-primary, #0f172a)' }}>{rupees(action.item.net)}</strong>
+                </div>
+                <div style={{ fontSize: '0.85rem', marginTop: '6px' }}>
+                  Gross {rupees(action.item.gross)} − Attendance deduction {rupees(action.item.leaveDeduction)} − Regular deduction {rupees(action.item.manualDeduction)} + Adjustment {rupees(action.item.adjustment)} − Advance recovery {rupees(action.item.advanceRecovery)}
+                </div>
+              </div>
+
+              {!isMonthEnded && (
+                <div
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.08)',
+                    color: '#1d4ed8',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    lineHeight: '1.5',
+                  }}
+                >
+                  💡 <strong>Early Salary Payment:</strong>
+                  <ul style={{ margin: '6px 0 0', paddingLeft: '20px' }}>
+                    <li>
+                      <strong>Approve early:</strong> Mahine ke beech me full salary release karne ke liye yahan se approve karke payment record kar sakte hain.
+                    </li>
+                    <li>
+                      <strong>Salary Advance:</strong> Staff ko zaroorat ke hisab se advance (peshgi) dene ke liye <em>"Give advance"</em> click karein. Yeh month-end salary me automatic adjust ho jayega.
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+              
+
+              {unresolvedList.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 600, margin: '8px 0 4px', color: 'var(--text-primary, #0f172a)' }}>
+                    Attendance issues ({unresolvedList.length}):
+                  </h4>
+                  <ul
+                    style={{
+                      maxHeight: '130px',
+                      overflowY: 'auto',
+                      padding: '8px 16px',
+                      background: 'var(--surface-sunken, #f8fafc)',
+                      borderRadius: '6px',
+                      fontSize: '0.825rem',
+                      margin: 0,
+                    }}
+                  >
+                    {unresolvedList.map((v) => (
+                      <li key={v} style={{ margin: '3px 0' }}>{v}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </HrForm>
+        );
+      })()}
     </>
   );
 }

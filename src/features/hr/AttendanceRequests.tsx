@@ -15,6 +15,7 @@ export default function AttendanceRequests({
   self,
   adapter,
   saved,
+  hideHeading = false,
 }: {
   requests: AttendanceRequest[];
   staff?: HrStaff[];
@@ -22,6 +23,7 @@ export default function AttendanceRequests({
   adapter: HrAdapter;
   saved: () => void;
   today?: string;
+  hideHeading?: boolean;
 }) {
   const [review, setReview] = useState<AttendanceRequest>();
   const [tab, setTab] = useState('pending');
@@ -31,7 +33,7 @@ export default function AttendanceRequests({
     .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
   return (
     <section className="attendance-requests" aria-label="Attendance requests">
-      {!self && (
+      {!self && !hideHeading && (
         <div className="attendance-requests-heading">
           <div>
             <h3>Attendance requests (ARS)</h3>

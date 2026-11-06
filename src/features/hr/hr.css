@@ -109,11 +109,19 @@
   font-size: clamp(20px, 2vw, 28px);
   overflow-wrap: anywhere;
 }
+.hr-content .panel-heading {
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+.hr-content .panel-heading > div:first-child {
+  flex-shrink: 0;
+  min-width: 140px;
+}
 .hr-header-filters {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 .hr-header-filters .button,
 .hr-header-filters button {
@@ -141,6 +149,61 @@
   padding: 5px 10px;
   font-size: 12px;
   box-sizing: border-box;
+}
+.hr-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.hr-search-wrap .hr-search-icon {
+  position: absolute;
+  left: 9px;
+  color: var(--muted, #64748b);
+  pointer-events: none;
+}
+.hr-search-wrap .hr-search-input {
+  width: 100%;
+  padding-left: 28px !important;
+  border-radius: var(--radius-sm, 6px);
+}
+.hr-search-filter {
+  width: 135px;
+  min-width: 115px;
+  max-width: 145px;
+}
+.hr-dept-filter {
+  width: 125px;
+  min-width: 110px;
+  max-width: 135px;
+}
+.hr-status-filter {
+  width: 120px;
+  min-width: 110px;
+  max-width: 130px;
+}
+.hr-date-filter {
+  width: 125px;
+  min-width: 115px;
+  max-width: 130px;
+}
+.hr-date-filter .calendar-date-control {
+  width: 100%;
+}
+.hr-date-filter .calendar-date-control > input[type='text'] {
+  width: 100%;
+  padding-right: 28px !important;
+  padding-left: 8px !important;
+  font-size: 12px;
+  letter-spacing: -0.2px;
+}
+.hr-date-filter .calendar-date-button {
+  width: 26px;
+  right: 1px;
+}
+.hr-date-filter .calendar-date-button svg {
+  width: 15px;
+  height: 15px;
 }
 .hr-content > .field,
 .hr-content > p,
@@ -316,25 +379,67 @@
   border-radius: var(--radius-control);
   background: var(--surface-panel);
 }
-.hr-personal-salary {
-  margin: 24px;
-  border-top: 1px solid var(--border);
-  padding-top: 20px;
+/* Personal Salary & Profile Cards (Vertical List Layout) */
+.hr-personal-salary-wrapper,
+.hr-personal-profile-wrapper {
+  padding: 6px 0;
 }
-.hr-personal-salary h3 {
-  margin-bottom: 14px;
+
+.hr-personal-salary-card,
+.hr-personal-profile-card {
+  border: 1px solid var(--border, #e0e6e3);
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(18, 55, 59, 0.03);
 }
-.hr-personal-salary p {
-  font-size: 12px;
-  color: var(--muted);
+
+.hr-salary-card-top {
+  margin-bottom: 12px;
 }
-.hr-personal-salary-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
+
+.hr-vertical-list {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
-.hr-personal-salary-card .button {
-  margin-top: 12px;
+
+.hr-vertical-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 4px;
+  border-bottom: 1px solid #edf2ef;
+}
+
+.hr-vertical-row:last-child {
+  border-bottom: none;
+}
+
+.hr-vertical-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--muted, #64748b);
+  margin: 0;
+}
+
+.hr-vertical-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main, #12373b);
+  margin: 0;
+  text-align: right;
+}
+
+.hr-vertical-value.font-bold {
+  font-weight: 650;
+  font-size: 14.5px;
+}
+
+.hr-salary-card-action {
+  margin-top: 16px;
+  padding-top: 4px;
 }
 
 /* Leave balance banner & empty state styles */
@@ -440,4 +545,37 @@
 }
 .staff-header-toolbar {
   align-items: flex-end;
+}
+
+
+.hr-leave-balance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0f7f4;
+  border: 1px solid #d4deda;
+  color: #12373b;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.hr-leave-chip-count {
+  font-weight: 700;
+  color: #1b6351;
+  font-size: 14.5px;
+}
+
+.hr-leave-chip-text {
+  color: #4a5c57;
+  font-size: 12.5px;
+}
+
+.hr-leave-footer-note {
+  font-size: 12px;
+  color: var(--muted, #64748b);
+  margin: 16px 22px 8px;
 }

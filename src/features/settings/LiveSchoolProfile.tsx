@@ -6,6 +6,7 @@ import type { SchoolHours } from '../../types/domain';
 import { saveSchoolProfile } from '../../services/schoolProfileService';
 import { profileDraft, validateProfile } from '../setup/profileForm';
 import SchoolProfileView, { type ProfileViewValue } from './SchoolProfileView';
+import { setupApi } from '../../services/schoolSetupService';
 import { useSchoolProfile } from './useSchoolProfile';
 export default function LiveSchoolProfile({
   schoolId,
@@ -129,6 +130,15 @@ export default function LiveSchoolProfile({
               onSaved?.();
             },
           };
+          const handleSaveAcademicYear = async (yearData: { name: string; start: string; end: string }) => {
+            if (!academicYear?.id) {
+              throw new Error('No active academic year found to update.');
+            }
+            const existing = await setupApi.year(schoolId, academicYear.id);
+            await setupApi.saveYear(schoolId, yearData, existing);
+            profile.retry();
+            onSaved?.();
+          };
           return (
             <SchoolProfileView
               key={school.profileRevision}
@@ -140,6 +150,7 @@ export default function LiveSchoolProfile({
               registrationManaged
               validate={source.validate}
               save={source.save}
+              onSaveAcademicYear={handleSaveAcademicYear}
               holidays={hrSettings?.holidays || []}
               onSaveHolidays={handleSaveHolidays}
             />

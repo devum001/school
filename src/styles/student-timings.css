@@ -169,6 +169,75 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.attendance-header-timing {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #d4deda;
+  border-radius: 12px;
+  padding: 6px 14px;
+  font-size: 12px;
+  box-shadow: 0 1px 3px rgba(18, 55, 59, 0.06);
+}
+.attendance-header-timing .timing-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #4a5c57;
+}
+.attendance-header-timing .timing-chip strong {
+  color: #12373b;
+  font-weight: 650;
+}
+.attendance-header-timing .timing-divider {
+  width: 1px;
+  height: 16px;
+  background: #d4deda;
+}
+.attendance-header-timing .timing-chip.cutoff strong {
+  color: #b45309;
+}
+.attendance-register-panel .panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+}
+.attendance-register-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.attendance-register-controls .filter-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted, #5a7370);
+}
+.attendance-register-controls .filter-label select,
+.attendance-register-controls .filter-label input {
+  min-width: 130px;
+  height: 38px;
+  padding: 6px 12px;
+  border: 1px solid #d4deda;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+  color: var(--text-main, #263b3a);
+}
+.attendance-register-controls .button {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
 .attendance-school-timing {
   padding: 10px 22px;
   color: #52647a;

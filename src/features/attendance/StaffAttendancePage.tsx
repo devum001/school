@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, CalendarX2, Clock, UserCheck, Users, UserX } from 'lucide-react';
+import { AlertCircle, CalendarX2 } from 'lucide-react';
 import '../../styles/ledgers.css';
 import AttendanceTabs from '../../components/shared/AttendanceTabs';
 import { attendanceSummary } from '../../lib/selectors';
@@ -26,6 +26,7 @@ import { staffDirectory, staffLabel } from '../../lib/staffStructure';
 import { staffStatusFor } from '../../lib/staffAttendance';
 import { repository } from '../../lib/repository';
 import { STATUS_LABELS } from '../../lib/config';
+import { configuredSchoolHours } from '../../lib/schoolHours';
 import { isDateHoliday } from '../../lib/indianHolidays';
 import type { AttendanceStatus } from '../../types/domain';
 const statuses: AttendanceStatus[] = ['present', 'absent', 'half-day', 'late', 'unmarked'];
@@ -57,7 +58,11 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
 
   const holidayInfo = isDateHoliday(date, state.holidays);
   const weekdayName = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
-  const isWeeklyOff = config.work.weeklyOff === weekdayName;
+  const hours = configuredSchoolHours(state);
+  const isWeeklyOff =
+    hours && hours.days.length > 0
+      ? !hours.days.includes(weekdayName as any)
+      : config.work.weeklyOff === weekdayName;
   const isDateLocked = holidayInfo.isHoliday || isWeeklyOff;
 
   const members = staffDirectory(state, config).filter(
@@ -273,35 +278,30 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
             value={summary.total}
             detail="Active staff members"
             tone="blue"
-            icon={<Users size={16} />}
           />
           <StatCard
             label="Present"
             value={summary.present + summary.late}
             detail={summary.total ? `${Math.round(((summary.present + summary.late) / summary.total) * 100)}% on duty` : '0%'}
             tone="green"
-            icon={<UserCheck size={16} />}
           />
           <StatCard
             label="Absent"
             value={summary.absent}
             detail={summary.absent > 0 ? `${summary.absent} absent today` : 'No absentees'}
             tone="red"
-            icon={<UserX size={16} />}
           />
           <StatCard
             label="Late / Half day"
             value={`${summary.late} / ${summary['half-day']}`}
             detail={`${summary.late} late · ${summary['half-day']} half-day`}
             tone="amber"
-            icon={<Clock size={16} />}
           />
           <StatCard
             label="Not Marked"
             value={summary.unmarked}
             detail={summary.unmarked > 0 ? 'Pending punch / mark' : 'All recorded'}
             tone="neutral"
-            icon={<AlertCircle size={16} />}
           />
         </div>
         <Panel
@@ -320,9 +320,6 @@ function StaffRegister({ embedded }: { embedded: boolean }) {
             </Button>
           }
         >
-          <div className="info-banner inline">
-            Not marked is a separate status. It is never counted as absent.
-          </div>
           {members.length ? (
             <div
               className="table-wrap"

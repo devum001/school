@@ -41,16 +41,21 @@ export default function LiveApp() {
   }, []);
   if (auth.status === 'loading')
     return (
-      <main className="live-login">
-        <Panel>
-          <div className="loading-state">
-            <AppLoader
-              size="xl"
-              label="Checking your session…"
-              message="Checking your session…"
-            />
-          </div>
-        </Panel>
+      <main
+        style={{
+          minHeight: '100dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg, #f4f6f8)',
+        }}
+      >
+        <AppLoader
+          size="xl"
+          label="Checking your session…"
+          message="Checking your session…"
+        />
       </main>
     );
   if (auth.status === 'error')

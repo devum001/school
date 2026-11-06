@@ -253,6 +253,20 @@ export default function SalarySetupWorkspace({
         'PUT',
       );
 
+      if (basicPaise > 0) {
+        try {
+          await adapter.save(`/staff/${row.staff.id}/payroll`, {
+            month,
+            revision: 0,
+            adjustment: 0,
+            advanceRecovery: 0,
+            note: 'Draft from salary setup',
+          });
+        } catch (e) {
+          console.warn('Auto draft creation notice:', e);
+        }
+      }
+
       setRowsById((prev) => ({
         ...prev,
         [id]: {
@@ -306,6 +320,20 @@ export default function SalarySetupWorkspace({
           },
           'PUT',
         );
+
+        if (basicPaise > 0) {
+          try {
+            await adapter.save(`/staff/${row.staff.id}/payroll`, {
+              month,
+              revision: 0,
+              adjustment: 0,
+              advanceRecovery: 0,
+              note: 'Bulk draft from salary setup',
+            });
+          } catch {
+            // best-effort draft
+          }
+        }
 
         setRowsById((prev) => ({
           ...prev,

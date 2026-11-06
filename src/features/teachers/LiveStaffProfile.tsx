@@ -24,6 +24,7 @@ import {
 } from '../../services/hrService';
 import { personSchema } from '../../services/onboardingService';
 import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
+import { getSavedHolidays } from '../../lib/indianHolidays';
 import AttendanceCalendar from '../hr/AttendanceCalendar';
 import { PunchChips } from '../hr/StaffAttendancePanel';
 import { LeaveDialog, Payslip } from '../hr/HrActions';
@@ -32,8 +33,26 @@ import StaffLoginDialog from '../hr/StaffLoginDialog';
 import PeopleRelations from '../setup/PeopleRelations';
 import { StaffEditor } from './LiveStaff';
 import '../hr/staff-attendance.css';
+
+const DAY_MAP: Record<string, number> = {
+  Sunday: 0,
+  Sun: 0,
+  Monday: 1,
+  Mon: 1,
+  Tuesday: 2,
+  Tue: 2,
+  Wednesday: 3,
+  Wed: 3,
+  Thursday: 4,
+  Thu: 4,
+  Friday: 5,
+  Fri: 5,
+  Saturday: 6,
+  Sat: 6,
+};
+
 export default function LiveStaffProfile() {
-  const { schoolId, access, status } = useLiveSchool(),
+  const { schoolId, access, status, profile } = useLiveSchool(),
     { teacherId, staffId } = useParams();
   const personId = teacherId ?? staffId ?? '',
     today = useToday(),
@@ -49,7 +68,8 @@ export default function LiveStaffProfile() {
     adapter = useMemo(() => liveHrAdapter(schoolId), [schoolId]);
   const [action, setAction] = useState(''),
     [leave, setLeave] = useState<HrWorkspace['leaves'][number]>(),
-    [slip, setSlip] = useState<HrWorkspace['payroll'][number]>();
+    [slip, setSlip] = useState<HrWorkspace['payroll'][number]>(),
+    [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
   const close = () => {
       setAction('');
       setLeave(undefined);
@@ -60,7 +80,27 @@ export default function LiveStaffProfile() {
       state.reload();
     };
   const person = state.data?.staff,
-    data = state.data?.workspace;
+    rawData = state.data?.workspace;
+
+  const data = useMemo(() => {
+    if (!rawData) return undefined;
+    const baseSettings = rawData.settings;
+    const schoolHoursDays = profile?.school?.hours?.days;
+    const workingDays =
+      schoolHoursDays && schoolHoursDays.length > 0
+        ? schoolHoursDays.map((d) => DAY_MAP[d]).filter((n): n is number => n !== undefined)
+        : baseSettings?.workingDays;
+    const localSaved = getSavedHolidays();
+    const holidays = Array.from(new Set([...(baseSettings?.holidays || []), ...localSaved]));
+    return {
+      ...rawData,
+      settings: {
+        ...baseSettings,
+        workingDays: workingDays ?? baseSettings?.workingDays,
+        holidays,
+      },
+    };
+  }, [rawData, profile?.school?.hours?.days]);
   const tabs = [
     'Overview',
     ...(state.data?.attendance ? ['Attendance'] : []),
@@ -101,7 +141,7 @@ export default function LiveStaffProfile() {
                 <div className="staff-profile-identity">
                   <h2>{person.name}</h2>
                   <p>
-                    {person.code} · {titleCase(person.designation)} · {titleCase(person.department)}
+                    {titleCase(person.designation)} · {titleCase(person.department)}
                   </p>
                   <Badge tone={person.status === 'active' ? 'green' : 'neutral'}>
                     {titleCase(person.status)}
@@ -173,16 +213,6 @@ export default function LiveStaffProfile() {
             )}
             {tab === 'Attendance' && data && (
               <>
-                <label className="field">
-                  Attendance month
-                  <input
-                    type="month"
-                    value={month}
-                    onChange={(e) => {
-                      if (e.target.value) setParams({ tab, month: e.target.value });
-                    }}
-                  />
-                </label>
                 <div className="staff-profile-stats">
                   {['present', 'late', 'absent', 'half-day'].map((s) => (
                     <StatCard
@@ -196,7 +226,7 @@ export default function LiveStaffProfile() {
                           ? 'Includes late arrivals and half days'
                           : ['late', 'half-day'].includes(s)
                             ? 'Also counted in Present'
-                            : 'Selected month'
+                            : ''
                       }
                     />
                   ))}
@@ -205,6 +235,7 @@ export default function LiveStaffProfile() {
                   <AttendanceCalendar
                     data={data}
                     month={month}
+                    onMonthChange={(newMonth) => setParams({ tab, month: newMonth })}
                     label={`${person.name} attendance`}
                   />
                 </Panel>
@@ -314,7 +345,58 @@ export default function LiveStaffProfile() {
                     </tbody>
                   </table>
                   {!data.payroll.length && (
-                    <p className="panel-note">Payroll has not been generated for this month.</p>
+                    <div style={{ padding: '16px 0' }}>
+                      {data.employment?.[0]?.salaries?.slice(-1)[0]?.basic > 0 ? (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '16px',
+                            background: 'var(--surface-sunken, #f8fafc)',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                          }}
+                        >
+                          <p className="panel-note" style={{ margin: 0 }}>
+                            Salary is configured (
+                            {rupees(
+                              (data.employment[0].salaries.slice(-1)[0].basic || 0) +
+                                (data.employment[0].salaries.slice(-1)[0].allowance || 0) +
+                                (data.employment[0].salaries.slice(-1)[0].bonus || 0) -
+                                (data.employment[0].salaries.slice(-1)[0].deduction || 0),
+                            )}
+                            /mo), but payroll draft has not been generated for {month} yet.
+                          </p>
+                          {can('payroll.manage') && (
+                            <Button
+                              disabled={isGeneratingDraft}
+                              onClick={async () => {
+                                try {
+                                  setIsGeneratingDraft(true);
+                                  await adapter.save(`/staff/${person.id}/payroll`, {
+                                    month,
+                                    revision: 0,
+                                    adjustment: 0,
+                                    advanceRecovery: 0,
+                                    note: 'Draft generated from profile',
+                                  });
+                                  state.reload();
+                                } catch (e) {
+                                  console.error(e);
+                                } finally {
+                                  setIsGeneratingDraft(false);
+                                }
+                              }}
+                            >
+                              {isGeneratingDraft ? 'Generating draft…' : 'Generate salary draft'}
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="panel-note">Payroll has not been generated for this month.</p>
+                      )}
+                    </div>
                   )}
                 </div>
                 <Link

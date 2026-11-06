@@ -33,7 +33,7 @@ const profileSchema = z.object({
       .default(null),
   }),
   academicYear: z
-    .object({ id: z.string(), name: z.string(), start: z.string(), end: z.string() })
+    .object({ id: z.string(), name: z.string(), start: z.string(), end: z.string(), revision: z.number().int().nonnegative().optional() })
     .nullable(),
   setupRequired: z.boolean(),
 });
