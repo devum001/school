@@ -43,6 +43,7 @@ import {
 import EmploymentDialog from './EmploymentDialog';
 import HrSettingsPanel from './HrSettingsPanel';
 import { AttendanceDialog, LeaveDialog, PaymentDialog, PayrollDialog, Payslip } from './HrActions';
+import { PaySalaryDialog, BulkPaySalaryDialog } from './PaySalaryDialog';
 import { HrForm } from './HrForms';
 import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import './hr.css';
@@ -337,10 +338,11 @@ export function HrWorkspace({
 }
 type Action =
   | {
-      kind: 'employment' | 'payroll' | 'payment' | 'advance' | 'attendance' | 'login' | 'calendar';
+      kind: 'employment' | 'payroll' | 'payment' | 'advance' | 'attendance' | 'login' | 'calendar' | 'paySalary';
       staff: HrStaff;
       item?: HrPayroll;
     }
+  | { kind: 'bulkPay' }
   | { kind: 'leave' | 'cancelLeave'; leave?: Workspace['leaves'][number] }
   | { kind: 'slip' | 'approve'; item: HrPayroll; staff?: HrStaff }
   | { kind: 'advanceHistory'; staff: HrStaff };
@@ -507,12 +509,48 @@ function HrContent({
       setBusy(false);
     }
   };
-  const visiblePayroll = data.payroll.filter((item) => staff.some((p) => p.id === item.staffId));
-  const approved = visiblePayroll.filter((item) => item.status === 'approved');
-  const paid = approved.reduce((total, item) => total + payrollPaid(item, data), 0);
-  const outstanding = approved.reduce(
-    (total, item) => total + item.net - payrollPaid(item, data),
-    0,
+    const staffSalaryData = useMemo(() => {
+    return staff.map((p) => {
+      const item = data.payroll.find((v) => v.staffId === p.id);
+      const emp = data.employment.find((e) => e.staffId === p.id);
+      const salaryConfig = emp?.salaries.filter((sal) => sal.effectiveMonth <= month).at(-1);
+      const configuredGross =
+        (salaryConfig?.basic ?? 0) + (salaryConfig?.allowance ?? 0) + (salaryConfig?.bonus ?? 0);
+      const configuredDeduction = salaryConfig?.deduction ?? 0;
+      const configuredNet = Math.max(0, configuredGross - configuredDeduction);
+
+      const netSalary = item ? item.net : configuredNet;
+      const paidAmount = item ? payrollPaid(item, data) : 0;
+      const pendingAmount = Math.max(0, netSalary - paidAmount);
+
+      return {
+        staff: p,
+        item,
+        salaryConfig,
+        configuredGross,
+        configuredDeduction,
+        netSalary,
+        paidAmount,
+        pendingAmount,
+      };
+    });
+  }, [staff, data.payroll, data.employment, data.payments, month]);
+
+  const totalMonthlySalary = useMemo(
+    () => staffSalaryData.reduce((s, row) => s + row.netSalary, 0),
+    [staffSalaryData],
+  );
+  const totalPaidThisMonth = useMemo(
+    () => staffSalaryData.reduce((s, row) => s + row.paidAmount, 0),
+    [staffSalaryData],
+  );
+  const totalPendingThisMonth = useMemo(
+    () => staffSalaryData.reduce((s, row) => s + row.pendingAmount, 0),
+    [staffSalaryData],
+  );
+  const pendingStaffList = useMemo(
+    () => staffSalaryData.filter((r) => r.pendingAmount > 0),
+    [staffSalaryData],
   );
   return (
     <>
@@ -596,24 +634,28 @@ function HrContent({
             icon={<AppIcon name="staff" size={48} />}
           />
           <StatCard
-            label="Salary drafts"
-            value={visiblePayroll.filter((p) => p.status === 'draft').length}
-            detail="Awaiting review and approval"
+            label="Total monthly salary"
+            value={rupees(totalMonthlySalary)}
+            detail="Net salary commitment for this month"
             icon={<AppIcon name="document" size={48} />}
           />
           <StatCard
-            label="Paid this salary month"
-            value={rupees(paid)}
-            detail="Recorded payments for approved salaries"
+            label="Paid this month"
+            value={rupees(totalPaidThisMonth)}
+            detail="Recorded payments for this salary month"
             icon={<AppIcon name="wallet" size={48} />}
             tone="green"
           />
           <StatCard
-            label="Outstanding"
-            value={rupees(outstanding)}
-            detail="Approved salaries still to be paid"
+            label="Pending to pay"
+            value={rupees(totalPendingThisMonth)}
+            detail={
+              totalPendingThisMonth > 0
+                ? `${pendingStaffList.length} staff awaiting payment`
+                : 'All salaries paid!'
+            }
             icon={<AppIcon name="finance-balance" size={48} />}
-            tone="amber"
+            tone={totalPendingThisMonth > 0 ? 'amber' : 'green'}
           />
         </div>
       )}
@@ -630,8 +672,7 @@ function HrContent({
                   : selfView === 'profile'
                     ? 'Your personal and school employment details.'
                     : 'Record your attendance and review your monthly attendance calendar.'
-            : tab === 'salary'
-              ? 'Set up salary → prepare a draft → review and approve → record payment.'
+            : tab === 'salary' ? 'Review monthly salary breakdown, disburse payments in 1 click, and issue payslips.'
               : tab === 'attendance'
                 ? 'Punches update attendance automatically. Review correction requests and choose any salary impact.'
                 : 'Review requests and decide whether approved leave is paid or unpaid.'
@@ -688,6 +729,20 @@ function HrContent({
                     ))}
                 </select>
               </label>
+              {tab === 'salary' && pendingStaffList.length > 0 && can('payroll.pay') && (
+                <Button
+                  variant="primary"
+                  onClick={() => setAction({ kind: 'bulkPay' })}
+                  style={{
+                    alignSelf: 'flex-end',
+                    marginLeft: 'auto',
+                    background: '#0f766e',
+                    borderColor: '#0f766e',
+                  }}
+                >
+                  Pay All Pending ({pendingStaffList.length})
+                </Button>
+              )}
               {tab === 'leave' && (
                 <label className="field hr-inline-filter">
                   <span>Month</span>
@@ -869,31 +924,45 @@ function HrContent({
                 </tr>
               </thead>
               <tbody>
-                {staff.map((p) => {
-                  const item = data.payroll.find((v) => v.staffId === p.id);
-                  const paid = item ? payrollPaid(item, data) : 0;
-                  const outstanding = item ? Math.max(0, item.net - paid) : 0;
-                  const isOverdue = Boolean(item && item.status === 'approved' && item.dueDate < data.today && outstanding > 0);
-                  const statusTone = !item
-                    ? 'neutral'
-                    : item.status === 'draft'
-                      ? 'amber'
-                      : outstanding === 0 && item.net > 0
-                        ? 'green'
-                        : isOverdue
-                          ? 'red'
-                          : 'amber';
-                  const statusLabel = !item
-                    ? 'Not prepared'
-                    : item.status === 'draft'
-                      ? 'Draft'
-                      : outstanding === 0 && item.net > 0
-                        ? 'Paid'
-                        : paid > 0
-                          ? 'Partially paid'
-                          : isOverdue
-                            ? 'Overdue'
-                            : 'Pending';
+                {staffSalaryData.map((row) => {
+                  const p = row.staff;
+                  const item = row.item;
+                  const salaryConfig = row.salaryConfig;
+                  const paid = row.paidAmount;
+                  const pending = row.pendingAmount;
+                  const net = row.netSalary;
+                  const isPaid = pending === 0 && net > 0;
+                  const isPartiallyPaid = paid > 0 && pending > 0;
+                  const isOverdue = Boolean(item && item.dueDate < data.today && pending > 0);
+
+                  const statusTone = isPaid ? 'green' : isPartiallyPaid ? 'amber' : isOverdue ? 'red' : 'amber';
+                  const statusLabel = isPaid ? 'Paid' : isPartiallyPaid ? 'Partially paid' : isOverdue ? 'Overdue' : 'Pending';
+
+                  const effectiveItem: HrPayroll = item ?? {
+                    id: `draft-${p.id}`,
+                    schoolId: (p as any).schoolId ?? '',
+                    revision: 0,
+                    staffId: p.id,
+                    month,
+                    name: p.name,
+                    code: p.code,
+                    department: p.department,
+                    dueDate: `${month}-05`,
+                    status: 'draft',
+                    basic: salaryConfig?.basic ?? 0,
+                    allowance: salaryConfig?.allowance ?? 0,
+                    bonus: salaryConfig?.bonus ?? 0,
+                    gross: (salaryConfig?.basic ?? 0) + (salaryConfig?.allowance ?? 0) + (salaryConfig?.bonus ?? 0),
+                    unpaidUnits: 0,
+                    leaveDeduction: 0,
+                    manualDeduction: salaryConfig?.deduction ?? 0,
+                    adjustment: 0,
+                    advanceRecovery: 0,
+                    note: '',
+                    net,
+                    unresolved: [],
+                  };
+
                   return (
                     <tr key={p.id}>
                       <td>
@@ -907,50 +976,43 @@ function HrContent({
                           </div>
                         </div>
                         {data.advanceBalances?.find((a) => a.staffId === p.id) && (
-                          <small>
-                            Advance balance:{' '}
-                            {rupees(data.advanceBalances.find((a) => a.staffId === p.id)!.balance)}
+                          <small style={{ color: '#2563eb', fontWeight: 500 }}>
+                            Advance balance: {rupees(data.advanceBalances.find((a) => a.staffId === p.id)!.balance)}
                           </small>
                         )}
                       </td>
                       <td>{titleCase(p.department || '') || '—'}</td>
-                      <td className="currency-cell">{item ? rupees(item.net) : '—'}</td>
+                      <td className="currency-cell" style={{ fontWeight: 600 }}>{rupees(net)}</td>
                       <td className="currency-cell">
-                        {item ? `${rupees(paid)} / ${rupees(outstanding)}` : '—'}
+                        <span style={{ color: paid > 0 ? '#15803d' : '#64748b' }}>{rupees(paid)}</span> / <span style={{ color: pending > 0 ? '#b45309' : '#15803d', fontWeight: pending > 0 ? 600 : 400 }}>{rupees(pending)}</span>
                       </td>
                       <td>
-                        {item ? (
-                          <>
-                            <Badge tone={statusTone}>{statusLabel}</Badge>
-                            <small>{formatCalendarDate(item.dueDate)}</small>
-                          </>
-                        ) : (
-                          <Badge tone="neutral">Not prepared</Badge>
-                        )}
+                        <Badge tone={statusTone}>{statusLabel}</Badge>
+                        <small>{item?.dueDate ? formatCalendarDate(item.dueDate) : `Due ${month}-05`}</small>
                       </td>
                       <td>
                         <div className="hr-actions">
-                          {!item && can('payroll.manage') && (
-                            <Button onClick={() => setAction({ kind: 'employment', staff: p })}>
-                              Prepare salary
+                          {pending > 0 && can('payroll.pay') ? (
+                            <Button
+                              variant="primary"
+                              onClick={() => setAction({ kind: 'paySalary', staff: p, item })}
+                            >
+                              {paid > 0 ? `Pay remaining (${rupees(pending)})` : 'Pay Salary'}
                             </Button>
-                          )}
-                          {item && can('payroll.manage') && (
+                          ) : (
                             <Button
                               variant="secondary"
-                              onClick={() => setAction({ kind: 'payroll', staff: p, item })}
+                              onClick={() => setAction({ kind: 'slip', item: effectiveItem })}
                             >
-                              Manage salary
+                              Payslip
                             </Button>
                           )}
-                          {item?.status === 'draft' && can('payroll.approve') && (
-                            <Button onClick={() => setAction({ kind: 'approve', item, staff: p })}>
-                              Review & approve
-                            </Button>
-                          )}
-                          {item?.status === 'approved' && outstanding > 0 && can('payroll.pay') && (
-                            <Button onClick={() => setAction({ kind: 'payment', staff: p, item })}>
-                              Record payment
+                          {pending > 0 && (
+                            <Button
+                              variant="ghost"
+                              onClick={() => setAction({ kind: 'slip', item: effectiveItem })}
+                            >
+                              Payslip
                             </Button>
                           )}
                           {can('payroll.pay') && (
@@ -961,12 +1023,12 @@ function HrContent({
                               Give advance
                             </Button>
                           )}
-                          {item && item.status === 'approved' && (
+                          {can('payroll.manage') && (
                             <Button
                               variant="ghost"
-                              onClick={() => setAction({ kind: 'slip', item })}
+                              onClick={() => setAction({ kind: 'payroll', staff: p, item })}
                             >
-                              Receipt
+                              Adjustments
                             </Button>
                           )}
                         </div>
@@ -1227,6 +1289,25 @@ function HrContent({
       )}
       {action?.kind === 'payroll' && (
         <PayrollDialog {...shared} staff={action.staff} item={action.item} month={month} />
+      )}
+      {action?.kind === 'paySalary' && (
+        <PaySalaryDialog
+          {...shared}
+          staff={action.staff}
+          item={action.item}
+          month={month}
+        />
+      )}
+      {action?.kind === 'bulkPay' && (
+        <BulkPaySalaryDialog
+          {...shared}
+          month={month}
+          pendingStaff={pendingStaffList.map((r) => ({
+            staff: r.staff,
+            item: r.item,
+            pendingAmount: r.pendingAmount,
+          }))}
+        />
       )}
       {(action?.kind === 'payment' || action?.kind === 'advance') && (
         <PaymentDialog {...shared} staff={action.staff} item={action.item} />
