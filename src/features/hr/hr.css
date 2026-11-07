@@ -120,7 +120,7 @@
 .hr-header-filters {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 14px;
   flex-wrap: nowrap;
 }
 .hr-header-filters .button,
@@ -150,6 +150,48 @@
   font-size: 12px;
   box-sizing: border-box;
 }
+
+.hr-month-filter {
+  min-width: 235px !important;
+  max-width: 260px !important;
+  flex: 0 0 auto !important;
+}
+.hr-month-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+.hr-header-filters button.hr-month-nav-btn,
+.hr-month-filter button.hr-month-nav-btn {
+  min-width: 32px !important;
+  width: 32px !important;
+  max-width: 32px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+.hr-month-filter .hr-month-corner {
+  margin: 0 !important;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.hr-month-filter .hr-month-corner input[type="month"] {
+  width: 100%;
+  min-width: 125px;
+  max-width: 155px;
+  min-height: 34px;
+  height: 34px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
 .hr-search-wrap {
   position: relative;
   display: flex;
@@ -234,10 +276,30 @@
 }
 .hr-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: nowrap;
   gap: 8px;
   white-space: nowrap;
+}
+.hr-action-attendance {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.hr-action-attendance button.hr-attendance-sublink {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  height: auto;
+  min-height: auto;
 }
 .hr-actions .button {
   white-space: nowrap;

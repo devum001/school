@@ -43,7 +43,7 @@ import {
 import EmploymentDialog from './EmploymentDialog';
 import HrSettingsPanel from './HrSettingsPanel';
 import { AttendanceDialog, LeaveDialog, PaymentDialog, PayrollDialog, Payslip } from './HrActions';
-import { PaySalaryDialog, BulkPaySalaryDialog, getStaffAttendanceSummary } from './PaySalaryDialog';
+import { PaySalaryDialog, BulkPaySalaryDialog, getStaffAttendanceSummary, AttendanceIssuesSection } from './PaySalaryDialog';
 import { HrForm } from './HrForms';
 import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import './hr.css';
@@ -706,15 +706,14 @@ function HrContent({
           ) : (
             <div className="hr-header-filters">
               {tab === 'salary' && (
-                <label className="field hr-inline-filter" style={{ minWidth: '170px' }}>
+                <label className="field hr-inline-filter hr-month-filter">
                   <span>Month</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                  <div className="hr-month-controls">
                     <button
                       type="button"
-                      className="button secondary"
+                      className="button secondary hr-month-nav-btn"
                       title="Previous month"
                       aria-label="Previous month"
-                      style={{ padding: '6px 8px', height: '36px', minWidth: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       onClick={() => {
                         const d = new Date(`${month}-01T12:00:00Z`);
                         d.setUTCMonth(d.getUTCMonth() - 1);
@@ -723,7 +722,7 @@ function HrContent({
                     >
                       <ChevronLeft size={16} />
                     </button>
-                    <label className="hr-month-corner" style={{ margin: 0 }}>
+                    <label className="hr-month-corner">
                       <PickerInput
                         type="month"
                         required
@@ -736,10 +735,9 @@ function HrContent({
                     </label>
                     <button
                       type="button"
-                      className="button secondary"
+                      className="button secondary hr-month-nav-btn"
                       title="Next month"
                       aria-label="Next month"
-                      style={{ padding: '6px 8px', height: '36px', minWidth: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       onClick={() => {
                         const d = new Date(`${month}-01T12:00:00Z`);
                         d.setUTCMonth(d.getUTCMonth() + 1);
@@ -1054,35 +1052,37 @@ function HrContent({
                               Payslip
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            onClick={() => setAction({ kind: 'calendar', staff: p })}
-                            title="View monthly attendance calendar"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              border: '1px solid #e2e8f0',
-                              background: '#ffffff',
-                              color: '#0f766e',
-                              fontWeight: 500,
-                            }}
-                          >
-                            <Calendar size={13} />
-                            <span>Attendance</span>
-                            <span
+                          <div className="hr-action-attendance">
+                            <Button
+                              variant="ghost"
+                              onClick={() => setAction({ kind: 'calendar', staff: p })}
+                              title="View monthly attendance calendar"
                               style={{
-                                background: attSummary.issueDates.length > 0 ? '#fef3c7' : '#dcfce7',
-                                color: attSummary.issueDates.length > 0 ? '#b45309' : '#15803d',
-                                fontSize: '11px',
-                                fontWeight: 600,
-                                padding: '1px 6px',
-                                borderRadius: '10px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                border: '1px solid #cbd5e1',
+                                background: '#ffffff',
+                                color: '#0f766e',
+                                fontWeight: 500,
                               }}
                             >
-                              {attSummary.present}d{attSummary.issueDates.length > 0 ? ` · ${attSummary.issueDates.length} issues` : ''}
-                            </span>
-                          </Button>
+                              <Calendar size={13} />
+                              <span>Attendance</span>
+                            </Button>
+                            <button
+                              type="button"
+                              className="hr-attendance-sublink"
+                              onClick={() => setAction({ kind: 'calendar', staff: p })}
+                              title="Click to view monthly attendance issues"
+                              style={{
+                                color: attSummary.issueDates.length > 0 ? '#b45309' : '#15803d',
+                                fontWeight: attSummary.issueDates.length > 0 ? 600 : 500,
+                              }}
+                            >
+                              {attSummary.present} Present {attSummary.issueDates.length > 0 ? `(${attSummary.issueDates.length} issues)` : ''}
+                            </button>
+                          </div>
                           {can('payroll.pay') && (
                             <Button
                               variant="ghost"
@@ -1336,6 +1336,16 @@ function HrContent({
               }}
             />
           </div>
+          <AttendanceIssuesSection
+            summary={getStaffAttendanceSummary(
+              action.staff.id,
+              month,
+              data.today,
+              data,
+              data.payroll.find((p) => p.staffId === action.staff.id),
+            )}
+            month={month}
+          />
         </Modal>
       )}
       {action?.kind === 'cancelLeave' && action.leave && (

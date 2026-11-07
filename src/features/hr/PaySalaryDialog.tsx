@@ -111,6 +111,128 @@ export function getStaffAttendanceSummary(
   };
 }
 
+
+export function AttendanceIssuesSection({
+  summary,
+  month,
+}: {
+  summary: ReturnType<typeof getStaffAttendanceSummary>;
+  month: string;
+}) {
+  const [year, m] = month.split('-').map(Number);
+  const monthName =
+    !isNaN(year) && !isNaN(m)
+      ? new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
+          new Date(Date.UTC(year, m - 1, 1)),
+        )
+      : month;
+
+  return (
+    <div
+      style={{
+        marginTop: '12px',
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '10px',
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '8px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertCircle
+            size={18}
+            style={{ color: summary.issueDates.length > 0 ? '#b45309' : '#15803d', flexShrink: 0 }}
+          />
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '13px', color: '#1e293b' }}>
+              {summary.issueDates.length > 0
+                ? `${summary.issueDates.length} attendance issue(s) recorded for ${monthName}`
+                : `No attendance issues recorded for ${monthName}`}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+              Present: <strong style={{ color: '#15803d' }}>{summary.present} days</strong> · Absent / Unmarked:{' '}
+              <strong style={{ color: summary.absent + summary.unmarked > 0 ? '#b91c1c' : '#64748b' }}>
+                {summary.absent + summary.unmarked} days
+              </strong>{' '}
+              · Leaves: <strong style={{ color: '#4338ca' }}>{summary.leave} days</strong> · Holidays / Off:{' '}
+              <strong style={{ color: '#64748b' }}>{summary.holiday + summary.weeklyOff} days</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {summary.issueDates.length > 0 ? (
+        <div
+          style={{
+            maxHeight: '180px',
+            overflowY: 'auto',
+            border: '1px solid #f1f5f9',
+            borderRadius: '8px',
+            background: '#f8fafc',
+          }}
+        >
+          {summary.issueDates.map((issue, idx) => (
+            <div
+              key={issue.date + idx}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                fontSize: '12px',
+                borderBottom: idx === summary.issueDates.length - 1 ? 'none' : '1px solid #e2e8f0',
+              }}
+            >
+              <span style={{ fontWeight: 600, color: '#334155', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <Calendar size={13} style={{ color: '#64748b' }} />
+                {formatCalendarDate(issue.date)}
+              </span>
+              <span
+                style={{
+                  fontWeight: 500,
+                  fontSize: '12px',
+                  color: issue.reason.toLowerCase().includes('pending')
+                    ? '#b45309'
+                    : issue.reason.toLowerCase().includes('absent')
+                    ? '#b91c1c'
+                    : '#64748b',
+                }}
+              >
+                {issue.reason}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div
+          style={{
+            fontSize: '12px',
+            color: '#15803d',
+            fontWeight: 500,
+            background: '#f0fdf4',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            border: '1px solid #bbf7d0',
+          }}
+        >
+          ✓ All working days in this month have valid attendance punches or approved leaves.
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PaySalaryDialog({
   adapter,
   data,
@@ -434,6 +556,9 @@ export function PaySalaryDialog({
                 }}
               />
             </div>
+
+            {/* Issues Breakdown Below Calendar */}
+            <AttendanceIssuesSection summary={attendanceSummary} month={month} />
 
             {/* Tab switch back buttons */}
             <div
