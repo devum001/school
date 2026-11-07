@@ -8,11 +8,10 @@ import {
   platformService as api,
   platformError,
   type PlatformSchool,
-  type PlatformUser,
 } from '../../services/platformService';
 import { useRemote } from '../live/useRemote';
 import LiveAccount from '../live/LiveAccount';
-import { SchoolForm, UserForm, PasswordReset } from './PlatformForms';
+import { SchoolForm } from './PlatformForms';
 
 type Confirmation = { title: string; description: string; action: () => Promise<unknown> };
 export default function PlatformDashboard() {
@@ -22,22 +21,19 @@ export default function PlatformDashboard() {
     <div className="school-settings">
       <PageHeading
         title="Platform administration"
-        description="Manage school registrations and accounts. Each school manages its own operations."
+        description="Manage school registrations and platform activity. Each school manages its own operations."
       />
       <SectionNavigation
         label="Platform sections"
         value={tab}
         items={[
           { id: 'Schools', label: 'Schools', icon: 'overview-grid', to: '/platform?tab=Schools' },
-          { id: 'Accounts', label: 'Accounts', icon: 'users', to: '/platform?tab=Accounts' },
           { id: 'Activity', label: 'Activity', icon: 'security', to: '/platform?tab=Activity' },
           { id: 'My account', label: 'My account', icon: 'user-check', to: '/platform?tab=My%20account' },
         ]}
       />
       {tab === 'Schools' ? (
         <PlatformSchools />
-      ) : tab === 'Accounts' ? (
-        <PlatformUsers />
       ) : tab === 'Activity' ? (
         <PlatformActivity />
       ) : tab === 'My account' ? (
@@ -272,194 +268,6 @@ function SchoolPage({
             saved={saved}
           />
         )}
-        {confirmation && (
-          <ConfirmAction value={confirmation} close={() => setConfirmation(null)} saved={saved} />
-        )}
-      </Panel>
-    </LoadingOverlay>
-  );
-}
-function PlatformUsers() {
-  const [cursor, setCursor] = useState<string>();
-  const [search, setSearch] = useState('');
-  const [email, setEmail] = useState('');
-  return (
-    <>
-      <form
-        className="platform-search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setCursor(undefined);
-          setEmail(search.trim().toLowerCase());
-        }}
-      >
-        <label>
-          Find account by email
-          <input
-            type="email"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Exact email address"
-          />
-        </label>
-        <Button variant="secondary">Find account</Button>
-        {email && (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setSearch('');
-              setEmail('');
-              setCursor(undefined);
-            }}
-          >
-            Clear search
-          </Button>
-        )}
-      </form>
-      <UserPage
-        key={`${cursor ?? 'first'}:${email}`}
-        cursor={cursor}
-        email={email}
-        setCursor={setCursor}
-      />
-    </>
-  );
-}
-function UserPage({
-  cursor,
-  email,
-  setCursor,
-}: {
-  cursor?: string;
-  email: string;
-  setCursor: (value?: string) => void;
-}) {
-  const load = useCallback(
-    (signal: AbortSignal) => api.users(signal, cursor, email),
-    [cursor, email],
-  );
-  const state = useRemote(load);
-  const [editing, setEditing] = useState<PlatformUser | 'new' | null>(null);
-  const [reset, setReset] = useState<PlatformUser | null>(null);
-  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
-  const [notice, setNotice] = useState('');
-  const saved = () => {
-    setEditing(null);
-    setReset(null);
-    setConfirmation(null);
-    setNotice('Account change saved.');
-    state.reload();
-  };
-  return (
-    <LoadingOverlay
-      loading={state.loading}
-      size="xl"
-      label="Loading accounts…"
-      message="Loading accounts…"
-    >
-      <Panel
-        title="Platform accounts"
-        subtitle="Create and maintain accounts. School owners assign school-specific roles and memberships."
-        action={<Button onClick={() => setEditing('new')}>Create account</Button>}
-      >
-        <div className="live-content">
-          {notice && <p role="status">{notice}</p>}
-          {state.error && (
-            <p role="alert">
-              {state.error} <Button onClick={state.reload}>Retry accounts</Button>
-            </p>
-          )}
-          {!state.error && (
-            <>
-              <div className="live-table-wrap">
-                <table className="live-table">
-                  <caption className="sr-only">Platform user accounts</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Account</th>
-                      <th scope="col">Access</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(state.data?.items ?? []).map((user) => (
-                      <tr key={user.id}>
-                        <th scope="row">
-                          {user.name}
-                          <small>{user.email}</small>
-                        </th>
-                        <td>
-                          {user.platformRole === 'super_admin' ? 'Super Admin' : 'School account'}
-                        </td>
-                        <td>{user.status === 'active' ? 'Active' : 'Disabled'}</td>
-                        <td>
-                          {user.platformRole === 'super_admin' ? (
-                            <span>Protected platform identity</span>
-                          ) : (
-                            <div className="live-actions">
-                              <Button variant="secondary" onClick={() => setEditing(user)}>
-                                Edit <span className="sr-only">{user.name}</span>
-                              </Button>
-                              <Button variant="secondary" onClick={() => setReset(user)}>
-                                Reset password <span className="sr-only">{user.name}</span>
-                              </Button>
-                              {user.status === 'active' ? (
-                                <Button
-                                  variant="danger"
-                                  onClick={() =>
-                                    setConfirmation({
-                                      title: 'Remove account access?',
-                                      description: `${user.email} will be disabled across all schools and signed out of all devices. Its records are retained.`,
-                                      action: () => api.disableUser(user.id),
-                                    })
-                                  }
-                                >
-                                  Remove access <span className="sr-only">{user.name}</span>
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant="secondary"
-                                  onClick={() =>
-                                    setConfirmation({
-                                      title: 'Reactivate account?',
-                                      description: `${user.email} can sign in again with its current password. Existing school memberships will apply. Revoked sessions stay signed out.`,
-                                      action: () => api.updateUser(user.id, { status: 'active' }),
-                                    })
-                                  }
-                                >
-                                  Reactivate <span className="sr-only">{user.name}</span>
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {state.data && !state.data.items.length && (
-                <p>No accounts match this page or email.</p>
-              )}
-              {state.data && (
-                <Pagination cursor={cursor} next={state.data.nextCursor} onChange={setCursor} />
-              )}
-            </>
-          )}
-          <Button variant="secondary" disabled={state.loading} onClick={state.reload}>
-            Refresh accounts
-          </Button>
-        </div>
-        {editing && (
-          <UserForm
-            user={editing === 'new' ? undefined : editing}
-            close={() => setEditing(null)}
-            saved={saved}
-          />
-        )}
-        {reset && <PasswordReset user={reset} close={() => setReset(null)} saved={saved} />}
         {confirmation && (
           <ConfirmAction value={confirmation} close={() => setConfirmation(null)} saved={saved} />
         )}

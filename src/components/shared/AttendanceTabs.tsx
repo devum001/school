@@ -44,7 +44,7 @@ export default function AttendanceTabs({
     ...(studentsVisible
       ? [
           {
-            id: 'student',
+            id: 'student' as const,
             label: 'Student Attendance',
             icon: 'student' as const,
             to: onChange ? undefined : `/attendance?date=${date}`,
@@ -54,7 +54,7 @@ export default function AttendanceTabs({
     ...(showStaff
       ? [
           {
-            id: 'staff',
+            id: 'staff' as const,
             label: 'Staff Attendance',
             icon: 'staff' as const,
             to: onChange ? undefined : `/attendance/staff?date=${date}`,
@@ -64,19 +64,19 @@ export default function AttendanceTabs({
     ...(isTeacher
       ? [
           {
-            id: 'self',
+            id: 'self' as const,
             label: 'My attendance',
             icon: 'attendance' as const,
             to: onChange ? undefined : `/attendance?register=self&view=attendance`,
           },
+          {
+            id: 'ars' as const,
+            label: 'ARS',
+            icon: 'document' as const,
+            to: onChange ? undefined : `/attendance?register=ars&view=requests`,
+          },
         ]
       : []),
-    {
-      id: 'ars',
-      label: 'ARS',
-      icon: 'document' as const,
-      to: onChange ? undefined : `/attendance?register=ars&view=requests`,
-    },
   ];
 
   return (

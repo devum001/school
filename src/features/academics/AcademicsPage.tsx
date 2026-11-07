@@ -80,6 +80,10 @@ export default function AcademicsPage() {
       (e) =>
         e.schoolId === state.school.id &&
         e.academicYearId === state.academicYear.id &&
+        (!feature?.canMarkSubject ||
+          e.subjects.length > 0 ||
+          (e.sheets ?? []).some((s) => (s.subjects ?? []).length > 0) ||
+          (e.subjectSelections ?? []).some((sel) => (sel.subjectIds ?? []).length > 0)) &&
         (!resultsView || examIncludes(e, classId)),
     )
     .reverse()

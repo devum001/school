@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bus, Building2, ChevronDown, Search } from 'lucide-react';
+import { Bus, Building2, ChevronDown } from 'lucide-react';
 import { useFeedback } from '../../../app/useFeedback';
 import {
   Button,
@@ -7,6 +7,7 @@ import {
   LoadingOverlay,
   Panel,
   PickerInput,
+  SearchInput,
 } from '../../../components/ui/Primitives';
 import { communicationError } from '../../../lib/communication';
 import { money } from '../../../lib/config';
@@ -748,16 +749,27 @@ export default function FeeOnboardingWorkspace({
 
   return (
     <div className="fee-onboarding-workspace">
-      <div>
-        <h2 className="fee-setup-main-title">
-          School fee, bus &amp; hostel setup (Single &amp; Bulk)
-        </h2>
+      <Panel
+        className="fee-register-panel"
+        title="School fee, bus & hostel setup (Single & Bulk)"
+        subtitle="Configure individual or bulk Tuition, Bus, Hostel, Concession, and Previous Year Pending."
+        action={
+          <div className="fee-setup-header-actions">
+            <div className="fee-setup-header-filters">
+              <div className="fee-header-filter fee-header-search">
+                <span>Search student</span>
+                <SearchInput
+                  value={search}
+                  onChange={(v) => {
+                    setSearch(v);
+                    setPage(1);
+                  }}
+                  placeholder="Name or admission no..."
+                />
+              </div>
 
-        <div className="fee-setup-filter-card">
-          <div className="fee-setup-filter-grid">
-            <label className="fee-setup-field">
-              <span>Class</span>
-              <div className="fee-setup-select-wrapper">
+              <label className="field fee-header-filter fee-filter-class">
+                <span>Class</span>
                 <select
                   aria-label="Class"
                   value={classId}
@@ -774,12 +786,10 @@ export default function FeeOnboardingWorkspace({
                     </option>
                   ))}
                 </select>
-                <ChevronDown size={15} className="fee-setup-chevron" />
-              </div>
-            </label>
-            <label className="fee-setup-field">
-              <span>Section</span>
-              <div className="fee-setup-select-wrapper">
+              </label>
+
+              <label className="field fee-header-filter fee-filter-section">
+                <span>Section</span>
                 <select
                   aria-label="Section"
                   value={sectionId}
@@ -797,12 +807,10 @@ export default function FeeOnboardingWorkspace({
                       </option>
                     ))}
                 </select>
-                <ChevronDown size={15} className="fee-setup-chevron" />
-              </div>
-            </label>
-            <label className="fee-setup-field">
-              <span>Filter students</span>
-              <div className="fee-setup-select-wrapper">
+              </label>
+
+              <label className="field fee-header-filter fee-filter-status">
+                <span>Filter students</span>
                 <select
                   aria-label="Show students"
                   value={statusFilter}
@@ -814,25 +822,42 @@ export default function FeeOnboardingWorkspace({
                   <option value="bus">Using school bus</option>
                   <option value="hostel">Staying in hostel</option>
                 </select>
-                <ChevronDown size={15} className="fee-setup-chevron" />
+              </label>
+            </div>
+
+            {dirtyRows.length > 0 && (
+              <div className="fee-register-header-actions">
+                <span className="fee-unsaved-badge">
+                  <span className="fee-unsaved-dot"></span>
+                  <strong>{dirtyRows.length}</strong> unsaved student change
+                  {dirtyRows.length === 1 ? '' : 's'}
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={saving}
+                  onClick={() => void loadDirectory()}
+                >
+                  Discard edits
+                </Button>
+                <button
+                  type="button"
+                  className="fee-save-all-btn"
+                  disabled={saving}
+                  onClick={() => void saveAllDirtyRows()}
+                >
+                  {saving ? 'Saving...' : `Save All Changes (${dirtyRows.length})`}
+                </button>
               </div>
-            </label>
-            <label className="fee-setup-field">
-              <span>Search student</span>
-              <div className="fee-setup-search-wrapper">
-                <Search size={15} className="fee-setup-search-icon" />
-                <input
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Name or admission no."
-                />
-              </div>
-            </label>
+            )}
           </div>
-        </div>
+        }
+      >
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
 
         {selectedIds.length > 1 && (
         <div className="fee-setup-bulk-card">
@@ -1058,46 +1083,7 @@ export default function FeeOnboardingWorkspace({
           )}
         </div>
         )}
-      </div>
 
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      )}
-
-      <Panel
-        className="fee-register-panel"
-        title={`Student fee structure register (${visibleRows.length})`}
-        subtitle="Edit any student's Tuition, Bus (toggle or reduce months if they leave mid-year), Hostel, Concession, or Previous Year Pending directly below."
-        action={
-          dirtyRows.length > 0 ? (
-            <div className="fee-register-header-actions">
-              <span className="fee-unsaved-badge">
-                <span className="fee-unsaved-dot"></span>
-                <strong>{dirtyRows.length}</strong> unsaved student change
-                {dirtyRows.length === 1 ? '' : 's'}
-              </span>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={saving}
-                onClick={() => void loadDirectory()}
-              >
-                Discard edits
-              </Button>
-              <button
-                type="button"
-                className="fee-save-all-btn"
-                disabled={saving}
-                onClick={() => void saveAllDirtyRows()}
-              >
-                {saving ? 'Saving...' : `Save All Changes (${dirtyRows.length})`}
-              </button>
-            </div>
-          ) : undefined
-        }
-      >
         <LoadingOverlay loading={loading} label="Loading students and fee structures…">
           {visibleRows.length === 0 && !loading ? (
             <EmptyState

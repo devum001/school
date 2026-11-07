@@ -88,6 +88,14 @@ export default function StaffAttendancePanel({
     const s = days.get(p.id)?.status;
     return matchesStaffAttendance(s, 'half-day');
   }).length;
+  const countLeave = staff.filter((p) => {
+    const s = days.get(p.id)?.status;
+    return matchesStaffAttendance(s, 'leave');
+  }).length;
+  const countOff = staff.filter((p) => {
+    const s = days.get(p.id)?.status;
+    return s === 'off' || s === 'holiday';
+  }).length;
   const countUnmarked = staff.filter((p) => {
     const s = days.get(p.id)?.status;
     return matchesStaffAttendance(s, 'unmarked');
@@ -124,12 +132,28 @@ export default function StaffAttendancePanel({
           detail={`${countLate} late · ${countHalfDay} half-day`}
           tone="amber"
         />
-        <StatCard
-          label="Not Marked"
-          value={countUnmarked}
-          detail={countUnmarked > 0 ? 'Pending recording' : 'All recorded'}
-          tone="neutral"
-        />
+{countOff > 0 && countPresent === 0 && countAbsent === 0 ? (
+          <StatCard
+            label="Weekly Off / Holiday"
+            value={countOff}
+            detail="School closed / off"
+            tone="neutral"
+          />
+        ) : countLeave > 0 ? (
+          <StatCard
+            label="On Leave"
+            value={countLeave}
+            detail={countLeave === 1 ? '1 on approved leave' : `${countLeave} on approved leave`}
+            tone="blue"
+          />
+        ) : (
+          <StatCard
+            label="Not Marked"
+            value={countUnmarked}
+            detail={countUnmarked > 0 ? 'Pending recording' : 'All recorded'}
+            tone="neutral"
+          />
+        )}
       </div>
 
       <div className="table-wrap">

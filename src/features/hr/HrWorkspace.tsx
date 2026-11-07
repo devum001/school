@@ -4,6 +4,7 @@ import AttendanceRequests from './AttendanceRequests';
 import StaffAttendancePanel from './StaffAttendancePanel';
 import StaffLoginDialog from './StaffLoginDialog';
 import AttendanceCalendar from './AttendanceCalendar';
+import { FloatingStickyTableHeader } from '../../components/shared/FloatingStickyTableHeader';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -42,6 +43,7 @@ import {
 } from '../../services/hrService';
 import EmploymentDialog from './EmploymentDialog';
 import HrSettingsPanel from './HrSettingsPanel';
+import SalaryAdvanceOverviewModal from './SalaryAdvanceOverviewModal';
 import { AttendanceDialog, LeaveDialog, PaymentDialog, PayrollDialog, Payslip } from './HrActions';
 import { PaySalaryDialog, BulkPaySalaryDialog, getStaffAttendanceSummary, AttendanceIssuesSection } from './PaySalaryDialog';
 import { HrForm } from './HrForms';
@@ -76,7 +78,26 @@ export default function LiveHrWorkspace({
   onMonthChange?: (month: string) => void;
   hideMonthCorner?: boolean;
 }) {
-  const { schoolId, access, status } = useLiveSchool();
+  const { schoolId, access, status, profile } = useLiveSchool();
+
+  const schoolWorkingDays = useMemo(() => {
+    const daysList = profile?.school?.hours?.days;
+    if (!daysList || !Array.isArray(daysList) || daysList.length === 0) return undefined;
+    const DAY_MAP: Record<string, number> = {
+      Sunday: 0,
+      Monday: 1,
+      Tuesday: 2,
+      Wednesday: 3,
+      Thursday: 4,
+      Friday: 5,
+      Saturday: 6,
+    };
+    const mapped = daysList
+      .map((d: string) => DAY_MAP[d])
+      .filter((n): n is number => n !== undefined)
+      .sort((a, b) => a - b);
+    return mapped.length > 0 ? mapped : undefined;
+  }, [profile?.school?.hours?.days]);
   const adapter = useMemo(() => liveHrAdapter(schoolId), [schoolId]);
   return (
     <HrWorkspace
@@ -92,6 +113,7 @@ export default function LiveHrWorkspace({
       month={month}
       onMonthChange={onMonthChange}
       hideMonthCorner={hideMonthCorner}
+      schoolWorkingDays={schoolWorkingDays}
     />
   );
 }
@@ -107,6 +129,7 @@ export function HrWorkspace({
   month: controlledMonth,
   onMonthChange,
   hideMonthCorner = false,
+  schoolWorkingDays,
 }: {
   liveSchoolId?: string;
   punchSchoolId?: string;
@@ -119,6 +142,7 @@ export function HrWorkspace({
   month?: string;
   onMonthChange?: (month: string) => void;
   hideMonthCorner?: boolean;
+  schoolWorkingDays?: number[];
 }) {
   const today = useToday(),
     [internalMonth, setInternalMonth] = useState(today.slice(0, 7)),
@@ -240,7 +264,7 @@ export function HrWorkspace({
               onChange={setTab}
             />
           )}
-          {!hideMonthCorner && tab !== 'leave' && tab !== 'salary' && (
+          {!hideMonthCorner && tab !== 'leave' && tab !== 'salary' && !self && (
             <div className="hr-month-controls" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <button
                 type="button"
@@ -330,6 +354,10 @@ export function HrWorkspace({
             adapter={adapter}
             data={{
               ...activeWorkspace,
+              settings: {
+                ...activeWorkspace.settings,
+                workingDays: schoolWorkingDays ?? activeWorkspace.settings.workingDays,
+              },
               staff: teachersOnly
                 ? activeWorkspace.staff.filter((p) => p.teaching)
                 : activeWorkspace.staff,
@@ -342,6 +370,7 @@ export function HrWorkspace({
             changeMonth={setMonth}
             dedicatedPunchPage={Boolean(punchSchoolId)}
             liveSchoolId={liveSchoolId}
+            hideNavigation={hideNavigation}
           />
         </LoadingOverlay>
       )}
@@ -357,7 +386,8 @@ type Action =
   | { kind: 'bulkPay' }
   | { kind: 'leave' | 'cancelLeave'; leave?: Workspace['leaves'][number] }
   | { kind: 'slip' | 'approve'; item: HrPayroll; staff?: HrStaff }
-  | { kind: 'advanceHistory'; staff: HrStaff };
+  | { kind: 'advanceHistory' | 'advanceOverview'; staff: HrStaff };
+
 function HrContent({
   adapter,
   data,
@@ -369,6 +399,7 @@ function HrContent({
   changeMonth,
   dedicatedPunchPage,
   liveSchoolId,
+  hideNavigation = false,
 }: {
   liveSchoolId?: string;
   dedicatedPunchPage: boolean;
@@ -380,9 +411,13 @@ function HrContent({
   permissions: readonly string[];
   reload: () => void;
   changeMonth: (month: string) => void;
+  hideNavigation?: boolean;
 }) {
+  void dedicatedPunchPage;
   const [openMenuStaffId, setOpenMenuStaffId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const salaryExpensesTableWrapRef = useRef<HTMLDivElement>(null);
+  const salaryExpensesTheadRef = useRef<HTMLTableSectionElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -397,12 +432,14 @@ function HrContent({
   }, [openMenuStaffId]);
   const [params, setParams] = useSearchParams();
   const [leaveStatusTab, setLeaveStatusTab] = useState<'pending' | 'approved'>('pending');
+  const [salaryStatusFilter, setSalaryStatusFilter] = useState<'all' | 'paid' | 'pending' | 'overdue' | 'setup_pending'>('all');
+  const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('all');
   const initialStaff = data.staff.find((p) => p.id === params.get('setupSalary'));
   const selfView = ['attendance', 'requests', 'leave', 'salary', 'profile'].includes(
     params.get('view') || '',
   )
     ? params.get('view')!
-    : 'attendance';
+    : 'salary';
   const [selectedStaff, setSelectedStaff] = useState(params.get('staff') || '');
   const requestedDate = params.get('date') || '';
   const initialDate =
@@ -449,7 +486,15 @@ function HrContent({
           const targetStaff = prevData.staff.filter(
             (p) => (!department || p.department === department) && (!selectedStaff || p.id === selectedStaff),
           );
-          const unprepared = targetStaff.filter((s) => !prevData.payroll.some((p) => p.staffId === s.id));
+          const isEligibleInMonth = (s: typeof prevData.staff[number]) => {
+            if (s.joinedOn && s.joinedOn > `${prevMonthStr}-31`) return false;
+            const emp = prevData.employment?.find((e) => e.staffId === s.id);
+            if (emp?.endedOn && emp.endedOn < `${prevMonthStr}-01`) return false;
+            const salary = emp?.salaries?.slice().reverse().find((sal) => sal.effectiveMonth <= prevMonthStr);
+            return Boolean(salary && salary.basic > 0);
+          };
+          const eligibleStaff = targetStaff.filter(isEligibleInMonth);
+          const unprepared = eligibleStaff.filter((s) => !prevData.payroll.some((p) => p.staffId === s.id));
           const drafts = prevData.payroll.filter(
             (p) => p.status === 'draft' && targetStaff.some((s) => s.id === p.staffId),
           );
@@ -485,7 +530,7 @@ function HrContent({
   }, [tab, month, data.today, adapter, department, selectedStaff]);
   const staff = data.staff.filter(
       (p) =>
-        (!department || p.department === department) && (!selectedStaff || p.id === selectedStaff),
+        (!department || p.department === department) && (tab === 'salary' || tab === 'attendance' || !selectedStaff || p.id === selectedStaff),
     ),
     close = () => {
       setAction(null);
@@ -501,6 +546,7 @@ function HrContent({
     },
     shared = { adapter, data, close, saved: reload };
   const punchRequest = useRef<{ kind: 'in' | 'out'; key: string } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const punch = async (kind: 'in' | 'out') => {
     if (busy) return;
     setBusy(true);
@@ -535,6 +581,7 @@ function HrContent({
       setBusy(false);
     }
   };
+  void punch;
     const staffSalaryData = useMemo(() => {
     return staff.map((p) => {
       const item = data.payroll.find((v) => v.staffId === p.id);
@@ -578,22 +625,46 @@ function HrContent({
     () => staffSalaryData.filter((r) => r.pendingAmount > 0),
     [staffSalaryData],
   );
+
+  const getSalaryCategory = useCallback((row: typeof staffSalaryData[0]): 'setup_pending' | 'paid' | 'overdue' | 'pending' => {
+    if (row.netSalary === 0) return 'setup_pending';
+    if (row.pendingAmount === 0 && row.paidAmount > 0) return 'paid';
+    const dueDate = row.item?.dueDate || `${month}-05`;
+    if (row.pendingAmount > 0 && dueDate < data.today) return 'overdue';
+    return 'pending';
+  }, [data.today, month]);
+
+  const salaryStatusCounts = useMemo(() => {
+    const counts = {
+      all: staffSalaryData.length,
+      paid: 0,
+      pending: 0,
+      overdue: 0,
+      setup_pending: 0,
+    };
+    for (const row of staffSalaryData) {
+      const cat = getSalaryCategory(row);
+      counts[cat]++;
+    }
+    return counts;
+  }, [staffSalaryData, getSalaryCategory]);
+
+  const visibleSalaryRows = useMemo(() => {
+    if (salaryStatusFilter === 'all') return staffSalaryData;
+    return staffSalaryData.filter((row) => getSalaryCategory(row) === salaryStatusFilter);
+  }, [staffSalaryData, salaryStatusFilter, getSalaryCategory]);
   return (
     <>
-      {tab === 'self' && (
+      {tab === 'self' && !hideNavigation && (
         <SectionNavigation
           variant="secondary"
-          label="My workspace"
+          label="Salary & Leaves"
           items={[
-            { id: 'attendance', label: 'Attendance' },
-            ...(liveSchoolId && data.staff.some((p) => p.teaching)
-              ? [{ id: 'requests', label: 'ARS' }]
-              : []),
-            { id: 'leave', label: 'Leave' },
             { id: 'salary', label: 'Salary' },
+            { id: 'leave', label: 'Leave' },
             { id: 'profile', label: 'My profile' },
           ]}
-          value={selfView}
+          value={selfView === 'attendance' || selfView === 'requests' ? 'salary' : selfView}
           onChange={(view) =>
             setParams((previous) => {
               const next = new URLSearchParams(previous);
@@ -722,12 +793,78 @@ function HrContent({
         }
         action={
           tab === 'self' ? (
-            selfView === 'requests' ? (
+            selfView === 'attendance' ? (
+              <Button
+                style={{
+                  background: '#15803d',
+                  color: '#ffffff',
+                  borderColor: '#15803d',
+                  fontWeight: 600,
+                  borderRadius: '6px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                }}
+                onClick={() => setAction({ kind: 'leave' })}
+              >
+                Request leave
+              </Button>
+            ) : selfView === 'requests' ? (
               <Button variant="secondary" onClick={reload}>
                 Refresh requests
               </Button>
             ) : selfView === 'leave' ? (
-              <Button onClick={() => setAction({ kind: 'leave' })}>Request leave</Button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  className="hr-leave-balance-compact-badge"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    color: '#166534',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                  }}
+                  title={`Annual Paid Leave Allowance: ${data.settings.paidLeaveDays} days (${month.slice(0, 4)})`}
+                >
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#15803d',
+                      color: '#ffffff',
+                      borderRadius: '9999px',
+                      padding: '2px 8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {Math.max(
+                      0,
+                      data.settings.paidLeaveDays -
+                        (data.leaveUsage?.find((l) => staff.some((p) => p.id === l.staffId))
+                          ?.used ?? 0),
+                    )}
+                  </span>
+                  <span>Paid days remaining</span>
+                </div>
+                <Button
+                  style={{
+                    background: '#15803d',
+                    color: '#ffffff',
+                    borderColor: '#15803d',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                  }}
+                  onClick={() => setAction({ kind: 'leave' })}
+                >
+                  Request leave
+                </Button>
+              </div>
             ) : undefined
           ) : (
             <div className="hr-header-filters">
@@ -786,19 +923,53 @@ function HrContent({
                   ))}
                 </select>
               </label>
-              <label className="field hr-inline-filter">
-                <span>Staff member</span>
-                <select value={selectedStaff} onChange={(e) => setSelectedStaff(e.target.value)}>
-                  <option value="">All staff</option>
-                  {data.staff
-                    .filter((p) => !department || p.department === department)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              {tab === 'attendance' ? (
+                <label className="field hr-inline-filter">
+                  <span>Status</span>
+                  <select
+                    value={attendanceStatusFilter}
+                    onChange={(e) => setAttendanceStatusFilter(e.target.value)}
+                  >
+                    <option value="all">All status</option>
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                    <option value="late">Late</option>
+                    <option value="half-day">Half day</option>
+                    <option value="leave">On leave</option>
+                    <option value="off">Weekly off</option>
+                    <option value="holiday">Holiday</option>
+                    <option value="unmarked">Not marked</option>
+                  </select>
+                </label>
+              ) : tab === 'salary' ? (
+                <label className="field hr-inline-filter">
+                  <span>Status</span>
+                  <select
+                    value={salaryStatusFilter}
+                    onChange={(e) => setSalaryStatusFilter(e.target.value as any)}
+                  >
+                    <option value="all">All staff ({salaryStatusCounts.all})</option>
+                    <option value="paid">Paid ({salaryStatusCounts.paid})</option>
+                    <option value="pending">Pending ({salaryStatusCounts.pending})</option>
+                    <option value="overdue">Overdue ({salaryStatusCounts.overdue})</option>
+                    <option value="setup_pending">Setup pending ({salaryStatusCounts.setup_pending})</option>
+                  </select>
+                </label>
+              ) : (
+                <label className="field hr-inline-filter">
+                  <span>Staff member</span>
+                  <select value={selectedStaff} onChange={(e) => setSelectedStaff(e.target.value)}>
+                    <option value="">All staff</option>
+                    {data.staff
+                      .filter((p) => !department || p.department === department)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
               {tab === 'salary' && pendingStaffList.length > 0 && can('payroll.pay') && (
                 <button
                   type="button"
@@ -844,64 +1015,18 @@ function HrContent({
         )}
         {tab === 'self' && selfView === 'attendance' && (
           <>
-            {data.punchState?.code === 'HR_ON_LEAVE' ||
-            data.leaves.some(
-              (l) =>
-                l.status === 'approved' &&
-                (l.approvedDates
-                  ? l.approvedDates.includes(data.today)
-                  : l.start <= data.today && l.end >= data.today),
-            ) ? (
+            {(data.punchState?.code === 'HR_ON_LEAVE' ||
+              data.leaves.some(
+                (l) =>
+                  l.status === 'approved' &&
+                  (l.approvedDates
+                    ? l.approvedDates.includes(data.today)
+                    : l.start <= data.today && l.end >= data.today),
+              )) && (
               <p className="panel-note" role="status">
                 You are on approved leave today. Punch in and punch out are disabled while on
                 approved leave.
               </p>
-            ) : (
-              <>
-                <p>
-                  Location is checked only when you punch. Missing or inaccurate location? Ask your
-                  administrator to correct attendance.
-                </p>
-                {data.punchState?.reason && (
-                  <p className="panel-note" role="status">
-                    {data.punchState.reason}
-                  </p>
-                )}
-                {dedicatedPunchPage && (
-                  <p className="panel-note">
-                    <Link to="/staff/punch">Open Punch in & out</Link> to record your school day.
-                  </p>
-                )}
-                <div className="toolbar">
-                  {!dedicatedPunchPage && (
-                    <>
-                      <Button
-                        disabled={
-                          busy ||
-                          (data.punchState &&
-                            (!data.punchState.allowed || data.punchState.nextKind !== 'in'))
-                        }
-                        onClick={() => void punch('in')}
-                      >
-                        Punch in
-                      </Button>
-                      <Button
-                        disabled={
-                          busy ||
-                          (data.punchState &&
-                            (!data.punchState.allowed || data.punchState.nextKind !== 'out'))
-                        }
-                        onClick={() => void punch('out')}
-                      >
-                        Punch out
-                      </Button>
-                    </>
-                  )}
-                  <Button variant="secondary" onClick={() => setAction({ kind: 'leave' })}>
-                    Request leave
-                  </Button>
-                </div>
-              </>
             )}
           </>
         )}
@@ -909,6 +1034,7 @@ function HrContent({
           <AttendanceCalendar
             data={data}
             month={month}
+            onMonthChange={changeMonth}
             ars={
               liveSchoolId && data.staff.some((p) => p.teaching)
                 ? { adapter, saved: reload }
@@ -918,7 +1044,6 @@ function HrContent({
         )}
         {tab === 'self' && selfView === 'profile' && (
           <section className="hr-personal-salary">
-            <h3>My profile</h3>
             {data.staff.map((p) => (
               <dl className="hr-breakdown" key={p.id}>
                 {[
@@ -941,7 +1066,6 @@ function HrContent({
         {tab === 'self' && selfView === 'salary' && (
           <>
             <div className="hr-personal-salary">
-              <h3>My salary</h3>
               {data.payroll.length ? (
                 data.payroll.map((item) => (
                   <div key={item.id} className="hr-personal-salary-card">
@@ -976,9 +1100,25 @@ function HrContent({
           </>
         )}
         {tab === 'salary' ? (
-          <div className="table-wrap">
+          <div className="table-wrap" ref={salaryExpensesTableWrapRef}>
+            <FloatingStickyTableHeader
+              tableWrapRef={salaryExpensesTableWrapRef}
+              theadRef={salaryExpensesTheadRef}
+            >
+              {(colWidths) => (
+                <thead>
+                  <tr>
+                    <th style={{ width: colWidths[0] }}>STAFF MEMBER</th>
+                    <th style={{ width: colWidths[1] }}>NET SALARY</th>
+                    <th style={{ width: colWidths[2] }}>STATUS</th>
+                    <th style={{ width: colWidths[3] }}>DUE DATE</th>
+                    <th style={{ width: colWidths[4] }}>ACTIONS</th>
+                  </tr>
+                </thead>
+              )}
+            </FloatingStickyTableHeader>
             <table>
-              <thead>
+              <thead ref={salaryExpensesTheadRef}>
                 <tr>
                   <th>STAFF MEMBER</th>
                   <th>NET SALARY</th>
@@ -988,7 +1128,14 @@ function HrContent({
                 </tr>
               </thead>
               <tbody>
-                {staffSalaryData.map((row) => {
+                {visibleSalaryRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
+                      No staff found matching the selected status.
+                    </td>
+                  </tr>
+                ) : (
+                  visibleSalaryRows.map((row) => {
                   const p = row.staff;
                   const item = row.item;
                   const salaryConfig = row.salaryConfig;
@@ -998,7 +1145,7 @@ function HrContent({
                   const isZeroSalary = net === 0;
                   const isPaid = !isZeroSalary && pending === 0 && paid > 0;
                   const isPartiallyPaid = paid > 0 && pending > 0;
-                  const isOverdue = !isZeroSalary && Boolean(item && item.dueDate < data.today && pending > 0);
+                  const isOverdue = !isZeroSalary && Boolean((item?.dueDate || `${month}-05`) < data.today && pending > 0);
                   const attSummary = getStaffAttendanceSummary(p.id, month, data.today, data, item);
 
                   const statusTone = isZeroSalary
@@ -1020,7 +1167,10 @@ function HrContent({
                     ? 'Overdue'
                     : 'Pending';
 
-                  const advanceBalance = data.advanceBalances?.find((a) => a.staffId === p.id)?.balance ?? 0;
+                  const advObj = data.advanceBalances?.find((a) => a.staffId === p.id);
+                  const advanceBalance = advObj?.balance ?? 0;
+                  const advanceIssued = advObj?.issued ?? 0;
+                  const hasAdvance = advanceIssued > 0 || (data.advances || []).some((a) => a.staffId === p.id);
                   const rowDueDate = item?.dueDate ? formatDueDate(item.dueDate) : formatDueDate(`${month}-05`);
 
                   const effectiveItem: HrPayroll = item ?? {
@@ -1060,7 +1210,7 @@ function HrContent({
                             </div>
                             {advanceBalance > 0 && (
                               <div style={{ color: '#475569', fontSize: '12px', marginTop: '2px' }}>
-                                • Advance: {rupees(advanceBalance)}
+                                • Advance taken: {rupees(advanceIssued)} · Remaining: <strong style={{ color: '#b45309' }}>{rupees(advanceBalance)}</strong>
                               </div>
                             )}
                           </div>
@@ -1199,6 +1349,19 @@ function HrContent({
                                     <span>Give advance</span>
                                   </button>
                                 )}
+                                {hasAdvance && (
+                                  <button
+                                    type="button"
+                                    className="hr-menu-item"
+                                    onClick={() => {
+                                      setOpenMenuStaffId(null);
+                                      setAction({ kind: 'advanceOverview', staff: p });
+                                    }}
+                                  >
+                                    <Wallet size={14} style={{ color: '#2563eb' }} />
+                                    <span>Salary Advance Overview</span>
+                                  </button>
+                                )}
                                 {can('payroll.manage') && (
                                   <button
                                     type="button"
@@ -1212,19 +1375,6 @@ function HrContent({
                                     <span>Adjustments</span>
                                   </button>
                                 )}
-                                {paid > 0 && (
-                                  <button
-                                    type="button"
-                                    className="hr-menu-item"
-                                    onClick={() => {
-                                      setOpenMenuStaffId(null);
-                                      setAction({ kind: 'slip', item: effectiveItem });
-                                    }}
-                                  >
-                                    <FileText size={14} style={{ color: '#64748b' }} />
-                                    <span>View Payslip</span>
-                                  </button>
-                                )}
                               </div>
                             )}
                           </div>
@@ -1232,7 +1382,7 @@ function HrContent({
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
@@ -1249,6 +1399,8 @@ function HrContent({
             canManage={can('attendance.manage')}
             correct={(staff) => setAction({ kind: 'attendance', staff })}
             calendar={(staff) => setAction({ kind: 'calendar', staff })}
+            filter={attendanceStatusFilter}
+            onFilterChange={setAttendanceStatusFilter}
           />
         )}
         {tab === 'self' && selfView === 'requests' && liveSchoolId && (
@@ -1275,32 +1427,7 @@ function HrContent({
 
             return (
               <div className="attendance-requests" style={{ padding: 0 }}>
-                {tab === 'self' && (
-                  <div className="hr-leave-balance-card" style={{ margin: '0 0 16px' }}>
-                    <div className="hr-leave-stat-pill">
-                      <span className="hr-leave-stat-num">
-                        {Math.max(
-                          0,
-                          data.settings.paidLeaveDays -
-                            (data.leaveUsage?.find((l) => staff.some((p) => p.id === l.staffId))
-                              ?.used ?? 0),
-                        )}
-                      </span>
-                      <span className="hr-leave-stat-label">Paid days remaining</span>
-                    </div>
-                    <div className="hr-leave-info-text">
-                      <strong>
-                        Annual Paid Leave Allowance: {data.settings.paidLeaveDays} days (
-                        {month.slice(0, 4)})
-                      </strong>
-                      <p>
-                        {data.settings.absenceReducesLeave
-                          ? `${data.leaveUsage?.find((l) => staff.some((p) => p.id === l.staffId))?.absenceDays ?? 0} absence days included in usage. Approval or correction recalculates this balance.`
-                          : 'Only approved paid leave reduces this balance.'}
-                      </p>
-                    </div>
-                  </div>
-                )}
+
                 <div
                   className="hr-leave-subnav-row"
                   style={{
@@ -1567,26 +1694,15 @@ function HrContent({
           }}
         />
       )}
-      {action?.kind === 'advanceHistory' && (
-        <Modal
+      {(action?.kind === 'advanceHistory' || action?.kind === 'advanceOverview') && (
+        <SalaryAdvanceOverviewModal
           open
-          title={`Advances · ${action.staff.name}`}
-          description="Approved payroll reserves its advance recovery, even while salary payment is outstanding."
           onClose={close}
-        >
-          <p>
-            Outstanding:{' '}
-            {rupees(data.advanceBalances?.find((a) => a.staffId === action.staff.id)?.balance ?? 0)}
-          </p>
-          {data.advances
-            .filter((a) => a.staffId === action.staff.id)
-            .map((a) => (
-              <p key={a.id}>
-                {formatCalendarDate(a.date)} · {rupees(a.amount)} · {a.method} ·{' '}
-                {a.reference || 'No reference'}
-              </p>
-            ))}
-        </Modal>
+          staff={action.staff}
+          data={data}
+          canGiveAdvance={can('payroll.pay')}
+          onGiveAdvance={() => setAction({ kind: 'advance', staff: action.staff })}
+        />
       )}
       {action?.kind === 'slip' && <Payslip item={action.item} data={data} close={close} />}
       {action?.kind === 'approve' && (() => {

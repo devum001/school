@@ -1,8 +1,9 @@
 import './attendance-status.css';
 import { Badge } from '../ui/Primitives';
 import { titleCase } from '../../lib/displayFormat';
+
 export default function AttendanceStatus({ status = 'unmarked' }: { status?: string }) {
-  if (status === 'late' || status === 'half-day')
+  if (status === 'late' || status === 'half-day') {
     return (
       <span className="attendance-status-pair">
         <Badge tone="green">● Present</Badge>
@@ -11,14 +12,26 @@ export default function AttendanceStatus({ status = 'unmarked' }: { status?: str
         </Badge>
       </span>
     );
-  const tone =
-    status === 'present'
-      ? 'green'
-      : ['absent', 'invalid'].includes(status)
-        ? 'red'
-        : ['late', 'half-day'].includes(status)
-          ? 'amber'
-          : 'neutral';
+  }
+  if (status === 'present') {
+    return <Badge tone="green">● Present</Badge>;
+  }
+  if (status === 'absent') {
+    return <Badge tone="red">● Absent</Badge>;
+  }
+  if (status === 'leave') {
+    return <Badge tone="blue">● On Leave</Badge>;
+  }
+  if (status === 'off') {
+    return <Badge tone="neutral">● Weekly Off</Badge>;
+  }
+  if (status === 'holiday') {
+    return <Badge tone="amber">● Holiday</Badge>;
+  }
+  if (status === 'unmarked' || status === 'pending') {
+    return <Badge tone="neutral">● Not Marked</Badge>;
+  }
+  const tone = status === 'invalid' ? 'red' : 'neutral';
   return (
     <Badge tone={tone}>
       <span aria-hidden="true">● </span>

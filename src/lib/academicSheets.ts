@@ -446,12 +446,8 @@ export function scopeStateForFeature(
       ...cls,
       subjects: cls.subjects?.filter((sub) => allowsInClass(cls.id, '', sub.id, sub.name)),
     })),
-    exams: state.exams.map((exam) => ({
-      ...exam,
-      subjects: exam.subjects.filter((s) =>
-        allowsInClass(exam.classId, '', s.subjectId, s.name),
-      ),
-      sheets: exam.sheets?.map((sheet) => {
+    exams: state.exams.map((exam) => {
+      const allowedSheets = exam.sheets?.map((sheet) => {
         const sheetClassId =
           sheet.classId ??
           state.sections.find((sec) => sec.id === sheet.sectionId)?.classId ??
@@ -462,17 +458,31 @@ export function scopeStateForFeature(
             allowsInClass(sheetClassId, sheet.sectionId, s.subjectId, s.name),
           ),
         };
-      }),
-      subjectMaximums: exam.subjectMaximums?.filter((m) =>
-        allowsInClass(m.classId, '', m.subjectId, subjectNameById.get(m.subjectId)),
-      ),
-      subjectSelections: exam.subjectSelections?.map((sel) => ({
-        ...sel,
-        subjectIds: sel.subjectIds.filter((id) =>
-          allowsInClass(sel.classId, '', id, subjectNameById.get(id)),
+      });
+      const sheetFilteredSubs = (allowedSheets ?? []).flatMap((s) => s.subjects);
+      const directSubs = exam.subjects.filter((s) =>
+        allowsInClass(exam.classId, '', s.subjectId, s.name),
+      );
+      const combinedSubs = directSubs.length
+        ? directSubs
+        : sheetFilteredSubs.filter(
+            (sub, idx, arr) => arr.findIndex((x) => x.name === sub.name) === idx,
+          );
+      return {
+        ...exam,
+        subjects: combinedSubs,
+        sheets: allowedSheets,
+        subjectMaximums: exam.subjectMaximums?.filter((m) =>
+          allowsInClass(m.classId, '', m.subjectId, subjectNameById.get(m.subjectId)),
         ),
-      })),
-    })),
+        subjectSelections: exam.subjectSelections?.map((sel) => ({
+          ...sel,
+          subjectIds: sel.subjectIds.filter((id) =>
+            allowsInClass(sel.classId, '', id, subjectNameById.get(id)),
+          ),
+        })),
+      };
+    }),
     results: state.results.map((res) => {
       const enrollment = enrollmentMap.get(res.enrollmentId);
       const classId = enrollment?.classId ?? '';

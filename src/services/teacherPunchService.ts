@@ -70,10 +70,10 @@ export function currentPosition(): Promise<GeolocationPosition> {
         reject(
           new Error(
             error.code === 1
-              ? 'Location permission is blocked. Allow location for this site in your browser settings, then try again.'
+              ? 'Please turn on location on your device to continue.'
               : error.code === 3
                 ? 'Your device could not locate you in time. Move near a window or try your phone, then check again.'
-                : 'Your device could not determine its location. Turn on location services and try again.',
+                : 'Please turn on location on your device to continue.',
           ),
         ),
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },

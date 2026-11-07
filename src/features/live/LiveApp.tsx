@@ -118,7 +118,7 @@ function LiveWorkspace() {
           ? 'Staff & HR'
           : 'Overview';
   if (platform && !superAdmin) return <Navigate to="/settings" replace />;
-  if (superAdmin && !session.memberships.length && settings)
+  if (superAdmin && !session.memberships.length && location.pathname !== '/platform')
     return <Navigate to="/platform" replace />;
   return (
     <div className="app-shell live-workspace">
@@ -276,12 +276,12 @@ function LiveWorkspace() {
               </div>
             ) : (
               <Panel>
-                <h1>This module is not connected yet</h1>
+                <h1>Module not available in platform administration</h1>
                 <p>
-                  Live access includes school settings, roles, members, activity, and account
-                  sessions.
+                  Academic, student, and school operations modules belong to individual schools.
+                  Super Admin accounts administer schools and platform settings.
                 </p>
-                <Link to="/settings">Open General settings</Link>
+                <Link to="/platform">Go to Platform administration</Link>
               </Panel>
             )}
           </WorkspaceLoadingBoundary>

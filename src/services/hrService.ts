@@ -125,6 +125,7 @@ const payment = z.object({
   date: z.string(),
   method: z.string(),
   reference: z.string(),
+  reason: z.string().optional(),
 });
 const workspace = z.object({
   timezone: z.string().optional(),

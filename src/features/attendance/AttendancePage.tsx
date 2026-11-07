@@ -287,7 +287,7 @@ function AttendanceRegister() {
           <StaffAttendancePage embedded />
         )
       ) : register === 'ars' ? (
-        <LiveHrWorkspace section={isTeacher ? 'self' : 'ars'} hideNavigation />
+        <LiveHrWorkspace section="self" hideNavigation />
       ) : register === 'self' ? (
         <LiveHrWorkspace section="self" hideNavigation />
       ) : (

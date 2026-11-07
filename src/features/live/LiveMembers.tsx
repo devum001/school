@@ -62,7 +62,19 @@ function MemberPage({
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const manage = access.permissions.includes('memberships.manage');
-  const choices = state.data?.roles.filter((role) => canAssign(access, role)) ?? [];
+  const choices = (state.data?.roles.filter((role) => canAssign(access, role)) ?? []).filter(
+    (role) => role.builtinKey !== 'owner' && role.name.toLowerCase() !== 'owner',
+  );
+  const staffMembers = (state.data?.members.items ?? []).filter((member) => {
+    const roleName =
+      member.roleName ?? state.data?.roles.find((role) => role.id === member.roleId)?.name;
+    const role = state.data?.roles.find((r) => r.id === member.roleId);
+    const isOwner =
+      roleName?.toLowerCase() === 'owner' ||
+      role?.builtinKey === 'owner' ||
+      role?.name?.toLowerCase() === 'owner';
+    return !isOwner;
+  });
   const editable = (member: Member) => choices.some((role) => role.id === member.roleId);
   const changed = (message: string) => {
     setNotice(message);
@@ -122,7 +134,7 @@ function MemberPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {(state.data?.members.items ?? []).map((member) => (
+                    {staffMembers.map((member) => (
                       <tr key={member.id}>
                         <th scope="row">
                           {member.user?.name ?? 'Account details unavailable'}
@@ -165,7 +177,7 @@ function MemberPage({
                   </tbody>
                 </table>
               </div>
-              {state.data && state.data.members.items.length === 0 && <p>No members on this page.</p>}
+              {state.data && staffMembers.length === 0 && <p>No staff members on this page.</p>}
               {state.data && (
                 <div className="live-actions">
                   {cursor && (

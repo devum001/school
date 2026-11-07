@@ -152,21 +152,22 @@
 }
 
 .hr-month-filter {
-  min-width: 235px !important;
-  max-width: 260px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
   flex: 0 0 auto !important;
 }
 .hr-month-controls {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  width: 100%;
+  gap: 6px;
+  width: auto;
 }
 .hr-header-filters button.hr-month-nav-btn,
 .hr-month-filter button.hr-month-nav-btn {
-  min-width: 32px !important;
-  width: 32px !important;
-  max-width: 32px !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
   height: 34px !important;
   min-height: 34px !important;
   padding: 0 !important;
@@ -174,22 +175,26 @@
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
+  border-radius: 6px !important;
 }
 .hr-month-filter .hr-month-corner {
   margin: 0 !important;
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
 }
 .hr-month-filter .hr-month-corner input[type="month"] {
-  width: 100%;
-  min-width: 125px;
-  max-width: 155px;
+  width: 152px;
+  min-width: 152px;
+  max-width: 152px;
   min-height: 34px;
   height: 34px;
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   box-sizing: border-box;
+  border-radius: 6px;
+  text-align: center;
 }
 
 .hr-search-wrap {

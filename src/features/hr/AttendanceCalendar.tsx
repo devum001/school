@@ -11,7 +11,7 @@ import {
 import CancelLeaveDialog from './CancelLeaveDialog';
 import AttendanceDayDetail from './AttendanceDayDetail';
 import ArsRequestDialog from './ArsRequestDialog';
-import { Button } from '../../components/ui/Primitives';
+import { Button, PickerInput } from '../../components/ui/Primitives';
 import { isDateHoliday } from '../../lib/indianHolidays';
 import './hr-personal-calendar.css';
 
@@ -114,26 +114,40 @@ export default function AttendanceCalendar({
       <div className="hr-personal-calendar-main">
         <div className="hr-calendar-header">
           <div className="hr-calendar-month-heading">
-            <h3>{monthFormatted}</h3>
-            {!hideMonthNavigation && onMonthChange && (
-              <div className="hr-month-arrows">
+            {!hideMonthNavigation && onMonthChange ? (
+              <div className="hr-month-controls" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <button
                   type="button"
-                  className="hr-month-arrow-btn"
+                  className="button secondary hr-month-nav-btn"
                   onClick={handlePrevMonth}
                   aria-label="Previous month"
+                  style={{ padding: '6px 8px', height: '36px', minWidth: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <ChevronLeft size={16} />
                 </button>
+                <label className="hr-month-corner" style={{ margin: 0 }}>
+                  <PickerInput
+                    type="month"
+                    required
+                    aria-label="Attendance month"
+                    value={month}
+                    onChange={(e) => {
+                      if (e.target.value) onMonthChange(e.target.value);
+                    }}
+                  />
+                </label>
                 <button
                   type="button"
-                  className="hr-month-arrow-btn"
+                  className="button secondary hr-month-nav-btn"
                   onClick={handleNextMonth}
                   aria-label="Next month"
+                  style={{ padding: '6px 8px', height: '36px', minWidth: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <ChevronRight size={16} />
                 </button>
               </div>
+            ) : (
+              <h3>{monthFormatted}</h3>
             )}
           </div>
           <div className="hr-calendar-actions">
@@ -146,14 +160,19 @@ export default function AttendanceCalendar({
         </div>
 
         <div className="hr-personal-calendar-grid">
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-            <span
-              className={`hr-calendar-weekday ${d === 'Sun' ? 'is-sunday' : ''}`}
-              key={d}
-            >
-              {d}
-            </span>
-          ))}
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, index) => {
+            const dayOfWeek = index === 6 ? 0 : index + 1;
+            const isOff = data.settings?.workingDays && !data.settings.workingDays.includes(dayOfWeek);
+            return (
+              <span
+                className={`hr-calendar-weekday ${d === 'Sun' || isOff ? 'is-sunday' : ''}`}
+                key={d}
+                title={isOff ? `${d} (Weekly off)` : d}
+              >
+                {d}
+              </span>
+            );
+          })}
           {Array.from({ length: offset }, (_, i) => (
             <span aria-hidden="true" key={'empty' + i} />
           ))}

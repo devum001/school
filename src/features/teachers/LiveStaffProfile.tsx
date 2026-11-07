@@ -27,11 +27,22 @@ import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import { getSavedHolidays } from '../../lib/indianHolidays';
 import AttendanceCalendar from '../hr/AttendanceCalendar';
 import { PunchChips } from '../hr/StaffAttendancePanel';
-import { LeaveDialog, Payslip } from '../hr/HrActions';
+import { LeaveDialog, PaymentDialog, Payslip } from '../hr/HrActions';
 import EmploymentDialog from '../hr/EmploymentDialog';
 import StaffLoginDialog from '../hr/StaffLoginDialog';
 import PeopleRelations from '../setup/PeopleRelations';
 import { StaffEditor } from './LiveStaff';
+import SalaryAdvanceOverviewModal from '../hr/SalaryAdvanceOverviewModal';
+import {
+  Shield,
+  KeyRound,
+  Mail,
+  Phone,
+  User,
+  Check,
+  ArrowRight,
+  UserPlus,
+} from 'lucide-react';
 import '../hr/staff-attendance.css';
 
 const DAY_MAP: Record<string, number> = {
@@ -302,135 +313,545 @@ export default function LiveStaffProfile() {
             )}
             {tab === 'Salary' && data && (
               <Panel
-                title="Salary & payments"
+                title="Salary & payments (Monthly Payroll Breakdown)"
                 action={
-                  can('payroll.manage') && (
-                    <Button onClick={() => setAction('salary')}>Salary setup</Button>
-                  )
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--muted, #64748b)', whiteSpace: 'nowrap' }}>
+                        Salary month
+                      </span>
+                      <input
+                        type="month"
+                        value={month}
+                        style={{
+                          height: '34px',
+                          padding: '4px 10px',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          borderRadius: '6px',
+                          border: '1px solid var(--border, #d3ddda)',
+                          background: 'var(--surface-panel, #fff)',
+                          color: '#1e293b',
+                        }}
+                        onChange={(e) => {
+                          if (e.target.value) setParams({ tab, month: e.target.value });
+                        }}
+                      />
+                    </div>
+                    {(() => {
+                      const staffAdvance = data.advanceBalances?.find((a) => a.staffId === person.id);
+                      const hasAdvance = (staffAdvance?.issued ?? 0) > 0 || (data.advances || []).some((a) => a.staffId === person.id);
+                      if (!hasAdvance) return null;
+                      return (
+                        <button
+                          type="button"
+                          style={{
+                            backgroundColor: '#2563eb',
+                            color: '#ffffff',
+                            fontWeight: 600,
+                            fontSize: '13px',
+                            padding: '7px 14px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                          }}
+                          onClick={() => setAction('advanceOverview')}
+                        >
+                          Salary Advance Overview
+                        </button>
+                      );
+                    })()}
+                    {can('payroll.manage') && (
+                      <Button onClick={() => setAction('salary')}>Salary setup</Button>
+                    )}
+                  </div>
                 }
               >
-                <label className="field">
-                  Salary month
-                  <input
-                    type="month"
-                    value={month}
-                    onChange={(e) => {
-                      if (e.target.value) setParams({ tab, month: e.target.value });
-                    }}
-                  />
-                </label>
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Month</th>
-                        <th>Net salary</th>
-                        <th>Payment status</th>
-                        <th>Statement</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.payroll.map((p) => (
-                        <tr key={p.id}>
-                          <td>{p.month}</td>
-                          <td>{rupees(p.net)}</td>
-                          <td>{payrollStatus(p, data)}</td>
-                          <td>
-                            <Button variant="ghost" onClick={() => setSlip(p)}>
-                              View
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {!data.payroll.length && (
-                    <div style={{ padding: '16px 0' }}>
-                      {data.employment?.[0]?.salaries?.slice(-1)[0]?.basic > 0 ? (
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '16px',
-                            background: 'var(--surface-sunken, #f8fafc)',
-                            padding: '12px 16px',
-                            borderRadius: '8px',
-                          }}
-                        >
-                          <p className="panel-note" style={{ margin: 0 }}>
-                            Salary is configured (
-                            {rupees(
-                              (data.employment[0].salaries.slice(-1)[0].basic || 0) +
-                                (data.employment[0].salaries.slice(-1)[0].allowance || 0) +
-                                (data.employment[0].salaries.slice(-1)[0].bonus || 0) -
-                                (data.employment[0].salaries.slice(-1)[0].deduction || 0),
-                            )}
-                            /mo), but payroll draft has not been generated for {month} yet.
-                          </p>
-                          {can('payroll.manage') && (
-                            <Button
-                              disabled={isGeneratingDraft}
-                              onClick={async () => {
-                                try {
-                                  setIsGeneratingDraft(true);
-                                  await adapter.save(`/staff/${person.id}/payroll`, {
-                                    month,
-                                    revision: 0,
-                                    adjustment: 0,
-                                    advanceRecovery: 0,
-                                    note: 'Draft generated from profile',
-                                  });
-                                  state.reload();
-                                } catch (e) {
-                                  console.error(e);
-                                } finally {
-                                  setIsGeneratingDraft(false);
-                                }
+                <div style={{ marginBottom: '16px' }}>
+                  <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Month</th>
+                            <th>Net salary</th>
+                            <th>Payment status</th>
+                            <th>Statement</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.payroll.map((p) => (
+                            <tr key={p.id}>
+                              <td>{p.month}</td>
+                              <td>{rupees(p.net)}</td>
+                              <td>{payrollStatus(p, data)}</td>
+                              <td>
+                                <Button variant="ghost" onClick={() => setSlip(p)}>
+                                  View
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {!data.payroll.length && (
+                        <div style={{ padding: '16px 0' }}>
+                          {data.employment?.[0]?.salaries?.slice(-1)[0]?.basic > 0 ? (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '16px',
+                                background: 'var(--surface-sunken, #f8fafc)',
+                                padding: '12px 16px',
+                                borderRadius: '8px',
                               }}
                             >
-                              {isGeneratingDraft ? 'Generating draft…' : 'Generate salary draft'}
-                            </Button>
+                              <p className="panel-note" style={{ margin: 0 }}>
+                                Salary is configured (
+                                {rupees(
+                                  (data.employment[0].salaries.slice(-1)[0].basic || 0) +
+                                    (data.employment[0].salaries.slice(-1)[0].allowance || 0) +
+                                    (data.employment[0].salaries.slice(-1)[0].bonus || 0) -
+                                    (data.employment[0].salaries.slice(-1)[0].deduction || 0),
+                                )}
+                                /mo), but payroll draft has not been generated for {month} yet.
+                              </p>
+                              {can('payroll.manage') && (
+                                <Button
+                                  disabled={isGeneratingDraft}
+                                  onClick={async () => {
+                                    try {
+                                      setIsGeneratingDraft(true);
+                                      await adapter.save(`/staff/${person.id}/payroll`, {
+                                        month,
+                                        revision: 0,
+                                        adjustment: 0,
+                                        advanceRecovery: 0,
+                                        note: 'Draft generated from profile',
+                                      });
+                                      state.reload();
+                                    } catch (e) {
+                                      console.error(e);
+                                    } finally {
+                                      setIsGeneratingDraft(false);
+                                    }
+                                  }}
+                                >
+                                  {isGeneratingDraft ? 'Generating draft…' : 'Generate salary draft'}
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="panel-note">Payroll has not been generated for this month.</p>
                           )}
                         </div>
-                      ) : (
-                        <p className="panel-note">Payroll has not been generated for this month.</p>
                       )}
                     </div>
-                  )}
-                </div>
-                <Link
-                  className="button secondary"
-                  to={`/fees?tab=Salary+Expenses&staff=${person.id}&month=${month}`}
-                >
-                  Open salary processing
-                </Link>
-              </Panel>
-            )}
-            {tab === 'Account' && (
-              <Panel title="School account">
-                <p>
-                  {state.data?.account
-                    ? `${titleCase(state.data.account.status)} · ${state.data.account.role}`
-                    : person.userId
-                      ? 'Account unavailable'
-                      : 'No login account linked'}
-                </p>
-                {!person.userId &&
-                  can('staff.manage') &&
-                  can('memberships.manage') &&
-                  can('roles.view') && (
-                    <Button onClick={() => setAction('login')}>Create login</Button>
-                  )}
-                {person.userId && can('memberships.manage') && (
+                  </div>
                   <Link
                     className="button secondary"
-                    to="/settings?tab=Roles+%26+Permissions&section=members"
+                    to={`/fees?tab=Salary+Expenses&staff=${person.id}&month=${month}`}
                   >
-                    Manage account and role
+                    Open salary processing
                   </Link>
+                </Panel>
+              )}
+            {tab === 'Account' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {person.userId ? (
+                  <>
+                    {/* Card 1: School account & access */}
+                    <div
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #eaecf0',
+                        borderRadius: '16px',
+                        padding: '24px 28px',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: '16px',
+                        }}
+                      >
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#111827' }}>
+                            School account & access
+                          </h3>
+                          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>
+                            Manage portal login credentials, security roles, and system permissions.
+                          </p>
+                        </div>
+                        <div>
+                          {state.data?.account?.status === 'active' || (!state.data?.account && person.status === 'active') ? (
+                            <div
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                background: '#eaf5ee',
+                                color: '#2e7d4d',
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                              }}
+                            >
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2e7d4d' }} />
+                              Active account
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                background: '#f1f5f9',
+                                color: '#64748b',
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                              }}
+                            >
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#64748b' }} />
+                              {state.data?.account ? titleCase(state.data.account.status) : 'Disabled'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                          gap: '0',
+                          marginTop: '28px',
+                        }}
+                      >
+                        {/* Left Column: Login Identity */}
+                        <div style={{ paddingRight: '28px' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '16px' }}>
+                            <Shield size={20} strokeWidth={1.5} color="#4b5563" style={{ flexShrink: 0, marginTop: '2px' }} />
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#111827' }}>
+                                Login Identity
+                              </h4>
+                              <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                Credentials used to access Schoolwell
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '11px 16px',
+                                background: '#f8fafc',
+                                borderRadius: '8px',
+                              }}
+                            >
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748b' }}>
+                                <Mail size={16} strokeWidth={1.5} /> Registered email
+                              </span>
+                              <strong style={{ fontSize: '13px', color: '#111827', fontWeight: 600 }}>
+                                {person.email || 'dev@gmail.com'}
+                              </strong>
+                            </div>
+
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '11px 16px',
+                                background: '#f8fafc',
+                                borderRadius: '8px',
+                              }}
+                            >
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748b' }}>
+                                <Phone size={16} strokeWidth={1.5} /> Phone number
+                              </span>
+                              <strong style={{ fontSize: '13px', color: '#111827', fontWeight: 600 }}>
+                                {person.phone || '9125789641'}
+                              </strong>
+                            </div>
+
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '11px 16px',
+                                background: '#f8fafc',
+                                borderRadius: '8px',
+                              }}
+                            >
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748b' }}>
+                                <User size={16} strokeWidth={1.5} /> Staff code
+                              </span>
+                              <strong style={{ fontSize: '13px', color: '#111827', fontWeight: 600 }}>
+                                {person.code || '2121'}
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right Column: Role & Permissions */}
+                        <div style={{ borderLeft: '1px solid #f1f5f9', paddingLeft: '28px' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '16px' }}>
+                            <KeyRound size={20} strokeWidth={1.5} color="#4b5563" style={{ flexShrink: 0, marginTop: '2px' }} />
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#111827' }}>
+                                Role & Permissions
+                              </h4>
+                              <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                System authorization and privileges.
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '11px 16px',
+                                background: '#f8fafc',
+                                borderRadius: '8px',
+                              }}
+                            >
+                              <span style={{ fontSize: '13px', color: '#64748b' }}>Assigned role</span>
+                              <span
+                                style={{
+                                  fontSize: '12px',
+                                  fontWeight: 500,
+                                  padding: '3px 12px',
+                                  borderRadius: '16px',
+                                  background: '#e0f2fe',
+                                  color: '#0284c7',
+                                }}
+                              >
+                                {state.data?.account?.role || (person.teaching ? 'Teacher' : 'Staff')}
+                              </span>
+                            </div>
+
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '11px 16px',
+                                background: '#f8fafc',
+                                borderRadius: '8px',
+                              }}
+                            >
+                              <span style={{ fontSize: '13px', color: '#64748b' }}>Department</span>
+                              <strong style={{ fontSize: '13px', color: '#111827', fontWeight: 600 }}>
+                                {person.department} · {person.designation}
+                              </strong>
+                            </div>
+
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '11px 16px',
+                                background: '#f8fafc',
+                                borderRadius: '8px',
+                              }}
+                            >
+                              <span style={{ fontSize: '13px', color: '#64748b' }}>Portal access</span>
+                              <span
+                                style={{
+                                  fontSize: '13px',
+                                  color: '#16a34a',
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                }}
+                              >
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16a34a' }} />
+                                Enabled
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 2: Portal features enabled for this account */}
+                    <div
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #eaecf0',
+                        borderRadius: '16px',
+                        padding: '24px 28px',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+                      }}
+                    >
+                      <h4 style={{ margin: '0 0 18px 0', fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                        Portal features enabled for this account
+                      </h4>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                          gap: '24px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                          <Check size={16} strokeWidth={2} color="#475569" style={{ flexShrink: 0, marginTop: '2px' }} />
+                          <div>
+                            <strong style={{ fontSize: '13px', color: '#111827', fontWeight: 600, display: 'block' }}>
+                              Teacher Punch (GPS)
+                            </strong>
+                            <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#6b7280', lineHeight: 1.45 }}>
+                              Daily secure punch in & out on school campus.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                          <Check size={16} strokeWidth={2} color="#475569" style={{ flexShrink: 0, marginTop: '2px' }} />
+                          <div>
+                            <strong style={{ fontSize: '13px', color: '#111827', fontWeight: 600, display: 'block' }}>
+                              Class Attendance
+                            </strong>
+                            <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#6b7280', lineHeight: 1.45 }}>
+                              Mark and manage student daily attendance.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                          <Check size={16} strokeWidth={2} color="#475569" style={{ flexShrink: 0, marginTop: '2px' }} />
+                          <div>
+                            <strong style={{ fontSize: '13px', color: '#111827', fontWeight: 600, display: 'block' }}>
+                              Salary & Payslips
+                            </strong>
+                            <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#6b7280', lineHeight: 1.45 }}>
+                              View salary breakdowns, advances & download clips.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                          <Check size={16} strokeWidth={2} color="#475569" style={{ flexShrink: 0, marginTop: '2px' }} />
+                          <div>
+                            <strong style={{ fontSize: '13px', color: '#111827', fontWeight: 600, display: 'block' }}>
+                              Tests & Results
+                            </strong>
+                            <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#6b7280', lineHeight: 1.45 }}>
+                              Enter marks and evaluate student exams
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Need to change account role or permissions? */}
+                    {can('memberships.manage') && (
+                      <div
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #eaecf0',
+                          borderRadius: '16px',
+                          padding: '16px 28px',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '16px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <div>
+                          <strong style={{ fontSize: '13px', color: '#111827', fontWeight: 600, display: 'block' }}>
+                            Need to change account role or permissions?
+                          </strong>
+                          <span style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginTop: '3px' }}>
+                            You can adjust assigned privileges or manage active memberships in workspace settings.
+                          </span>
+                        </div>
+                        <Link
+                          to="/settings?tab=Roles+%26+Permissions&section=members"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '8px 16px',
+                            background: '#ffffff',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            color: '#111827',
+                            textDecoration: 'none',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Manage account and role <ArrowRight size={14} />
+                        </Link>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Empty State when no account is linked */
+                  <div
+                    style={{
+                      background: '#ffffff',
+                      border: '1px dashed #cbd5e1',
+                      borderRadius: '16px',
+                      padding: '40px 20px',
+                      textAlign: 'center',
+                      maxWidth: '520px',
+                      margin: '20px auto',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        background: '#fef3c7',
+                        color: '#d97706',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '14px',
+                      }}
+                    >
+                      <UserPlus size={24} />
+                    </div>
+                    <h4 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 600, color: '#0f172a' }}>
+                      No login account linked
+                    </h4>
+                    <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                      This staff member does not have an active login account yet. Linking an account allows them to log in to Schoolwell to punch in and out, mark student attendance, and access their salary.
+                    </p>
+                    {can('staff.manage') && can('memberships.manage') && can('roles.view') && (
+                      <Button onClick={() => setAction('login')}>Create login account</Button>
+                    )}
+                  </div>
                 )}
-              </Panel>
+              </div>
             )}
             {action === 'salary' && data && (
               <EmploymentDialog
@@ -441,6 +862,25 @@ export default function LiveStaffProfile() {
                 close={close}
                 saved={saved}
                 canLink={can('memberships.manage') && can('memberships.view')}
+              />
+            )}
+            {action === 'advance' && data && (
+              <PaymentDialog
+                adapter={adapter}
+                data={data}
+                staff={person}
+                close={close}
+                saved={saved}
+              />
+            )}
+            {action === 'advanceOverview' && data && (
+              <SalaryAdvanceOverviewModal
+                open
+                onClose={close}
+                staff={person}
+                data={data}
+                canGiveAdvance={can('payroll.pay')}
+                onGiveAdvance={() => setAction('advance')}
               />
             )}
             {action === 'login' && (

@@ -294,30 +294,19 @@ function LearningContent({
     ) => {
       if (!isTeacherScoped) return true;
       const resolvedName = subjectName || subjectNameLookup.get(subjectId) || '';
-      const hasClassSectionScope =
-        !effective.assignments.length ||
-        effective.assignments.some(
-          (g) =>
-            (!classId || g.classId === classId) &&
-            (!sectionId || !g.sectionId || g.sectionId === sectionId),
-        );
-      if (!hasClassSectionScope) return false;
       if (explicitSubjectAssignments.length > 0 || teacherTokens.length > 0) {
         const matchesAssignedId =
           Boolean(subjectId) &&
-          explicitSubjectAssignments.some(
-            (g) =>
-              g.subjectId === subjectId &&
-              (!classId || g.classId === classId) &&
-              (!sectionId || !g.sectionId || g.sectionId === sectionId),
-          );
+          explicitSubjectAssignments.some((g) => g.subjectId === subjectId);
         const matchesDesignation =
           Boolean(resolvedName) && subjectMatchesTeacherTokens(resolvedName, teacherTokens);
-        return matchesAssignedId || matchesDesignation;
+        if (matchesAssignedId || matchesDesignation) {
+          return true;
+        }
       }
       return effective.assignments.some(
         (g) =>
-          g.classId === classId &&
+          (!classId || g.classId === classId) &&
           (!sectionId || !g.sectionId || g.sectionId === sectionId) &&
           (!g.subjectId || g.subjectId === subjectId),
       );

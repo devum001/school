@@ -2,7 +2,7 @@ import { DocumentPreview } from '../../components/shared/GeneratedDocumentPrevie
 import { useLiveSchool } from '../live/schoolContext';
 import { useCallback, useState } from 'react';
 import { Download } from 'lucide-react';
-import { Button, EmptyState, Modal, Panel, LoadingOverlay } from '../../components/ui/Primitives';
+import { Button, EmptyState, Modal, Panel, LoadingOverlay, PickerInput } from '../../components/ui/Primitives';
 import { feeApi, type FeePayment } from '../../services/feeService';
 import { useRemote } from '../live/useRemote';
 import { money } from '../../lib/config';
@@ -15,6 +15,10 @@ export default function FeePayments({
   yearId = '',
   canReverse,
   changed,
+  period,
+  month,
+  onPeriodChange,
+  onMonthChange,
 }: {
   schoolId: string;
   schoolName: string;
@@ -22,6 +26,10 @@ export default function FeePayments({
   yearId?: string;
   canReverse: boolean;
   changed?: () => void;
+  period?: 'year' | 'cycle';
+  month?: string;
+  onPeriodChange?: (period: 'year' | 'cycle') => void;
+  onMonthChange?: (month: string) => void;
 }) {
   const { profile } = useLiveSchool();
   const [after, setAfter] = useState(''),
@@ -42,38 +50,64 @@ export default function FeePayments({
         title={studentId ? 'Payments & receipts' : 'Fee transactions'}
         subtitle="Actual payments only. Opening paid balances are recorded in the student ledger."
         action={
-          <Button
-            variant="secondary"
-            disabled={!state.data?.items.length}
-            onClick={() =>
-              downloadCsv(
-                'fee-transactions-page.csv',
-                [
-                  'Receipt',
-                  'Student',
-                  'Admission number',
-                  'Date',
-                  'Amount INR',
-                  'Method',
-                  'Reference',
-                  'Status',
-                ],
-                (state.data?.items ?? []).map((p) => [
-                  p.receipt,
-                  p.studentName,
-                  p.admissionNumber,
-                  formatCalendarDate(p.date),
-                  p.amount / 100,
-                  p.method,
-                  p.reference,
-                  p.reversedAt ? 'Reversed' : 'Received',
-                ]),
-              )
-            }
-          >
-            <Download size={16} />
-            Export this page
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {onPeriodChange && (
+              <label className="field" style={{ margin: 0 }}>
+                <select
+                  aria-label="Finance period"
+                  value={period}
+                  onChange={(e) => onPeriodChange(e.target.value as 'year' | 'cycle')}
+                  style={{ height: '36px', padding: '4px 10px', fontSize: '13px' }}
+                >
+                  <option value="year">Academic Year</option>
+                  <option value="cycle">Monthly Cycle</option>
+                </select>
+              </label>
+            )}
+            {period === 'cycle' && onMonthChange && (
+              <label className="field" style={{ margin: 0 }}>
+                <PickerInput
+                  aria-label="Finance cycle month"
+                  type="month"
+                  value={month}
+                  onChange={(e) => onMonthChange(e.target.value)}
+                  style={{ height: '36px' }}
+                />
+              </label>
+            )}
+            <Button
+              variant="secondary"
+              disabled={!state.data?.items.length}
+              onClick={() =>
+                downloadCsv(
+                  'fee-transactions-page.csv',
+                  [
+                    'Receipt',
+                    'Student',
+                    'Admission number',
+                    'Date',
+                    'Amount INR',
+                    'Method',
+                    'Reference',
+                    'Status',
+                  ],
+                  (state.data?.items ?? []).map((p) => [
+                    p.receipt,
+                    p.studentName,
+                    p.admissionNumber,
+                    formatCalendarDate(p.date),
+                    p.amount / 100,
+                    p.method,
+                    p.reference,
+                    p.reversedAt ? 'Reversed' : 'Received',
+                  ]),
+                )
+              }
+            >
+              <Download size={16} />
+              Export this page
+            </Button>
+          </div>
         }
       >
         <LoadingOverlay loading={state.loading} label="Loading payments…">

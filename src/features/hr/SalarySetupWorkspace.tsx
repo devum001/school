@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FloatingStickyTableHeader } from '../../components/shared/FloatingStickyTableHeader';
 import {
   AppIcon,
   Avatar,
@@ -7,7 +8,7 @@ import {
   EmptyState,
   LoadingOverlay,
   Panel,
-  PickerInput,
+  SearchInput,
 } from '../../components/ui/Primitives';
 import { useFeedback } from '../../app/useFeedback';
 import { useToday } from '../../app/useToday';
@@ -20,7 +21,7 @@ import {
   type HrWorkspace,
 } from '../../services/hrService';
 import EmploymentDialog from './EmploymentDialog';
-import { Search, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import './salary-setup.css';
 
 interface SalaryRow {
@@ -46,6 +47,12 @@ const formatRupees = (paise: number) => {
   return rupees(paise);
 };
 
+function getNextMonth(m: string): string {
+  const [y, mon] = m.split('-').map(Number);
+  if (mon === 12) return `${y + 1}-01`;
+  return `${y}-${String(mon + 1).padStart(2, '0')}`;
+}
+
 export default function SalarySetupWorkspace({
   schoolId,
   permissions = [],
@@ -57,7 +64,7 @@ export default function SalarySetupWorkspace({
   const notify = useFeedback();
   const currentMonthStr = today.slice(0, 7);
 
-  const [month, setMonth] = useState(currentMonthStr);
+  const currentMonth = currentMonthStr;
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'configured' | 'pending'>('all');
   const [search, setSearch] = useState('');
@@ -72,18 +79,29 @@ export default function SalarySetupWorkspace({
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editingStaff, setEditingStaff] = useState<HrStaff | null>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const theadRef = useRef<HTMLTableSectionElement>(null);
 
   // Quick Bulk Bar state
   const [bulkBasic, setBulkBasic] = useState('');
   const [bulkAllowance, setBulkAllowance] = useState('');
   const [bulkBonus, setBulkBonus] = useState('');
-  const [bulkDeduction, setBulkDeduction] = useState('');
   const [bulkAttendanceMode, setBulkAttendanceMode] = useState<'keep' | 'punch' | 'manual' | 'none'>('keep');
   const [bulkReason, setBulkReason] = useState('Bulk salary setup');
 
   const adapter = useMemo<HrAdapter | null>(() => {
     return schoolId ? liveHrAdapter(schoolId) : null;
   }, [schoolId]);
+
+  const getTargetMonthForStaff = (staffId: string): string => {
+    const isApprovedThisMonth = hrData?.payroll?.some(
+      (p) => p.staffId === staffId && p.status === 'approved' && p.month >= currentMonth
+    );
+    if (isApprovedThisMonth) {
+      return getNextMonth(currentMonth);
+    }
+    return currentMonth;
+  };
 
   const loadData = useCallback(async () => {
     if (!adapter) {
@@ -93,7 +111,7 @@ export default function SalarySetupWorkspace({
     setLoading(true);
     setError('');
     try {
-      const data = await adapter.load(month, false, new AbortController().signal);
+      const data = await adapter.load(currentMonth, false, new AbortController().signal);
       setHrData(data);
 
       const map: Record<string, SalaryRow> = {};
@@ -103,12 +121,14 @@ export default function SalarySetupWorkspace({
         if (s.status === 'archived') continue;
         ids.push(s.id);
         const emp = data.employment.find((e) => e.staffId === s.id);
-        const latestSalary = emp?.salaries.filter((sal) => sal.effectiveMonth <= month).at(-1);
+        const latestSalary = emp?.salaries?.length
+          ? [...emp.salaries].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth)).at(-1)
+          : undefined;
         const hasSalary = Boolean(latestSalary && latestSalary.basic > 0);
 
         const currentPolicy = emp?.policies?.length
-          ? (emp.policies.filter((p) => p.effectiveMonth <= month).at(-1)?.attendanceMode ?? 'none')
-          : (emp?.attendanceMode ?? (s.teaching ? 'punch' : 'none'));
+          ? [...emp.policies].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth)).at(-1)?.attendanceMode ?? 'none'
+          : emp?.attendanceMode ?? (s.teaching ? 'punch' : 'none');
 
         map[s.id] = {
           staff: s,
@@ -132,7 +152,7 @@ export default function SalarySetupWorkspace({
     } finally {
       setLoading(false);
     }
-  }, [adapter, month]);
+  }, [adapter, currentMonth]);
 
   useEffect(() => {
     void loadData();
@@ -213,7 +233,6 @@ export default function SalarySetupWorkspace({
           basic: bulkBasic !== '' ? bulkBasic : row.basic,
           allowance: bulkAllowance !== '' ? bulkAllowance : row.allowance,
           bonus: bulkBonus !== '' ? bulkBonus : row.bonus,
-          deduction: bulkDeduction !== '' ? bulkDeduction : row.deduction,
           attendanceMode: bulkAttendanceMode !== 'keep' ? bulkAttendanceMode : row.attendanceMode,
           dirty: true,
         };
@@ -234,29 +253,47 @@ export default function SalarySetupWorkspace({
       const basicPaise = toPaise(row.basic);
       const allowancePaise = toPaise(row.allowance);
       const bonusPaise = toPaise(row.bonus);
-      const deductionPaise = toPaise(row.deduction);
+      const deductionPaise = 0;
+      let targetMonth = getTargetMonthForStaff(row.staff.id);
 
-      await adapter.save(
-        `/staff/${row.staff.id}/employment`,
-        {
-          revision: row.employment?.revision ?? 0,
-          attendanceMode: row.attendanceMode,
-          endedOn: row.endedOn || '',
-          userId: row.userId || undefined,
-          effectiveMonth: month,
-          basic: basicPaise,
-          allowance: allowancePaise,
-          bonus: bonusPaise,
-          deduction: deductionPaise,
-          reason: bulkReason || 'Salary setup via Finance',
-        },
-        'PUT',
-      );
+      const doSave = async (m: string) => {
+        await adapter.save(
+          `/staff/${row.staff.id}/employment`,
+          {
+            revision: row.employment?.revision ?? 0,
+            attendanceMode: row.attendanceMode,
+            endedOn: row.endedOn || '',
+            userId: row.userId || undefined,
+            effectiveMonth: m,
+            basic: basicPaise,
+            allowance: allowancePaise,
+            bonus: bonusPaise,
+            deduction: deductionPaise,
+            reason: bulkReason || 'Salary setup via Finance',
+          },
+          'PUT',
+        );
+      };
+
+      try {
+        await doSave(targetMonth);
+      } catch (saveErr: any) {
+        if (
+          saveErr?.code === 'HR_LOCKED' ||
+          saveErr?.message?.includes('approved payroll') ||
+          saveErr?.message?.includes('HR_LOCKED')
+        ) {
+          targetMonth = getNextMonth(targetMonth);
+          await doSave(targetMonth);
+        } else {
+          throw saveErr;
+        }
+      }
 
       if (basicPaise > 0) {
         try {
           await adapter.save(`/staff/${row.staff.id}/payroll`, {
-            month,
+            month: targetMonth,
             revision: 0,
             adjustment: 0,
             advanceRecovery: 0,
@@ -276,7 +313,12 @@ export default function SalarySetupWorkspace({
         },
       }));
 
-      notify(`Salary setup saved for ${row.staff.name}`);
+      if (targetMonth > currentMonth) {
+        notify(`Salary saved! Since ${currentMonth} payroll is already approved, changes apply starting from ${targetMonth}.`);
+      } else {
+        notify(`Salary setup saved for ${row.staff.name}`);
+      }
+      void loadData();
     } catch (err: any) {
       notify(err?.message || `Failed to save salary for ${row.staff.name}`);
     } finally {
@@ -302,29 +344,48 @@ export default function SalarySetupWorkspace({
         const basicPaise = toPaise(row.basic);
         const allowancePaise = toPaise(row.allowance);
         const bonusPaise = toPaise(row.bonus);
-        const deductionPaise = toPaise(row.deduction);
+        const deductionPaise = 0;
 
-        await adapter.save(
-          `/staff/${row.staff.id}/employment`,
-          {
-            revision: row.employment?.revision ?? 0,
-            attendanceMode: row.attendanceMode,
-            endedOn: row.endedOn || '',
-            userId: row.userId || undefined,
-            effectiveMonth: month,
-            basic: basicPaise,
-            allowance: allowancePaise,
-            bonus: bonusPaise,
-            deduction: deductionPaise,
-            reason: bulkReason || 'Bulk salary setup via Finance',
-          },
-          'PUT',
-        );
+        let targetMonth = getTargetMonthForStaff(row.staff.id);
+
+        const doSave = async (m: string) => {
+          await adapter.save(
+            `/staff/${row.staff.id}/employment`,
+            {
+              revision: row.employment?.revision ?? 0,
+              attendanceMode: row.attendanceMode,
+              endedOn: row.endedOn || '',
+              userId: row.userId || undefined,
+              effectiveMonth: m,
+              basic: basicPaise,
+              allowance: allowancePaise,
+              bonus: bonusPaise,
+              deduction: deductionPaise,
+              reason: bulkReason || 'Bulk salary setup via Finance',
+            },
+            'PUT',
+          );
+        };
+
+        try {
+          await doSave(targetMonth);
+        } catch (saveErr: any) {
+          if (
+            saveErr?.code === 'HR_LOCKED' ||
+            saveErr?.message?.includes('approved payroll') ||
+            saveErr?.message?.includes('HR_LOCKED')
+          ) {
+            targetMonth = getNextMonth(targetMonth);
+            await doSave(targetMonth);
+          } else {
+            throw saveErr;
+          }
+        }
 
         if (basicPaise > 0) {
           try {
             await adapter.save(`/staff/${row.staff.id}/payroll`, {
-              month,
+              month: targetMonth,
               revision: 0,
               adjustment: 0,
               advanceRecovery: 0,
@@ -360,90 +421,63 @@ export default function SalarySetupWorkspace({
 
   return (
     <div className="salary-setup-workspace">
-      {/* Overview Stat Banner */}
-      <div className="salary-setup-top-bar">
-        <div className="salary-setup-headings">
-          <h2>Staff Salary Setup</h2>
-          <p>
-            Configure monthly basic salary, allowances, deductions and attendance rules for your school staff in individual or bulk mode.
-          </p>
-        </div>
-        <div className="salary-setup-badge-row">
-          <Badge tone={configuredCount === totalStaffCount ? 'present' : 'amber'}>
-            {configuredCount} of {totalStaffCount} Configured
-          </Badge>
-          {dirtyCount > 0 && (
-            <Badge tone="blue">
-              {dirtyCount} Unsaved Changes
-            </Badge>
-          )}
-        </div>
-      </div>
+      <Panel
+        className="salary-setup-panel"
+        title="Staff Salary Setup"
+        subtitle="Configure monthly basic salary, allowances and attendance rules for your staff."
+        action={
+          <div className="salary-setup-header-actions">
+            <div className="salary-setup-header-filters">
+              <div className="salary-header-filter salary-header-search">
+                <span>Search staff</span>
+                <SearchInput
+                  value={search}
+                  onChange={(v) => setSearch(v)}
+                  placeholder="Name, code, designation…"
+                />
+              </div>
 
-      {/* Filter and Action Toolbar */}
-      <Panel className="salary-setup-toolbar-panel">
-        <div className="salary-setup-toolbar">
-          <label className="salary-setup-filter">
-            <span>Effective Month</span>
-            <PickerInput
-              type="month"
-              aria-label="Effective Month"
-              value={month}
-              onChange={(e) => {
-                if (e.target.value) setMonth(e.target.value);
-              }}
-            />
-          </label>
+              <label className="field salary-header-filter salary-filter-dept">
+                <span>Department</span>
+                <select
+                  value={departmentFilter}
+                  onChange={(e) => setDepartmentFilter(e.target.value)}
+                  aria-label="Filter by department"
+                >
+                  <option value="">All departments</option>
+                  {departments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          <label className="salary-setup-filter">
-            <span>Department</span>
-            <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              aria-label="Filter by department"
-            >
-              <option value="">All departments</option>
-              {departments.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
-          </label>
+              <label className="field salary-header-filter salary-filter-status">
+                <span>Status</span>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+                  aria-label="Filter by status"
+                >
+                  <option value="all">All Staff ({totalStaffCount})</option>
+                  <option value="configured">Configured ({configuredCount})</option>
+                  <option value="pending">Pending Setup ({totalStaffCount - configuredCount})</option>
+                </select>
+              </label>
+            </div>
 
-          <label className="salary-setup-filter">
-            <span>Status</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              aria-label="Filter by status"
-            >
-              <option value="all">All Staff ({totalStaffCount})</option>
-              <option value="configured">Configured ({configuredCount})</option>
-              <option value="pending">Pending Setup ({totalStaffCount - configuredCount})</option>
-            </select>
-          </label>
-
-          <div className="salary-setup-search-wrap">
-            <Search size={16} className="search-icon" />
-            <input
-              type="search"
-              placeholder="Search by name, code, designation…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search staff"
-            />
-          </div>
-
-          <div className="salary-setup-actions-wrap">
             {dirtyCount > 0 && (
-              <Button onClick={saveAllDirtyRows} disabled={savingAll}>
-                <AppIcon name="save" size={15} />
-                {savingAll ? 'Saving All...' : `Save All Changes (${dirtyCount})`}
-              </Button>
+              <div className="salary-setup-header-save">
+                <Button onClick={saveAllDirtyRows} disabled={savingAll}>
+                  <AppIcon name="save" size={15} />
+                  {savingAll ? 'Saving...' : `Save (${dirtyCount})`}
+                </Button>
+              </div>
             )}
           </div>
-        </div>
+        }
+      >
 
         {/* Quick Bulk Fill Box - Triggers only when more than 1 staff is selected */}
         {selectedIds.length > 1 && (
@@ -493,17 +527,6 @@ export default function SalarySetupWorkspace({
               </label>
 
               <label>
-                <span>Regular Deduction (₹)</span>
-                <input
-                  type="number"
-                  placeholder="e.g. 500"
-                  value={bulkDeduction}
-                  onChange={(e) => setBulkDeduction(e.target.value)}
-                  min={0}
-                />
-              </label>
-
-              <label>
                 <span>Attendance Mode</span>
                 <select
                   value={bulkAttendanceMode}
@@ -536,10 +559,8 @@ export default function SalarySetupWorkspace({
             </div>
           </div>
         )}
-      </Panel>
 
-      {/* Main Staff Salary Table */}
-      <Panel>
+        {/* Main Staff Salary Table */}
         <LoadingOverlay loading={loading} label="Loading staff salary structures…">
           {error ? (
             <div className="salary-setup-error">
@@ -555,9 +576,45 @@ export default function SalarySetupWorkspace({
               description="No staff members match the selected department, status or search filters."
             />
           ) : (
-            <div className="table-wrap salary-setup-table-wrap">
+            <div className="table-wrap salary-setup-table-wrap" ref={tableWrapRef}>
+              <FloatingStickyTableHeader
+                tableWrapRef={tableWrapRef}
+                theadRef={theadRef}
+              >
+                {(colWidths) => (
+                  <thead>
+                    <tr>
+                      <th style={{ width: colWidths[0] ?? 44 }}>
+                        <input
+                          type="checkbox"
+                          aria-label="Select all visible staff"
+                          checked={
+                            visibleRows.length > 0 &&
+                            visibleRows.every((r) => selectedIds.includes(r.staff.id))
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds(visibleRows.map((r) => r.staff.id));
+                            } else {
+                              setSelectedIds([]);
+                            }
+                          }}
+                        />
+                      </th>
+                      <th style={{ width: colWidths[1] ?? 220 }}>Staff Member</th>
+                      <th style={{ width: colWidths[2] ?? 140 }}>Basic Salary (₹)</th>
+                      <th style={{ width: colWidths[3] ?? 130 }}>Allowances (₹)</th>
+                      <th style={{ width: colWidths[4] ?? 120 }}>Bonus (₹)</th>
+                      <th style={{ width: colWidths[5] ?? 150 }}>Net Salary</th>
+                      <th style={{ width: colWidths[6] ?? 180 }}>Attendance Mode</th>
+                      <th style={{ width: colWidths[7] ?? 110 }}>Status</th>
+                      <th style={{ width: colWidths[8] ?? 160, textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                )}
+              </FloatingStickyTableHeader>
               <table className="salary-setup-table">
-                <thead>
+                <thead ref={theadRef}>
                   <tr>
                     <th style={{ width: 44 }}>
                       <input
@@ -580,7 +637,6 @@ export default function SalarySetupWorkspace({
                     <th style={{ width: 140 }}>Basic Salary (₹)</th>
                     <th style={{ width: 130 }}>Allowances (₹)</th>
                     <th style={{ width: 120 }}>Bonus (₹)</th>
-                    <th style={{ width: 130 }}>Deductions (₹)</th>
                     <th style={{ width: 150 }}>Net Salary</th>
                     <th style={{ width: 180 }}>Attendance Mode</th>
                     <th style={{ width: 110 }}>Status</th>
@@ -592,8 +648,7 @@ export default function SalarySetupWorkspace({
                     const basicPaise = toPaise(row.basic);
                     const allowancePaise = toPaise(row.allowance);
                     const bonusPaise = toPaise(row.bonus);
-                    const deductionPaise = toPaise(row.deduction);
-                    const netPaise = Math.max(0, basicPaise + allowancePaise + bonusPaise - deductionPaise);
+                    const netPaise = Math.max(0, basicPaise + allowancePaise + bonusPaise);
                     const isSelected = selectedIds.includes(row.staff.id);
                     const isSavingThis = savingId === row.staff.id;
 
@@ -622,7 +677,6 @@ export default function SalarySetupWorkspace({
                             <div className="salary-staff-info">
                               <strong>{row.staff.name}</strong>
                               <span className="staff-meta">
-                                {row.staff.code ? `#${row.staff.code} · ` : ''}
                                 {row.staff.designation || (row.staff.teaching ? 'Teacher' : 'Staff')}
                               </span>
                               {row.staff.department && (
@@ -662,17 +716,6 @@ export default function SalarySetupWorkspace({
                             value={row.bonus}
                             onChange={(e) => updateRowField(row.staff.id, 'bonus', e.target.value)}
                             aria-label={`Bonus for ${row.staff.name}`}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="salary-inline-input"
-                            placeholder="0"
-                            min={0}
-                            value={row.deduction}
-                            onChange={(e) => updateRowField(row.staff.id, 'deduction', e.target.value)}
-                            aria-label={`Deductions for ${row.staff.name}`}
                           />
                         </td>
                         <td>
@@ -737,7 +780,7 @@ export default function SalarySetupWorkspace({
           adapter={adapter}
           staff={editingStaff}
           employment={rowsById[editingStaff.id]?.employment}
-          month={month}
+          month={getTargetMonthForStaff(editingStaff.id)}
           canLink={permissions.includes('staff.manage')}
           close={() => setEditingStaff(null)}
           saved={() => {

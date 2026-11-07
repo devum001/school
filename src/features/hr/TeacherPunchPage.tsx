@@ -395,7 +395,11 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
               </div>
 
               <p className="punch-loc-subtext">
-                {feedback ? feedback.message : 'Check your location before you punch.'}
+                {feedback
+                  ? feedback.message
+                  : error && (error.toLowerCase().includes('location') || error.toLowerCase().includes('locate'))
+                    ? 'Please turn on location on your device.'
+                    : 'Check your location before you punch.'}
               </p>
             </div>
           </section>
@@ -478,11 +482,19 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
 
       {error && (
         <div role="alert" className="punch-error">
-          <strong>We couldn’t confirm this action</strong>
-          <p>{error}</p>
-          <span>
-            Your attendance has not been confirmed. Check the status above before retrying.
-          </span>
+          <strong>
+            {error.toLowerCase().includes('location') || error.toLowerCase().includes('locate')
+              ? 'Location is turned off'
+              : 'We couldn’t confirm this action'}
+          </strong>
+          <p>
+            {error.toLowerCase().includes('location') || error.toLowerCase().includes('locate')
+              ? 'Please turn on location on your device to continue.'
+              : error}
+          </p>
+          {!error.toLowerCase().includes('location') && !error.toLowerCase().includes('locate') && (
+            <span>Your attendance has not been confirmed. Check the status above before retrying.</span>
+          )}
         </div>
       )}
     </div>
