@@ -262,6 +262,7 @@ export function PaySalaryDialog({
     <Modal
       open
       wide
+      className="pay-salary-modal"
       title={`Pay Salary · ${staff.name}`}
       description={`Monthly salary disbursement for ${month} · Department: ${staff.department || 'General'}`}
       onClose={close}
@@ -293,9 +294,6 @@ export function PaySalaryDialog({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              borderColor: attendanceSummary.issueDates.length > 0 ? '#fcd34d' : undefined,
-              background: activeTab === 'attendance' ? undefined : (attendanceSummary.issueDates.length > 0 ? '#fefce8' : undefined),
-              color: activeTab === 'attendance' ? undefined : (attendanceSummary.issueDates.length > 0 ? '#92400e' : undefined),
             }}
           >
             <Calendar size={16} />
@@ -303,8 +301,8 @@ export function PaySalaryDialog({
             {attendanceSummary.issueDates.length > 0 && (
               <span
                 style={{
-                  background: '#f59e0b',
-                  color: '#ffffff',
+                  background: activeTab === 'attendance' ? '#ffffff' : '#0f766e',
+                  color: activeTab === 'attendance' ? '#0f766e' : '#ffffff',
                   fontSize: '11px',
                   borderRadius: '10px',
                   padding: '1px 6px',
@@ -542,17 +540,18 @@ export function PaySalaryDialog({
               </div>
             )}
 
-            {/* Interactive Attendance Banner with Dates & Calendar View Button */}
+            {/* Interactive Attendance Banner with Dates */}
             {attendanceSummary.issueDates.length > 0 ? (
               <div
                 style={{
-                  background: '#fefce8',
-                  border: '1px solid #fef08a',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   padding: '12px 16px',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '10px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                 }}
               >
                 <div
@@ -565,15 +564,15 @@ export function PaySalaryDialog({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Info size={20} style={{ color: '#ca8a04', flexShrink: 0 }} />
+                    <Info size={20} style={{ color: '#64748b', flexShrink: 0 }} />
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '13px', color: '#854d0e' }}>
+                      <div style={{ fontWeight: 600, fontSize: '13px', color: '#1e293b' }}>
                         {attendanceSummary.issueDates.length} attendance issue(s) recorded for this month
                       </div>
-                      <div style={{ fontSize: '12px', color: '#a16207', marginTop: '2px' }}>
-                        Present: <strong>{attendanceSummary.present} days</strong> · Absent/Unmarked:{' '}
-                        <strong>{attendanceSummary.absent + attendanceSummary.unmarked} days</strong> · Leaves:{' '}
-                        <strong>{attendanceSummary.leave} days</strong>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        Present: <strong style={{ color: '#1e293b' }}>{attendanceSummary.present} days</strong> · Absent/Unmarked:{' '}
+                        <strong style={{ color: '#1e293b' }}>{attendanceSummary.absent + attendanceSummary.unmarked} days</strong> · Leaves:{' '}
+                        <strong style={{ color: '#1e293b' }}>{attendanceSummary.leave} days</strong>
                       </div>
                     </div>
                   </div>
@@ -586,9 +585,9 @@ export function PaySalaryDialog({
                         fontSize: '12px',
                         padding: '4px 10px',
                         height: '28px',
-                        background: '#ffffff',
-                        borderColor: '#fef08a',
-                        color: '#854d0e',
+                        background: '#f8fafc',
+                        borderColor: '#cbd5e1',
+                        color: '#334155',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
@@ -604,25 +603,6 @@ export function PaySalaryDialog({
                         </>
                       )}
                     </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setActiveTab('attendance')}
-                      style={{
-                        fontSize: '12px',
-                        padding: '4px 12px',
-                        height: '28px',
-                        background: '#fef9c3',
-                        borderColor: '#fde047',
-                        color: '#854d0e',
-                        fontWeight: 600,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Calendar size={14} /> View Calendar
-                    </Button>
                   </div>
                 </div>
 
@@ -631,7 +611,7 @@ export function PaySalaryDialog({
                   <div
                     style={{
                       paddingTop: '8px',
-                      borderTop: '1px solid #fef08a',
+                      borderTop: '1px solid #f1f5f9',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '6px',
@@ -647,17 +627,17 @@ export function PaySalaryDialog({
                           justifyContent: 'space-between',
                           alignItems: 'center',
                           fontSize: '12px',
-                          color: '#713f12',
-                          background: '#fffbeb',
+                          color: '#1e293b',
+                          background: '#f8fafc',
                           padding: '6px 10px',
                           borderRadius: '6px',
-                          border: '1px solid #fef3c7',
+                          border: '1px solid #e2e8f0',
                         }}
                       >
                         <span>
                           📅 <strong>{formatCalendarDate(issue.date)}</strong>
                         </span>
-                        <span style={{ color: '#b45309', fontWeight: 500 }}>{issue.reason}</span>
+                        <span style={{ color: '#64748b', fontWeight: 500 }}>{issue.reason}</span>
                       </div>
                     ))}
                   </div>
@@ -666,8 +646,8 @@ export function PaySalaryDialog({
             ) : (
               <div
                 style={{
-                  background: '#f0fdf4',
-                  border: '1px solid #bbf7d0',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   padding: '10px 14px',
                   fontSize: '12px',
@@ -680,21 +660,6 @@ export function PaySalaryDialog({
                 <span>
                   All attendance records clear for {month}: {attendanceSummary.present} days present.
                 </span>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setActiveTab('attendance')}
-                  style={{
-                    fontSize: '11px',
-                    padding: '2px 8px',
-                    height: '24px',
-                    background: '#ffffff',
-                    borderColor: '#bbf7d0',
-                    color: '#166534',
-                  }}
-                >
-                  View Calendar
-                </Button>
               </div>
             )}
 
@@ -718,7 +683,7 @@ export function PaySalaryDialog({
                 onChange={(val) => setMethod(val as 'Bank' | 'UPI' | 'Cash' | 'Cheque')}
               />
               <TextField
-                label="Reference (UTR / Cheque no / Note)"
+                label="Reference (UTR / Cheque no / Note - Optional)"
                 required={false}
                 value={reference}
                 onChange={(val) => setReference(val)}
@@ -818,7 +783,7 @@ export function BulkPaySalaryDialog({
   const totalPending = pendingStaff.reduce((s, p) => s + p.pendingAmount, 0);
   const [method, setMethod] = useState<'Bank' | 'UPI' | 'Cash' | 'Cheque'>('Bank');
   const [date, setDate] = useState(data.today);
-  const [reference, setReference] = useState(`Bulk salary ${month}`);
+  const [reference, setReference] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [error, setError] = useState('');
@@ -964,7 +929,7 @@ export function BulkPaySalaryDialog({
             onChange={(val) => setMethod(val as 'Bank' | 'UPI' | 'Cash' | 'Cheque')}
           />
           <TextField
-            label="Payment reference"
+            label="Reference (UTR / Cheque no / Note - Optional)"
             required={false}
             value={reference}
             onChange={(val) => setReference(val)}

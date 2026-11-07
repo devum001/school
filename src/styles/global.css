@@ -2290,6 +2290,10 @@ tfoot td {
 .modal.wide {
   width: min(800px, calc(100vw - 32px));
 }
+.modal.pay-salary-modal {
+  width: min(1080px, calc(100vw - 32px));
+  max-width: 1080px;
+}
 .modal-heading {
   display: flex;
   align-items: flex-start;

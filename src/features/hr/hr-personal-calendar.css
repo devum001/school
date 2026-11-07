@@ -406,8 +406,14 @@
   align-items: start;
 }
 
+.pay-salary-modal .hr-personal-calendar-layout {
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 16px;
+}
+
 @media (max-width: 960px) {
-  .hr-personal-calendar-layout {
+  .hr-personal-calendar-layout,
+  .pay-salary-modal .hr-personal-calendar-layout {
     grid-template-columns: 1fr;
   }
 }
