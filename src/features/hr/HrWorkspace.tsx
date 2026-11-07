@@ -43,7 +43,7 @@ import {
 import EmploymentDialog from './EmploymentDialog';
 import HrSettingsPanel from './HrSettingsPanel';
 import { AttendanceDialog, LeaveDialog, PaymentDialog, PayrollDialog, Payslip } from './HrActions';
-import { PaySalaryDialog, BulkPaySalaryDialog } from './PaySalaryDialog';
+import { PaySalaryDialog, BulkPaySalaryDialog, getStaffAttendanceSummary } from './PaySalaryDialog';
 import { HrForm } from './HrForms';
 import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import './hr.css';
@@ -934,6 +934,7 @@ function HrContent({
                   const isPaid = pending === 0 && net > 0;
                   const isPartiallyPaid = paid > 0 && pending > 0;
                   const isOverdue = Boolean(item && item.dueDate < data.today && pending > 0);
+                  const attSummary = getStaffAttendanceSummary(p.id, month, data.today, data, item);
 
                   const statusTone = isPaid ? 'green' : isPartiallyPaid ? 'amber' : isOverdue ? 'red' : 'amber';
                   const statusLabel = isPaid ? 'Paid' : isPartiallyPaid ? 'Partially paid' : isOverdue ? 'Overdue' : 'Pending';
@@ -975,6 +976,30 @@ function HrContent({
                             </small>
                           </div>
                         </div>
+                        <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setAction({ kind: 'calendar', staff: p })}
+                            title="Click to view monthly attendance calendar"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: 0,
+                              fontSize: '11px',
+                              color: attSummary.issueDates.length > 0 ? '#b45309' : '#0f766e',
+                              cursor: 'pointer',
+                              textDecoration: 'underline',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                            }}
+                          >
+                            📅 {attSummary.present} Present
+                            {attSummary.issueDates.length > 0 && (
+                              <span style={{ fontWeight: 600 }}> ({attSummary.issueDates.length} issues)</span>
+                            )}
+                          </button>
+                        </div>
                         {data.advanceBalances?.find((a) => a.staffId === p.id) && (
                           <small style={{ color: '#2563eb', fontWeight: 500 }}>
                             Advance balance: {rupees(data.advanceBalances.find((a) => a.staffId === p.id)!.balance)}
@@ -1007,6 +1032,13 @@ function HrContent({
                               Payslip
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            onClick={() => setAction({ kind: 'calendar', staff: p })}
+                            title="View monthly attendance calendar"
+                          >
+                            Attendance
+                          </Button>
                           {pending > 0 && (
                             <Button
                               variant="ghost"
