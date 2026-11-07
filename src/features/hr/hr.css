@@ -640,3 +640,125 @@
   color: var(--muted, #64748b);
   margin: 16px 22px 8px;
 }
+
+
+/* Compact Actions & Kebab Menu */
+.hr-actions-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.hr-pay-btn {
+  background: #1b4332;
+  color: #ffffff;
+  padding: 6px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hr-pay-btn:hover {
+  background: #143527;
+}
+.hr-payslip-btn {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hr-payslip-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+.hr-more-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.hr-more-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+.hr-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #1e293b;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.1s ease;
+}
+.hr-menu-item:hover {
+  background: #f1f5f9;
+}
+.hr-pay-all-btn {
+  background: #1b4332 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 16px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background 0.15s ease;
+}
+.hr-pay-all-btn:hover:not(:disabled) {
+  background: #143527 !important;
+}
+.hr-pay-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.hr-content table thead th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+.hr-content table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}

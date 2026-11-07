@@ -18,7 +18,7 @@ import {
   AppIcon,
 } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
-import { Calendar, CalendarDays, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, CalendarDays, AlertCircle, ChevronLeft, ChevronRight, MoreHorizontal, Wallet, FileText } from 'lucide-react';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import type { IconName } from '../../components/ui/Primitives';
 const HR_NAV_ICONS: Record<string, IconName> = {
@@ -47,6 +47,18 @@ import { PaySalaryDialog, BulkPaySalaryDialog, getStaffAttendanceSummary, Attend
 import { HrForm } from './HrForms';
 import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import './hr.css';
+
+function formatDueDate(isoDate?: string | null): string {
+  if (!isoDate) return '—';
+  const parts = isoDate.split('-');
+  if (parts.length < 3) return isoDate;
+  const [year, m, d] = parts;
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthIdx = Number(m) - 1;
+  const monthName = monthNames[monthIdx] || m;
+  return `${d.padStart(2, '0')} ${monthName} ${year}`;
+}
+
 export default function LiveHrWorkspace({
   section,
   settings = false,
@@ -369,6 +381,20 @@ function HrContent({
   reload: () => void;
   changeMonth: (month: string) => void;
 }) {
+  const [openMenuStaffId, setOpenMenuStaffId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuStaffId(null);
+      }
+    }
+    if (openMenuStaffId) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [openMenuStaffId]);
   const [params, setParams] = useSearchParams();
   const [leaveStatusTab, setLeaveStatusTab] = useState<'pending' | 'approved'>('pending');
   const initialStaff = data.staff.find((p) => p.id === params.get('setupSalary'));
@@ -672,7 +698,7 @@ function HrContent({
                   : selfView === 'profile'
                     ? 'Your personal and school employment details.'
                     : 'Record your attendance and review your monthly attendance calendar.'
-            : tab === 'salary' ? 'Review monthly salary breakdown, disburse payments in 1 click, and issue payslips.'
+            : tab === 'salary' ? 'Review monthly salary breakdown and payments.'
               : tab === 'attendance'
                 ? 'Punches update attendance automatically. Review correction requests and choose any salary impact.'
                 : 'Review requests and decide whether approved leave is paid or unpaid.'
@@ -774,18 +800,13 @@ function HrContent({
                 </select>
               </label>
               {tab === 'salary' && pendingStaffList.length > 0 && can('payroll.pay') && (
-                <Button
-                  variant="primary"
+                <button
+                  type="button"
+                  className="hr-pay-all-btn"
                   onClick={() => setAction({ kind: 'bulkPay' })}
-                  style={{
-                    alignSelf: 'flex-end',
-                    marginLeft: 'auto',
-                    background: '#0f766e',
-                    borderColor: '#0f766e',
-                  }}
                 >
                   Pay All Pending ({pendingStaffList.length})
-                </Button>
+                </button>
               )}
               {tab === 'leave' && (
                 <label className="field hr-inline-filter">
@@ -959,12 +980,11 @@ function HrContent({
             <table>
               <thead>
                 <tr>
-                  <th>Staff member</th>
-                  <th>Department</th>
-                  <th className="currency-cell">Net salary</th>
-                  <th className="currency-cell">Paid / outstanding</th>
-                  <th>Status / due date</th>
-                  <th>Actions</th>
+                  <th>STAFF MEMBER</th>
+                  <th>NET SALARY</th>
+                  <th>STATUS</th>
+                  <th>DUE DATE</th>
+                  <th>ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
@@ -982,6 +1002,9 @@ function HrContent({
 
                   const statusTone = isPaid ? 'green' : isPartiallyPaid ? 'amber' : isOverdue ? 'red' : 'amber';
                   const statusLabel = isPaid ? 'Paid' : isPartiallyPaid ? 'Partially paid' : isOverdue ? 'Overdue' : 'Pending';
+
+                  const advanceBalance = data.advanceBalances?.find((a) => a.staffId === p.id)?.balance ?? 0;
+                  const rowDueDate = item?.dueDate ? formatDueDate(item.dueDate) : formatDueDate(`${month}-05`);
 
                   const effectiveItem: HrPayroll = item ?? {
                     id: `draft-${p.id}`,
@@ -1014,91 +1037,161 @@ function HrContent({
                         <div className="hr-person">
                           <Avatar name={p.name} />
                           <div>
-                            <strong>{titleCase(p.name)}</strong>
-                            <small>
-                              {[titleCase(p.department || ''), titleCase(p.designation || '')].filter(Boolean).join(' · ')}
-                            </small>
+                            <strong style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>{titleCase(p.name)}</strong>
+                            <div style={{ fontSize: '13px', color: '#64748b', marginTop: '1px' }}>
+                              {[titleCase(p.department || ''), titleCase(p.designation || '')].filter(Boolean).join(' • ')}
+                            </div>
+                            {advanceBalance > 0 && (
+                              <div style={{ color: '#475569', fontSize: '12px', marginTop: '2px' }}>
+                                • Advance: {rupees(advanceBalance)}
+                              </div>
+                            )}
                           </div>
                         </div>
-                        {data.advanceBalances?.find((a) => a.staffId === p.id) && (
-                          <small style={{ color: '#2563eb', fontWeight: 500, display: 'block', marginTop: '3px' }}>
-                            Advance balance: {rupees(data.advanceBalances.find((a) => a.staffId === p.id)!.balance)}
-                          </small>
-                        )}
                       </td>
-                      <td>{titleCase(p.department || '') || '—'}</td>
-                      <td className="currency-cell" style={{ fontWeight: 600 }}>{rupees(net)}</td>
-                      <td className="currency-cell">
-                        <span style={{ color: paid > 0 ? '#15803d' : '#64748b' }}>{rupees(paid)}</span> / <span style={{ color: pending > 0 ? '#b45309' : '#15803d', fontWeight: pending > 0 ? 600 : 400 }}>{rupees(pending)}</span>
+                      <td style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>
+                        {rupees(net)}
                       </td>
                       <td>
-                        <Badge tone={statusTone}>{statusLabel}</Badge>
-                        <small>{item?.dueDate ? formatCalendarDate(item.dueDate) : `Due ${month}-05`}</small>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              background:
+                                statusTone === 'red'
+                                  ? '#fee2e2'
+                                  : statusTone === 'green'
+                                  ? '#dcfce7'
+                                  : '#fef3c7',
+                              color:
+                                statusTone === 'red'
+                                  ? '#b91c1c'
+                                  : statusTone === 'green'
+                                  ? '#15803d'
+                                  : '#b45309',
+                            }}
+                          >
+                            {statusLabel}
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#64748b' }}>
+                            {rowDueDate}
+                          </span>
+                        </div>
                       </td>
                       <td>
-                        <div className="hr-actions">
+                        <span style={{ fontSize: '13px', color: '#334155' }}>
+                          {rowDueDate}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="hr-actions-compact">
                           {pending > 0 && can('payroll.pay') ? (
-                            <Button
-                              variant="primary"
+                            <button
+                              type="button"
+                              className="hr-pay-btn"
                               onClick={() => setAction({ kind: 'paySalary', staff: p, item })}
                             >
-                              {paid > 0 ? `Pay remaining (${rupees(pending)})` : 'Pay Salary'}
-                            </Button>
+                              Pay
+                            </button>
                           ) : (
-                            <Button
-                              variant="secondary"
+                            <button
+                              type="button"
+                              className="hr-payslip-btn"
                               onClick={() => setAction({ kind: 'slip', item: effectiveItem })}
                             >
                               Payslip
-                            </Button>
+                            </button>
                           )}
-                          <div className="hr-action-attendance">
-                            <Button
-                              variant="ghost"
-                              onClick={() => setAction({ kind: 'calendar', staff: p })}
-                              title="View monthly attendance calendar"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                border: '1px solid #cbd5e1',
-                                background: '#ffffff',
-                                color: '#0f766e',
-                                fontWeight: 500,
-                              }}
-                            >
-                              <Calendar size={13} />
-                              <span>Attendance</span>
-                            </Button>
+                          <div style={{ position: 'relative', display: 'inline-block' }}>
                             <button
                               type="button"
-                              className="hr-attendance-sublink"
-                              onClick={() => setAction({ kind: 'calendar', staff: p })}
-                              title="Click to view monthly attendance issues"
-                              style={{
-                                color: attSummary.issueDates.length > 0 ? '#b45309' : '#15803d',
-                                fontWeight: attSummary.issueDates.length > 0 ? 600 : 500,
+                              className="hr-more-btn"
+                              title="More options"
+                              aria-label="More options"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuStaffId(openMenuStaffId === p.id ? null : p.id);
                               }}
                             >
-                              {attSummary.present} Present {attSummary.issueDates.length > 0 ? `(${attSummary.issueDates.length} issues)` : ''}
+                              <MoreHorizontal size={18} />
                             </button>
+                            {openMenuStaffId === p.id && (
+                              <div
+                                ref={menuRef}
+                                className="hr-kebab-menu"
+                                style={{
+                                  position: 'absolute',
+                                  right: 0,
+                                  top: 'calc(100% + 4px)',
+                                  background: '#ffffff',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                                  zIndex: 50,
+                                  minWidth: '175px',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px',
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  className="hr-menu-item"
+                                  onClick={() => {
+                                    setOpenMenuStaffId(null);
+                                    setAction({ kind: 'calendar', staff: p });
+                                  }}
+                                >
+                                  <Calendar size={14} style={{ color: '#0f766e' }} />
+                                  <span>Attendance ({attSummary.present}d)</span>
+                                </button>
+                                {can('payroll.pay') && (
+                                  <button
+                                    type="button"
+                                    className="hr-menu-item"
+                                    onClick={() => {
+                                      setOpenMenuStaffId(null);
+                                      setAction({ kind: 'advance', staff: p });
+                                    }}
+                                  >
+                                    <Wallet size={14} style={{ color: '#2563eb' }} />
+                                    <span>Give advance</span>
+                                  </button>
+                                )}
+                                {can('payroll.manage') && (
+                                  <button
+                                    type="button"
+                                    className="hr-menu-item"
+                                    onClick={() => {
+                                      setOpenMenuStaffId(null);
+                                      setAction({ kind: 'payroll', staff: p, item });
+                                    }}
+                                  >
+                                    <FileText size={14} style={{ color: '#64748b' }} />
+                                    <span>Adjustments</span>
+                                  </button>
+                                )}
+                                {pending > 0 && (
+                                  <button
+                                    type="button"
+                                    className="hr-menu-item"
+                                    onClick={() => {
+                                      setOpenMenuStaffId(null);
+                                      setAction({ kind: 'slip', item: effectiveItem });
+                                    }}
+                                  >
+                                    <FileText size={14} style={{ color: '#64748b' }} />
+                                    <span>View Payslip</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          {can('payroll.pay') && (
-                            <Button
-                              variant="ghost"
-                              onClick={() => setAction({ kind: 'advance', staff: p })}
-                            >
-                              Give advance
-                            </Button>
-                          )}
-                          {can('payroll.manage') && (
-                            <Button
-                              variant="ghost"
-                              onClick={() => setAction({ kind: 'payroll', staff: p, item })}
-                            >
-                              Adjustments
-                            </Button>
-                          )}
                         </div>
                       </td>
                     </tr>
