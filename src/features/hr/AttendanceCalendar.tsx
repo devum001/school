@@ -57,6 +57,7 @@ export default function AttendanceCalendar({
   onMonthChange,
   onRequestLeave,
   ars,
+  hideMonthNavigation = false,
 }: {
   data: HrWorkspace;
   month: string;
@@ -64,6 +65,7 @@ export default function AttendanceCalendar({
   onMonthChange?: (month: string) => void;
   onRequestLeave?: () => void;
   ars?: { adapter: HrAdapter; saved: () => void };
+  hideMonthNavigation?: boolean;
 }) {
   const [selected, setSelected] = useState(
     data.today.startsWith(month) ? data.today : `${month}-01`,
@@ -113,24 +115,26 @@ export default function AttendanceCalendar({
         <div className="hr-calendar-header">
           <div className="hr-calendar-month-heading">
             <h3>{monthFormatted}</h3>
-            <div className="hr-month-arrows">
-              <button
-                type="button"
-                className="hr-month-arrow-btn"
-                onClick={handlePrevMonth}
-                aria-label="Previous month"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <button
-                type="button"
-                className="hr-month-arrow-btn"
-                onClick={handleNextMonth}
-                aria-label="Next month"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+            {!hideMonthNavigation && onMonthChange && (
+              <div className="hr-month-arrows">
+                <button
+                  type="button"
+                  className="hr-month-arrow-btn"
+                  onClick={handlePrevMonth}
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="hr-month-arrow-btn"
+                  onClick={handleNextMonth}
+                  aria-label="Next month"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
           <div className="hr-calendar-actions">
             {onRequestLeave && (

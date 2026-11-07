@@ -976,32 +976,8 @@ function HrContent({
                             </small>
                           </div>
                         </div>
-                        <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <button
-                            type="button"
-                            onClick={() => setAction({ kind: 'calendar', staff: p })}
-                            title="Click to view monthly attendance calendar"
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              padding: 0,
-                              fontSize: '11px',
-                              color: attSummary.issueDates.length > 0 ? '#b45309' : '#0f766e',
-                              cursor: 'pointer',
-                              textDecoration: 'underline',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                            }}
-                          >
-                            📅 {attSummary.present} Present
-                            {attSummary.issueDates.length > 0 && (
-                              <span style={{ fontWeight: 600 }}> ({attSummary.issueDates.length} issues)</span>
-                            )}
-                          </button>
-                        </div>
                         {data.advanceBalances?.find((a) => a.staffId === p.id) && (
-                          <small style={{ color: '#2563eb', fontWeight: 500 }}>
+                          <small style={{ color: '#2563eb', fontWeight: 500, display: 'block', marginTop: '3px' }}>
                             Advance balance: {rupees(data.advanceBalances.find((a) => a.staffId === p.id)!.balance)}
                           </small>
                         )}
@@ -1032,13 +1008,34 @@ function HrContent({
                               Payslip
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            onClick={() => setAction({ kind: 'calendar', staff: p })}
-                            title="View monthly attendance calendar"
-                          >
-                            Attendance
-                          </Button>
+                          <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <Button
+                              variant="ghost"
+                              onClick={() => setAction({ kind: 'calendar', staff: p })}
+                              title="View monthly attendance calendar"
+                            >
+                              Attendance
+                            </Button>
+                            <button
+                              type="button"
+                              onClick={() => setAction({ kind: 'calendar', staff: p })}
+                              title="Click to view monthly attendance calendar"
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                padding: 0,
+                                fontSize: '11px',
+                                color: attSummary.issueDates.length > 0 ? '#b45309' : '#0f766e',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                textDecoration: 'underline',
+                                fontWeight: attSummary.issueDates.length > 0 ? 600 : 400,
+                              }}
+                            >
+                              {attSummary.present} Present
+                              {attSummary.issueDates.length > 0 && ` (${attSummary.issueDates.length} issues)`}
+                            </button>
+                          </div>
                           {pending > 0 && (
                             <Button
                               variant="ghost"
@@ -1283,19 +1280,23 @@ function HrContent({
         <Modal
           open
           wide
-          description="Monthly attendance and selected-day punch details."
+          className="pay-salary-modal"
+          description={`Monthly attendance and selected-day punch details for ${month}.`}
           title={`${action.staff.name} · Attendance`}
           onClose={close}
         >
-          <AttendanceCalendar
-            month={month}
-            label={action.staff.name}
-            data={{
-              ...data,
-              attendance: data.attendance.filter((d) => d.staffId === action.staff.id),
-              leaves: data.leaves.filter((l) => l.staffId === action.staff.id),
-            }}
-          />
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px', background: '#ffffff' }}>
+            <AttendanceCalendar
+              month={month}
+              label={action.staff.name}
+              hideMonthNavigation
+              data={{
+                ...data,
+                attendance: data.attendance.filter((d) => d.staffId === action.staff.id),
+                leaves: data.leaves.filter((l) => l.staffId === action.staff.id),
+              }}
+            />
+          </div>
         </Modal>
       )}
       {action?.kind === 'cancelLeave' && action.leave && (

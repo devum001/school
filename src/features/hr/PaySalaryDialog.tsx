@@ -426,6 +426,7 @@ export function PaySalaryDialog({
               <AttendanceCalendar
                 month={month}
                 label={staff.name}
+                hideMonthNavigation
                 data={{
                   ...data,
                   attendance: data.attendance.filter((d) => d.staffId === staff.id),
