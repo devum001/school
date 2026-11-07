@@ -235,10 +235,9 @@
 .hr-actions {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
-  max-width: 420px;
-  white-space: normal;
+  white-space: nowrap;
 }
 .hr-actions .button {
   white-space: nowrap;

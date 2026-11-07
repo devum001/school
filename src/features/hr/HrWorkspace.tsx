@@ -18,7 +18,7 @@ import {
   AppIcon,
 } from '../../components/ui/Primitives';
 import CalendarDateInput from '../../components/ui/CalendarDateInput';
-import { CalendarDays, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, CalendarDays, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import type { IconName } from '../../components/ui/Primitives';
 const HR_NAV_ICONS: Record<string, IconName> = {
@@ -228,7 +228,7 @@ export function HrWorkspace({
               onChange={setTab}
             />
           )}
-          {!hideMonthCorner && tab !== 'leave' && (
+          {!hideMonthCorner && tab !== 'leave' && tab !== 'salary' && (
             <div className="hr-month-controls" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <button
                 type="button"
@@ -705,6 +705,52 @@ function HrContent({
             ) : undefined
           ) : (
             <div className="hr-header-filters">
+              {tab === 'salary' && (
+                <label className="field hr-inline-filter" style={{ minWidth: '170px' }}>
+                  <span>Month</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      title="Previous month"
+                      aria-label="Previous month"
+                      style={{ padding: '6px 8px', height: '36px', minWidth: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={() => {
+                        const d = new Date(`${month}-01T12:00:00Z`);
+                        d.setUTCMonth(d.getUTCMonth() - 1);
+                        changeMonth(d.toISOString().slice(0, 7));
+                      }}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <label className="hr-month-corner" style={{ margin: 0 }}>
+                      <PickerInput
+                        type="month"
+                        required
+                        aria-label="Salary month"
+                        value={month}
+                        onChange={(e) => {
+                          if (e.target.value) changeMonth(e.target.value);
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      title="Next month"
+                      aria-label="Next month"
+                      style={{ padding: '6px 8px', height: '36px', minWidth: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={() => {
+                        const d = new Date(`${month}-01T12:00:00Z`);
+                        d.setUTCMonth(d.getUTCMonth() + 1);
+                        changeMonth(d.toISOString().slice(0, 7));
+                      }}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </label>
+              )}
               <label className="field hr-inline-filter">
                 <span>Department</span>
                 <select value={department} onChange={(e) => setDepartment(e.target.value)}>
@@ -972,7 +1018,7 @@ function HrContent({
                           <div>
                             <strong>{titleCase(p.name)}</strong>
                             <small>
-                              {[p.code, titleCase(p.designation || '')].filter(Boolean).join(' · ')}
+                              {[titleCase(p.department || ''), titleCase(p.designation || '')].filter(Boolean).join(' · ')}
                             </small>
                           </div>
                         </div>
@@ -1008,42 +1054,35 @@ function HrContent({
                               Payslip
                             </Button>
                           )}
-                          <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                            <Button
-                              variant="ghost"
-                              onClick={() => setAction({ kind: 'calendar', staff: p })}
-                              title="View monthly attendance calendar"
-                            >
-                              Attendance
-                            </Button>
-                            <button
-                              type="button"
-                              onClick={() => setAction({ kind: 'calendar', staff: p })}
-                              title="Click to view monthly attendance calendar"
+                          <Button
+                            variant="ghost"
+                            onClick={() => setAction({ kind: 'calendar', staff: p })}
+                            title="View monthly attendance calendar"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              border: '1px solid #e2e8f0',
+                              background: '#ffffff',
+                              color: '#0f766e',
+                              fontWeight: 500,
+                            }}
+                          >
+                            <Calendar size={13} />
+                            <span>Attendance</span>
+                            <span
                               style={{
-                                background: 'none',
-                                border: 'none',
-                                padding: 0,
+                                background: attSummary.issueDates.length > 0 ? '#fef3c7' : '#dcfce7',
+                                color: attSummary.issueDates.length > 0 ? '#b45309' : '#15803d',
                                 fontSize: '11px',
-                                color: attSummary.issueDates.length > 0 ? '#b45309' : '#0f766e',
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                                textDecoration: 'underline',
-                                fontWeight: attSummary.issueDates.length > 0 ? 600 : 400,
+                                fontWeight: 600,
+                                padding: '1px 6px',
+                                borderRadius: '10px',
                               }}
                             >
-                              {attSummary.present} Present
-                              {attSummary.issueDates.length > 0 && ` (${attSummary.issueDates.length} issues)`}
-                            </button>
-                          </div>
-                          {pending > 0 && (
-                            <Button
-                              variant="ghost"
-                              onClick={() => setAction({ kind: 'slip', item: effectiveItem })}
-                            >
-                              Payslip
-                            </Button>
-                          )}
+                              {attSummary.present}d{attSummary.issueDates.length > 0 ? ` · ${attSummary.issueDates.length} issues` : ''}
+                            </span>
+                          </Button>
                           {can('payroll.pay') && (
                             <Button
                               variant="ghost"
