@@ -12,28 +12,45 @@ import {
 import { useRemote } from '../live/useRemote';
 import LiveAccount from '../live/LiveAccount';
 import { SchoolForm } from './PlatformForms';
+import PlatformOverview from './PlatformOverview';
+import PlatformAnnouncements from './PlatformAnnouncements';
+import PlatformSystemHealth from './PlatformSystemHealth';
+import PlatformMasterTemplates from './PlatformMasterTemplates';
+import SubscriptionModal from './SubscriptionModal';
 
 type Confirmation = { title: string; description: string; action: () => Promise<unknown> };
 export default function PlatformDashboard() {
   const [params] = useSearchParams();
-  const tab = params.get('tab') || 'Schools';
+  const tab = params.get('tab') || 'Overview';
   return (
     <div className="school-settings">
       <PageHeading
         title="Platform administration"
-        description="Manage school registrations and platform activity. Each school manages its own operations."
+        description="Manage school registrations, subscriptions, broadcasts, and system health."
       />
       <SectionNavigation
         label="Platform sections"
         value={tab}
         items={[
+          { id: 'Overview', label: 'Overview', icon: 'overview', to: '/platform?tab=Overview' },
           { id: 'Schools', label: 'Schools', icon: 'overview-grid', to: '/platform?tab=Schools' },
+          { id: 'Announcements', label: 'Announcements', icon: 'notifications', to: '/platform?tab=Announcements' },
+          { id: 'System Health', label: 'System Health', icon: 'settings', to: '/platform?tab=System%20Health' },
+          { id: 'Master Templates', label: 'Master Templates', icon: 'templates', to: '/platform?tab=Master%20Templates' },
           { id: 'Activity', label: 'Activity', icon: 'security', to: '/platform?tab=Activity' },
           { id: 'My account', label: 'My account', icon: 'user-check', to: '/platform?tab=My%20account' },
         ]}
       />
-      {tab === 'Schools' ? (
+      {tab === 'Overview' ? (
+        <PlatformOverview />
+      ) : tab === 'Schools' ? (
         <PlatformSchools />
+      ) : tab === 'Announcements' ? (
+        <PlatformAnnouncements />
+      ) : tab === 'System Health' ? (
+        <PlatformSystemHealth />
+      ) : tab === 'Master Templates' ? (
+        <PlatformMasterTemplates />
       ) : tab === 'Activity' ? (
         <PlatformActivity />
       ) : tab === 'My account' ? (
@@ -42,7 +59,7 @@ export default function PlatformDashboard() {
         <Panel>
           <div className="live-content">
             <h2>Section unavailable</h2>
-            <Link to="/platform">Open schools</Link>
+            <Link to="/platform?tab=Overview">Open overview</Link>
           </div>
         </Panel>
       )}
@@ -141,6 +158,7 @@ function SchoolPage({
   const state = useRemote(load);
   const [editing, setEditing] = useState<PlatformSchool | 'new' | null>(null);
   const [recovering, setRecovering] = useState<PlatformSchool | null>(null);
+  const [subscribing, setSubscribing] = useState<PlatformSchool | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [notice, setNotice] = useState('');
   const saved = () => {
@@ -210,6 +228,9 @@ function SchoolPage({
                             <Button variant="secondary" onClick={() => setRecovering(school)}>
                               Recover owner <span className="sr-only">{school.name}</span>
                             </Button>
+                            <Button variant="secondary" onClick={() => setSubscribing(school)}>
+                              Plan & Features <span className="sr-only">{school.name}</span>
+                            </Button>
                             <Button variant="secondary" onClick={() => setEditing(school)}>
                               Edit <span className="sr-only">{school.name}</span>
                             </Button>
@@ -266,6 +287,17 @@ function SchoolPage({
             school={editing === 'new' ? undefined : editing}
             close={() => setEditing(null)}
             saved={saved}
+          />
+        )}
+        {subscribing && (
+          <SubscriptionModal
+            school={subscribing}
+            onClose={() => setSubscribing(null)}
+            onSaved={() => {
+              setSubscribing(null);
+              setNotice('School subscription updated.');
+              state.reload();
+            }}
           />
         )}
         {confirmation && (

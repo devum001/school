@@ -14,6 +14,7 @@ import { sessionStore } from '../auth/sessionStore';
 import { SchoolContext, type SchoolContextValue } from './schoolContext';
 import { useRemote } from './useRemote';
 import LiveAccount from './LiveAccount';
+import GlobalAnnouncementBanner from '../../components/layout/GlobalAnnouncementBanner';
 import '../../components/layout/topbar-controls.css';
 
 export default function LiveSchoolWorkspace({ schoolId }: { schoolId: string | null }) {
@@ -157,7 +158,10 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
           navigation.home === '/staff/punch' ? (
           <Navigate to="/staff/punch" replace />
         ) : isRouteAllowed(location.pathname) ? (
-          <Outlet />
+          <>
+            <GlobalAnnouncementBanner schoolId={schoolId} />
+            <Outlet />
+          </>
         ) : (
           <Navigate to={navigation.home} replace />
         )}
