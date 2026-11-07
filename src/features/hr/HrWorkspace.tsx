@@ -995,13 +995,30 @@ function HrContent({
                   const paid = row.paidAmount;
                   const pending = row.pendingAmount;
                   const net = row.netSalary;
-                  const isPaid = pending === 0 && net > 0;
+                  const isZeroSalary = net === 0;
+                  const isPaid = !isZeroSalary && pending === 0 && paid > 0;
                   const isPartiallyPaid = paid > 0 && pending > 0;
-                  const isOverdue = Boolean(item && item.dueDate < data.today && pending > 0);
+                  const isOverdue = !isZeroSalary && Boolean(item && item.dueDate < data.today && pending > 0);
                   const attSummary = getStaffAttendanceSummary(p.id, month, data.today, data, item);
 
-                  const statusTone = isPaid ? 'green' : isPartiallyPaid ? 'amber' : isOverdue ? 'red' : 'amber';
-                  const statusLabel = isPaid ? 'Paid' : isPartiallyPaid ? 'Partially paid' : isOverdue ? 'Overdue' : 'Pending';
+                  const statusTone = isZeroSalary
+                    ? 'gray'
+                    : isPaid
+                    ? 'green'
+                    : isPartiallyPaid
+                    ? 'amber'
+                    : isOverdue
+                    ? 'red'
+                    : 'amber';
+                  const statusLabel = isZeroSalary
+                    ? 'No payment due'
+                    : isPaid
+                    ? 'Paid'
+                    : isPartiallyPaid
+                    ? 'Partially paid'
+                    : isOverdue
+                    ? 'Overdue'
+                    : 'Pending';
 
                   const advanceBalance = data.advanceBalances?.find((a) => a.staffId === p.id)?.balance ?? 0;
                   const rowDueDate = item?.dueDate ? formatDueDate(item.dueDate) : formatDueDate(`${month}-05`);
@@ -1066,12 +1083,16 @@ function HrContent({
                                   ? '#fee2e2'
                                   : statusTone === 'green'
                                   ? '#dcfce7'
+                                  : statusTone === 'gray'
+                                  ? '#f1f5f9'
                                   : '#fef3c7',
                               color:
                                 statusTone === 'red'
                                   ? '#b91c1c'
                                   : statusTone === 'green'
                                   ? '#15803d'
+                                  : statusTone === 'gray'
+                                  ? '#64748b'
                                   : '#b45309',
                             }}
                           >
@@ -1089,7 +1110,19 @@ function HrContent({
                       </td>
                       <td>
                         <div className="hr-actions-compact">
-                          {pending > 0 && can('payroll.pay') ? (
+                          {isZeroSalary ? (
+                            can('payroll.manage') ? (
+                              <Link
+                                to="/settings?tab=Staff+%26+Payroll&section=payroll"
+                                className="hr-payslip-btn"
+                                style={{ textDecoration: 'none' }}
+                              >
+                                Setup salary
+                              </Link>
+                            ) : (
+                              <span style={{ color: '#94a3b8', fontSize: '13px', padding: '0 8px' }}>—</span>
+                            )
+                          ) : pending > 0 && can('payroll.pay') ? (
                             <button
                               type="button"
                               className="hr-pay-btn"
@@ -1097,7 +1130,7 @@ function HrContent({
                             >
                               Pay
                             </button>
-                          ) : (
+                          ) : paid > 0 ? (
                             <button
                               type="button"
                               className="hr-payslip-btn"
@@ -1105,7 +1138,10 @@ function HrContent({
                             >
                               Payslip
                             </button>
+                          ) : (
+                            <span style={{ color: '#94a3b8', fontSize: '13px', padding: '0 8px' }}>—</span>
                           )}
+
                           <div style={{ position: 'relative', display: 'inline-block' }}>
                             <button
                               type="button"
@@ -1176,7 +1212,7 @@ function HrContent({
                                     <span>Adjustments</span>
                                   </button>
                                 )}
-                                {pending > 0 && (
+                                {paid > 0 && (
                                   <button
                                     type="button"
                                     className="hr-menu-item"
