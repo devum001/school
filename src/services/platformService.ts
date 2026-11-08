@@ -133,15 +133,35 @@ export type ActiveSchoolAnnouncement = {
 
 export type SystemHealthData = {
   gateways: {
-    sms: { provider: string; status: string; creditsRemaining: number; senderId: string };
+    sms: {
+      provider: string;
+      status: 'operational' | 'not_configured' | 'error' | string;
+      configured: boolean;
+      creditsRemaining?: number | null;
+      senderId?: string | null;
+      setupGuide?: string;
+      message?: string;
+    };
     whatsapp: {
       provider: string;
-      status: string;
-      qualityRating: string;
-      templatesApproved: number;
-      responseRatePercent: number;
+      status: 'operational' | 'not_configured' | 'error' | string;
+      configured: boolean;
+      qualityRating?: string | null;
+      verifiedName?: string | null;
+      templatesApproved?: number | null;
+      responseRatePercent?: number | null;
+      setupGuide?: string;
+      message?: string;
     };
-    database: { provider: string; status: string; latencyMs: number; replicaSet: string; uptimeHours: number };
+    database: {
+      provider: string;
+      status: string;
+      latencyMs: number | null;
+      databaseName?: string;
+      host?: string;
+      collectionsCount?: number;
+      readyState?: number;
+    };
   };
   storage: {
     totalEstimatedMb: number;
@@ -156,9 +176,11 @@ export type SystemHealthData = {
     }>;
   };
   backup: {
-    lastAutomatedBackup: string;
+    lastAutomatedBackup?: string | null;
+    automatedScheduled?: boolean;
     backupStatus: string;
-    retentionDays: number;
+    retentionDays?: number;
+    message?: string;
   };
 };
 
