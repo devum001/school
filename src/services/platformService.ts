@@ -19,10 +19,18 @@ export const subscriptionFeaturesSchema = z.object({
 });
 
 export const subscriptionSchema = z.object({
-  plan: z.enum(['starter', 'pro', 'enterprise']),
-  status: z.enum(['active', 'grace_period', 'expired']),
+  plan: z.enum(['starter', 'pro', 'enterprise', 'none']),
+  status: z.enum(['active', 'grace_period', 'expired', 'unsubscribed']),
+  purchasedAt: z.string().nullable().optional(),
   renewsAt: z.string().nullable().optional(),
-  features: subscriptionFeaturesSchema.default({ punchGps: true, whatsappAlerts: true, onlinePayments: true, advancedPayroll: true }),
+  amountPaid: z.number().optional(),
+  billingCycle: z.string().optional(),
+  features: subscriptionFeaturesSchema.default({
+    punchGps: true,
+    whatsappAlerts: true,
+    onlinePayments: true,
+    advancedPayroll: true,
+  }),
 });
 
 const schoolSchema = z.object({
@@ -68,6 +76,21 @@ export type NewSchool = {
 
 export type PlatformPage<T> = { items: T[]; nextCursor: string | null };
 
+export type SchoolSubscriptionRecord = {
+  schoolId: string;
+  schoolName: string;
+  code: string | null;
+  city: string | null;
+  hasPlan: boolean;
+  plan: 'starter' | 'pro' | 'enterprise' | 'none';
+  planLabel: string;
+  amountPaid: number;
+  annualRate: number;
+  status: 'active' | 'grace_period' | 'expired' | 'unsubscribed';
+  purchasedAt: string | null;
+  renewsAt: string | null;
+};
+
 export type PlatformStats = {
   summary: {
     totalSchools: number;
@@ -77,9 +100,13 @@ export type PlatformStats = {
     totalStaff: number;
     totalRevenue: number;
     subscriptionRevenue: number;
+    totalFeeCollections: number;
+    subscribedSchoolsCount: number;
+    unsubscribedSchoolsCount: number;
   };
   monthlyGrowth: Array<{ label: string; count: number }>;
   schoolDirectory: Array<PlatformSchool & { studentCount: number; staffCount: number }>;
+  schoolSubscriptions: SchoolSubscriptionRecord[];
 };
 
 export type PlatformAnnouncement = {
@@ -135,16 +162,6 @@ export type SystemHealthData = {
   };
 };
 
-export type MasterHoliday = { name: string; date: string; mandatory: boolean; description: string };
-export type MasterFeeHead = { name: string; frequency: string; type: string; defaultAmount: number };
-export type MasterDepartment = { name: string; headRole: string; code: string };
-
-export type MasterTemplatesData = {
-  holidays: MasterHoliday[];
-  feeHeads: MasterFeeHead[];
-  departments: MasterDepartment[];
-};
-
 function parse<T>(schema: z.ZodType<T>, data: unknown): T {
   const result = schema.safeParse(data);
   if (!result.success)
@@ -182,8 +199,8 @@ export const platformService = {
   async updateSubscription(
     schoolId: string,
     input: {
-      plan: 'starter' | 'pro' | 'enterprise';
-      status: 'active' | 'grace_period' | 'expired';
+      plan: 'starter' | 'pro' | 'enterprise' | 'none';
+      status: 'active' | 'grace_period' | 'expired' | 'unsubscribed';
       renewsAt?: string;
       features?: Partial<SchoolSubscriptionFeatures>;
     },
@@ -257,27 +274,6 @@ export const platformService = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  },
-
-  async masterTemplates(signal?: AbortSignal): Promise<MasterTemplatesData> {
-    return (await apiService.request('/platform/master-templates', { signal })) as MasterTemplatesData;
-  },
-
-  async saveMasterTemplates(input: Partial<MasterTemplatesData>): Promise<MasterTemplatesData> {
-    return (await apiService.request('/platform/master-templates', {
-      method: 'PUT',
-      body: input,
-    })) as MasterTemplatesData;
-  },
-
-  async applyMasterTemplates(
-    schoolId: string,
-    options: { holidays?: boolean; feeHeads?: boolean; departments?: boolean },
-  ): Promise<{ applied: boolean; schoolId: string }> {
-    return (await apiService.request(`/platform/master-templates/apply/${schoolId}`, {
-      method: 'POST',
-      body: options,
-    })) as { applied: boolean; schoolId: string };
   },
 
   async recoverOwner(schoolId: string, userId: string, reason: string) {

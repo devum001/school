@@ -36,6 +36,7 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
     plan: 'starter',
     status: 'active',
     renewsAt: null,
+    purchasedAt: null,
     features: {
       punchGps: true,
       whatsappAlerts: true,
@@ -44,12 +45,14 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
     },
   };
 
-  const [plan, setPlan] = useState<'starter' | 'pro' | 'enterprise'>(currentSub.plan || 'starter');
-  const [status, setStatus] = useState<'active' | 'grace_period' | 'expired'>(
-    currentSub.status || 'active',
+  const [plan, setPlan] = useState<'starter' | 'pro' | 'enterprise' | 'none'>(
+    (currentSub.plan as any) || 'starter'
+  );
+  const [status, setStatus] = useState<'active' | 'grace_period' | 'expired' | 'unsubscribed'>(
+    (currentSub.status as any) || 'active'
   );
   const [renewsAt, setRenewsAt] = useState<string>(
-    currentSub.renewsAt ? currentSub.renewsAt.slice(0, 10) : '',
+    currentSub.renewsAt ? currentSub.renewsAt.slice(0, 10) : ''
   );
   const [features, setFeatures] = useState({
     punchGps: currentSub.features?.punchGps ?? true,
@@ -74,10 +77,15 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
     setError('');
     try {
       const updated = await platformService.updateSubscription(school.id, {
-        plan,
+        plan: status === 'unsubscribed' ? 'none' : (plan === 'none' ? 'starter' : plan),
         status,
-        renewsAt: renewsAt ? new Date(renewsAt).toISOString() : undefined,
-        features,
+        renewsAt: status === 'unsubscribed' ? undefined : (renewsAt ? new Date(renewsAt).toISOString() : undefined),
+        features: status === 'unsubscribed' ? {
+          punchGps: false,
+          whatsappAlerts: false,
+          onlinePayments: false,
+          advancedPayroll: false,
+        } : features,
       });
       onSaved(updated);
       onClose();
@@ -87,6 +95,8 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
       setBusy(false);
     }
   };
+
+  const formattedPurchasedOn = currentSub.purchasedAt || school.createdAt;
 
   return (
     <Modal
@@ -104,14 +114,28 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
           </p>
         )}
 
+        {formattedPurchasedOn && (
+          <div style={{ fontSize: 12, color: '#475467', marginBottom: 12, background: '#f8fafc', padding: '6px 12px', borderRadius: 6 }}>
+            🗓️ <strong>Initial Purchase / Grant Date:</strong>{' '}
+            {new Date(formattedPurchasedOn).toLocaleDateString('en-IN', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
           {(['starter', 'pro', 'enterprise'] as const).map((tierKey) => {
-            const isSelected = plan === tierKey;
+            const isSelected = plan === tierKey && status !== 'unsubscribed';
             const details = PLAN_DETAILS[tierKey];
             return (
               <div
                 key={tierKey}
-                onClick={() => setPlan(tierKey)}
+                onClick={() => {
+                  setPlan(tierKey);
+                  if (status === 'unsubscribed') setStatus('active');
+                }}
                 style={{
                   border: isSelected ? '2px solid #2d6a4f' : '1px solid #eaecf0',
                   background: isSelected ? '#f4fbf7' : '#ffffff',
@@ -129,7 +153,10 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
                     type="radio"
                     name="planTier"
                     checked={isSelected}
-                    onChange={() => setPlan(tierKey)}
+                    onChange={() => {
+                      setPlan(tierKey);
+                      if (status === 'unsubscribed') setStatus('active');
+                    }}
                   />
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#2d6a4f', marginTop: 4 }}>
@@ -150,9 +177,10 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
             >
-              <option value="active">Active (Full access)</option>
+              <option value="active">Active (Full paid access)</option>
               <option value="grace_period">Grace Period (Renewal warning)</option>
               <option value="expired">Expired (Features suspended)</option>
+              <option value="unsubscribed">Unsubscribed (No Plan / Revoke plan)</option>
             </select>
           </label>
 
@@ -162,9 +190,15 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
               <input
                 type="date"
                 value={renewsAt}
+                disabled={status === 'unsubscribed'}
                 onChange={(e) => setRenewsAt(e.target.value)}
               />
-              <Button type="button" variant="secondary" onClick={grantOneYear}>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={status === 'unsubscribed'}
+                onClick={grantOneYear}
+              >
                 +1 Year
               </Button>
             </div>
@@ -180,6 +214,7 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
               <input
                 type="checkbox"
                 checked={features.punchGps}
+                disabled={status === 'unsubscribed'}
                 onChange={(e) => setFeatures({ ...features, punchGps: e.target.checked })}
               />
               <span>
@@ -193,6 +228,7 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
               <input
                 type="checkbox"
                 checked={features.whatsappAlerts}
+                disabled={status === 'unsubscribed'}
                 onChange={(e) => setFeatures({ ...features, whatsappAlerts: e.target.checked })}
               />
               <span>
@@ -206,6 +242,7 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
               <input
                 type="checkbox"
                 checked={features.onlinePayments}
+                disabled={status === 'unsubscribed'}
                 onChange={(e) => setFeatures({ ...features, onlinePayments: e.target.checked })}
               />
               <span>
@@ -219,6 +256,7 @@ export default function SubscriptionModal({ school, onClose, onSaved }: Props) {
               <input
                 type="checkbox"
                 checked={features.advancedPayroll}
+                disabled={status === 'unsubscribed'}
                 onChange={(e) => setFeatures({ ...features, advancedPayroll: e.target.checked })}
               />
               <span>

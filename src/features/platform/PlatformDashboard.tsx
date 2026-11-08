@@ -15,7 +15,6 @@ import { SchoolForm } from './PlatformForms';
 import PlatformOverview from './PlatformOverview';
 import PlatformAnnouncements from './PlatformAnnouncements';
 import PlatformSystemHealth from './PlatformSystemHealth';
-import PlatformMasterTemplates from './PlatformMasterTemplates';
 import SubscriptionModal from './SubscriptionModal';
 
 type Confirmation = { title: string; description: string; action: () => Promise<unknown> };
@@ -36,8 +35,7 @@ export default function PlatformDashboard() {
           { id: 'Schools', label: 'Schools', icon: 'overview-grid', to: '/platform?tab=Schools' },
           { id: 'Announcements', label: 'Announcements', icon: 'notifications', to: '/platform?tab=Announcements' },
           { id: 'System Health', label: 'System Health', icon: 'settings', to: '/platform?tab=System%20Health' },
-          { id: 'Master Templates', label: 'Master Templates', icon: 'templates', to: '/platform?tab=Master%20Templates' },
-          { id: 'Activity', label: 'Activity', icon: 'security', to: '/platform?tab=Activity' },
+                    { id: 'Activity', label: 'Activity', icon: 'security', to: '/platform?tab=Activity' },
           { id: 'My account', label: 'My account', icon: 'user-check', to: '/platform?tab=My%20account' },
         ]}
       />
@@ -49,8 +47,6 @@ export default function PlatformDashboard() {
         <PlatformAnnouncements />
       ) : tab === 'System Health' ? (
         <PlatformSystemHealth />
-      ) : tab === 'Master Templates' ? (
-        <PlatformMasterTemplates />
       ) : tab === 'Activity' ? (
         <PlatformActivity />
       ) : tab === 'My account' ? (
