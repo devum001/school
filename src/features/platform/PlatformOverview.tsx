@@ -6,7 +6,6 @@ import {
 } from '../../services/platformService';
 import { useRemote } from '../live/useRemote';
 import SubscriptionModal from './SubscriptionModal';
-import PlatformRevenueModal from './PlatformRevenueModal';
 
 const PLAN_BADGE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   starter: { bg: '#eff8ff', text: '#175cd3', dot: '#2e90fa' },
@@ -21,7 +20,6 @@ export default function PlatformOverview() {
 
   const [search, setSearch] = useState('');
   const [selectedSchool, setSelectedSchool] = useState<PlatformSchool | null>(null);
-  const [showRevenueModal, setShowRevenueModal] = useState(false);
 
   if (state.loading) {
     return (
@@ -46,7 +44,7 @@ export default function PlatformOverview() {
     );
   }
 
-  const { summary, monthlyGrowth, schoolDirectory, schoolSubscriptions } = state.data;
+  const { summary, monthlyGrowth, schoolDirectory, schoolSubscriptions = [] } = state.data;
 
   const filteredSchools = schoolDirectory.filter((school) => {
     const term = search.toLowerCase().trim();
@@ -61,11 +59,11 @@ export default function PlatformOverview() {
 
   const maxGrowthCount = Math.max(...monthlyGrowth.map((g) => g.count), 1);
   const realPlatformRevenue = summary.subscriptionRevenue ?? summary.totalRevenue ?? 0;
-  const subscribedCount = summary.subscribedSchoolsCount ?? schoolSubscriptions?.filter((s) => s.hasPlan).length ?? 0;
+  const subscribedCount = summary.subscribedSchoolsCount ?? schoolSubscriptions.filter((s) => s.hasPlan).length;
 
   return (
     <>
-      {/* 4 StatCards */}
+      {/* 4 Top StatCards */}
       <div className="stats-grid" style={{ marginBottom: 24 }}>
         <StatCard
           label="Total Schools"
@@ -82,29 +80,13 @@ export default function PlatformOverview() {
           value={summary.totalStaff.toLocaleString('en-IN')}
           detail="Active teaching & non-teaching staff"
         />
-
-        {/* Clickable Real Platform Revenue Card */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => setShowRevenueModal(true)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') setShowRevenueModal(true);
-          }}
-          style={{
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            borderRadius: 12,
-            outline: 'none',
-          }}
-          title="Click to view school-by-school subscription revenue ledger"
-        >
-          <StatCard
-            label="Total Platform Revenue"
-            value={`₹${realPlatformRevenue.toLocaleString('en-IN')}`}
-            detail={`${subscribedCount} of ${summary.totalSchools} schools subscribed · Click for details ↗`}
-          />
-        </div>
+        <StatCard
+          label="Total Platform Revenue"
+          value={`₹${realPlatformRevenue.toLocaleString('en-IN')}`}
+          detail={`${subscribedCount} of ${summary.totalSchools} schools subscribed · View full ledger`}
+          href="/platform?tab=Subscriptions"
+          tone="green"
+        />
       </div>
 
       {/* Monthly School Registration Growth Chart */}
@@ -321,20 +303,6 @@ export default function PlatformOverview() {
           onSaved={() => {
             setSelectedSchool(null);
             state.reload();
-          }}
-        />
-      )}
-
-      {/* Real Platform Revenue Breakdown Modal */}
-      {showRevenueModal && (
-        <PlatformRevenueModal
-          subscriptions={schoolSubscriptions || []}
-          allSchools={schoolDirectory}
-          totalRevenue={realPlatformRevenue}
-          onClose={() => setShowRevenueModal(false)}
-          onManagePlan={(school) => {
-            setShowRevenueModal(false);
-            setSelectedSchool(school);
           }}
         />
       )}

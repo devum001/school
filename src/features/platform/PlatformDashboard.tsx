@@ -13,6 +13,7 @@ import { useRemote } from '../live/useRemote';
 import LiveAccount from '../live/LiveAccount';
 import { SchoolForm } from './PlatformForms';
 import PlatformOverview from './PlatformOverview';
+import PlatformSubscriptions from './PlatformSubscriptions';
 import PlatformAnnouncements from './PlatformAnnouncements';
 import PlatformSystemHealth from './PlatformSystemHealth';
 import SubscriptionModal from './SubscriptionModal';
@@ -33,6 +34,7 @@ export default function PlatformDashboard() {
         items={[
           { id: 'Overview', label: 'Overview', icon: 'overview', to: '/platform?tab=Overview' },
           { id: 'Schools', label: 'Schools', icon: 'overview-grid', to: '/platform?tab=Schools' },
+          { id: 'Subscriptions', label: 'Subscriptions & Revenue', icon: 'wallet', to: '/platform?tab=Subscriptions' },
           { id: 'Announcements', label: 'Announcements', icon: 'notifications', to: '/platform?tab=Announcements' },
           { id: 'System Health', label: 'System Health', icon: 'settings', to: '/platform?tab=System%20Health' },
                     { id: 'Activity', label: 'Activity', icon: 'security', to: '/platform?tab=Activity' },
@@ -43,6 +45,8 @@ export default function PlatformDashboard() {
         <PlatformOverview />
       ) : tab === 'Schools' ? (
         <PlatformSchools />
+      ) : tab === 'Subscriptions' ? (
+        <PlatformSubscriptions />
       ) : tab === 'Announcements' ? (
         <PlatformAnnouncements />
       ) : tab === 'System Health' ? (
