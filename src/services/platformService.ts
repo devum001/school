@@ -19,13 +19,13 @@ export const subscriptionFeaturesSchema = z.object({
 });
 
 export const subscriptionSchema = z.object({
-  plan: z.enum(['starter', 'pro', 'enterprise', 'none']),
-  status: z.enum(['active', 'grace_period', 'expired', 'unsubscribed']),
+  plan: z.enum(['starter', 'pro', 'enterprise', 'none']).default('none'),
+  status: z.enum(['active', 'grace_period', 'expired', 'unsubscribed']).default('unsubscribed'),
   purchasedAt: z.string().nullable().optional(),
   renewsAt: z.string().nullable().optional(),
-  amountPaid: z.number().optional(),
-  billingCycle: z.string().optional(),
-  features: subscriptionFeaturesSchema.default({
+  amountPaid: z.number().nullable().optional(),
+  billingCycle: z.string().nullable().optional(),
+  features: subscriptionFeaturesSchema.optional().default({
     punchGps: true,
     whatsappAlerts: true,
     onlinePayments: true,
@@ -37,12 +37,12 @@ const schoolSchema = z.object({
   id,
   name: z.string(),
   slug: z.string(),
-  code: z.string().nullable(),
-  email: z.string().nullable(),
-  phone: z.string().nullable(),
+  code: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
   timezone: z.string(),
   status: z.enum(['active', 'suspended', 'archived']),
-  subscription: subscriptionSchema.optional(),
+  subscription: subscriptionSchema.nullable().optional(),
   principalName: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
   createdAt: z.string().nullable().optional(),
