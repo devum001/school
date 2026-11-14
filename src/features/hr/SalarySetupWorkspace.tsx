@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FloatingStickyTableHeader } from '../../components/shared/FloatingStickyTableHeader';
 import {
   AppIcon,
@@ -675,7 +676,9 @@ export default function SalarySetupWorkspace({
                           <div className="salary-staff-profile">
                             <Avatar name={row.staff.name} />
                             <div className="salary-staff-info">
-                              <strong>{row.staff.name}</strong>
+                              <Link to={`/staff/${row.staff.id}?tab=Salary`} style={{ textDecoration: 'none', color: 'inherit' }} title="View staff salary profile">
+                                <strong style={{ color: '#1b4332', cursor: 'pointer' }}>{row.staff.name}</strong>
+                              </Link>
                               <span className="staff-meta">
                                 {row.staff.designation || (row.staff.teaching ? 'Teacher' : 'Staff')}
                               </span>

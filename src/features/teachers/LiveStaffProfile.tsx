@@ -311,7 +311,124 @@ export default function LiveStaffProfile() {
                 </div>
               </Panel>
             )}
-            {tab === 'Salary' && data && (
+            {tab === 'Salary' && data && (() => {
+              const emp = data.employment?.find((e) => e.staffId === person.id) ?? data.employment?.[0];
+              const sal = emp?.salaries?.filter((s) => s.effectiveMonth <= month)?.at(-1) ?? emp?.salaries?.slice(-1)[0];
+              const basic = sal?.basic ?? 0;
+              const allowance = sal?.allowance ?? 0;
+              const bonus = sal?.bonus ?? 0;
+              const deduction = sal?.deduction ?? 0;
+              const totalGross = basic + allowance + bonus;
+
+              const policy = emp?.policies?.filter((p) => p.effectiveMonth <= month)?.at(-1) ?? emp?.policies?.slice(-1)[0];
+              const attendanceMode = policy?.attendanceMode ?? emp?.attendanceMode ?? (person.teaching ? 'punch' : 'manual');
+              const attendanceModeLabel =
+                attendanceMode === 'punch'
+                  ? 'Teacher Punch (GPS)'
+                  : attendanceMode === 'manual'
+                  ? 'Admin Attendance'
+                  : 'No Attendance Required';
+
+              return (
+                <div className="ledger-stack" style={{ gap: '20px' }}>
+                  {/* Dedicated Configured Salary Structure Panel */}
+                  <Panel
+                    title="Staff Salary Structure (वेतन संरचना)"
+                    subtitle={`Configured monthly salary and salary components for ${person.name}`}
+                    action={
+                      can('payroll.manage') && (
+                        <Button variant="secondary" onClick={() => setAction('salary')}>
+                          Edit salary setup
+                        </Button>
+                      )
+                    }
+                  >
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Total Monthly Salary
+                        </div>
+                        <div style={{ fontSize: '24px', fontWeight: 800, color: '#14532d', marginTop: '6px' }}>
+                          {rupees(totalGross)}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#15803d', marginTop: '4px' }}>
+                          ₹{(totalGross / 100).toLocaleString('en-IN')} / month
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Basic Salary (मूल वेतन)
+                        </div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>
+                          {rupees(basic)}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                          Base compensation
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Allowances (भत्ते)
+                        </div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>
+                          {rupees(allowance)}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                          Monthly allowances
+                        </div>
+                      </div>
+
+                      {bonus > 0 && (
+                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Bonus (बोनस)
+                          </div>
+                          <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>
+                            {rupees(bonus)}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                            Monthly bonus
+                          </div>
+                        </div>
+                      )}
+
+                      {deduction > 0 && (
+                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '16px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Standard Deduction (कटौती)
+                          </div>
+                          <div style={{ fontSize: '20px', fontWeight: 700, color: '#b91c1c', marginTop: '6px' }}>
+                            -{rupees(deduction)}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px' }}>
+                            Monthly deduction
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Attendance Policy
+                        </div>
+                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginTop: '8px' }}>
+                          {attendanceModeLabel}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                          {sal?.effectiveMonth ? `Effective: ${sal.effectiveMonth}` : 'Current session'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {totalGross === 0 && (
+                      <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', padding: '12px 16px', color: '#b45309', fontSize: '13px' }}>
+                        ⚠️ Salary has not been configured for this staff member yet. Click "Edit salary setup" to enter basic salary and allowances.
+                      </div>
+                    )}
+                  </Panel>
+
+                  {/* Monthly Payroll & Disbursals Section */}
               <Panel
                 title="Salary & payments (Monthly Payroll Breakdown)"
                 action={
@@ -460,7 +577,9 @@ export default function LiveStaffProfile() {
                     Open salary processing
                   </Link>
                 </Panel>
-              )}
+              </div>
+            );
+          })()}
             {tab === 'Account' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {person.userId ? (

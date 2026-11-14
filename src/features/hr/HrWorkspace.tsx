@@ -610,7 +610,7 @@ function HrContent({
   }, [staff, data.payroll, data.employment, data.payments, month]);
 
   const totalMonthlySalary = useMemo(
-    () => staffSalaryData.reduce((s, row) => s + row.netSalary, 0),
+    () => staffSalaryData.reduce((s, row) => s + (row.configuredGross > 0 ? row.configuredGross : row.netSalary), 0),
     [staffSalaryData],
   );
   const totalPaidThisMonth = useMemo(
@@ -733,7 +733,7 @@ function HrContent({
           <StatCard
             label="Total monthly salary"
             value={rupees(totalMonthlySalary)}
-            detail="Net salary commitment for this month"
+            detail="Configured monthly salary commitment"
             icon={<AppIcon name="document" size={48} />}
           />
           <StatCard
@@ -1109,7 +1109,7 @@ function HrContent({
                 <thead>
                   <tr>
                     <th style={{ width: colWidths[0] }}>STAFF MEMBER</th>
-                    <th style={{ width: colWidths[1] }}>NET SALARY</th>
+                    <th style={{ width: colWidths[1] }}>SALARY</th>
                     <th style={{ width: colWidths[2] }}>STATUS</th>
                     <th style={{ width: colWidths[3] }}>DUE DATE</th>
                     <th style={{ width: colWidths[4] }}>ACTIONS</th>
@@ -1121,7 +1121,7 @@ function HrContent({
               <thead ref={salaryExpensesTheadRef}>
                 <tr>
                   <th>STAFF MEMBER</th>
-                  <th>NET SALARY</th>
+                  <th>SALARY</th>
                   <th>STATUS</th>
                   <th>DUE DATE</th>
                   <th>ACTIONS</th>
@@ -1204,7 +1204,7 @@ function HrContent({
                         <div className="hr-person">
                           <Avatar name={p.name} />
                           <div>
-                            <strong style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>{titleCase(p.name)}</strong>
+                            <Link to={`/staff/${p.id}?tab=Salary&month=${month}`} style={{ textDecoration: 'none', color: 'inherit' }} title="View staff salary profile"><strong style={{ fontSize: '14px', fontWeight: 600, color: '#1b4332', cursor: 'pointer' }}>{titleCase(p.name)}</strong></Link>
                             <div style={{ fontSize: '13px', color: '#64748b', marginTop: '1px' }}>
                               {[titleCase(p.department || ''), titleCase(p.designation || '')].filter(Boolean).join(' • ')}
                             </div>
@@ -1217,7 +1217,12 @@ function HrContent({
                         </div>
                       </td>
                       <td style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>
-                        {rupees(net)}
+                        {rupees(row.configuredGross > 0 ? row.configuredGross : row.netSalary)}
+                        {item && item.net !== (row.configuredGross > 0 ? row.configuredGross : row.netSalary) && (
+                          <div style={{ fontSize: '11px', fontWeight: 500, color: '#64748b', marginTop: '2px' }}>
+                            Net payout: {rupees(item.net)}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
