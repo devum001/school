@@ -2,11 +2,12 @@ import FeeOnboardingWorkspace from './onboarding/FeeOnboardingWorkspace';
 import SalarySetupWorkspace from '../hr/SalarySetupWorkspace';
 import { orderedClasses } from '../../lib/schoolLabels';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Download, RefreshCw } from 'lucide-react';
 import {
   AppIcon,
   Button,
+  Modal,
   EmptyState,
   PageHeading,
   Panel,
@@ -31,11 +32,74 @@ import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import { downloadCsv } from '../../lib/download';
 import FeeSetupDialog from './FeeSetupDialog';
 import FeeOpeningDialog from './FeeOpeningDialog';
-import FeeStudentLedger from './FeeStudentLedger';
+import FeeStudentLedger, { CollectPayment } from './FeeStudentLedger';
 import FeePayments from './FeePayments';
 import './fees-live.css';
 import '../../styles/ledgers.css';
 import type { IconName } from '../../components/ui/AppIcon';
+
+
+function QuickCollectPaymentDialog({
+  schoolId,
+  context,
+  student,
+  close,
+  saved,
+}: {
+  schoolId: string;
+  context: FeeContext;
+  student: FeeStudentRow;
+  close: () => void;
+  saved: () => void;
+}) {
+  const load = useCallback(
+    (signal: AbortSignal) => feeApi.student(schoolId, student.id, signal),
+    [schoolId, student.id],
+  );
+  const state = useRemote(load);
+
+  if (state.loading || !state.data) {
+    return (
+      <Modal
+        open
+        title={`Collect fee payment — ${titleCase(student.name)}`}
+        description="Loading student fee account details…"
+        onClose={close}
+      >
+        <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+          Loading fee details…
+        </div>
+      </Modal>
+    );
+  }
+
+  if (state.error) {
+    return (
+      <Modal
+        open
+        title={`Collect fee payment — ${titleCase(student.name)}`}
+        description="Error loading fee account"
+        onClose={close}
+      >
+        <p className="form-error" role="alert">{state.error}</p>
+        <footer className="modal-actions">
+          <Button variant="secondary" onClick={close}>Close</Button>
+        </footer>
+      </Modal>
+    );
+  }
+
+  return (
+    <CollectPayment
+      schoolId={schoolId}
+      context={context}
+      studentId={student.id}
+      accounts={state.data.accounts}
+      close={close}
+      saved={saved}
+    />
+  );
+}
 
 const LIVE_FINANCE_ICONS: Record<string, IconName> = {
   Overview: 'overview',
@@ -170,6 +234,7 @@ function FeeWorkspace({
     [selected, setSelected] = useState<Map<string, FeeStudentRow>>(new Map()),
     [action, setAction] = useState<'setup' | 'opening' | null>(null),
     [student, setStudent] = useState<{ row: FeeStudentRow; collect: boolean } | null>(null),
+    [quickCollectStudent, setQuickCollectStudent] = useState<FeeStudentRow | null>(null),
     [error, setError] = useState(''),
     [version, setVersion] = useState(0),
     [params, setParams] = useSearchParams();
@@ -626,7 +691,6 @@ function FeeWorkspace({
                             </th>
                           )}
                           <th style={{ width: colWidths[idx++] }}>Student</th>
-                          <th style={{ width: colWidths[idx++] }}>Class / Section</th>
                           <th style={{ width: colWidths[idx++] }}>Yearly fee</th>
                           <th style={{ width: colWidths[idx++] }}>Old dues</th>
                           <th style={{ width: colWidths[idx++] }}>Paid this year</th>
@@ -685,7 +749,6 @@ function FeeWorkspace({
                         </th>
                       )}
                       <th>Student</th>
-                      <th>Class / Section</th>
                       <th>Yearly fee</th>
                       <th>Old dues</th>
                       <th>Paid this year</th>
@@ -696,7 +759,13 @@ function FeeWorkspace({
                     </tr>
                   </thead>
                   <tbody>
-                    {data?.items.map((r) => (
+                    {data?.items.map((r) => {
+                      const className = context.classes.find((c) => c.id === r.enrollment?.classId)?.name;
+                      const sectionName = context.sections.find((s) => s.id === r.enrollment?.sectionId)?.name;
+                      const classSectionLabel = className
+                        ? `${className}${sectionName ? ` · ${sectionName}` : ''}`
+                        : 'No current enrollment';
+                      return (
                       <tr key={r.id}>
                         {can('fees.manage') && (
                           <td>
@@ -717,17 +786,20 @@ function FeeWorkspace({
                           </td>
                         )}
                         <th scope="row">
-                          {titleCase(r.name)}
-                          <small>{r.code}</small>
-                        </th>
-                        <td>
-                          {context.classes.find((c) => c.id === r.enrollment?.classId)?.name ??
-                            'No current enrollment'}
-                          <small>
-                            {context.sections.find((s) => s.id === r.enrollment?.sectionId)?.name ??
-                              ''}
+                          <Link
+                            to={`/students/${r.id}?year=${context.yearId}&tab=fees`}
+                            style={{ color: '#0f172a', textDecoration: 'none', fontWeight: 600 }}
+                            title="View student fee profile"
+                          >
+                            {titleCase(r.name)}
+                          </Link>
+                          <small style={{ display: 'block', color: '#64748b', marginTop: '2px' }}>
+                            {r.code}
                           </small>
-                        </td>
+                          <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '12px', marginTop: '3px' }}>
+                            {classSectionLabel}
+                          </div>
+                        </th>
                         <td>{r.configured ? money(r.net) : 'Not set'}</td>
                         <td>{money(r.oldDues)}</td>
                         <td>{money(r.paid)}</td>
@@ -752,21 +824,16 @@ function FeeWorkspace({
                         </td>
                         <td>
                           <div className="fee-row-actions">
-                            <Button
-                              variant="secondary"
-                              onClick={() => setStudent({ row: r, collect: false })}
-                            >
-                              Manage Fees
-                            </Button>
                             {can('fees.collect') && r.outstanding > 0 && (
-                              <Button onClick={() => setStudent({ row: r, collect: true })}>
+                              <Button onClick={() => setQuickCollectStudent(r)}>
                                 Collect payment
                               </Button>
                             )}
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -820,6 +887,18 @@ function FeeWorkspace({
           students={[...selected.values()]}
           close={() => setAction(null)}
           saved={refresh}
+        />
+      )}
+      {quickCollectStudent && (
+        <QuickCollectPaymentDialog
+          schoolId={schoolId}
+          context={context}
+          student={quickCollectStudent}
+          close={() => setQuickCollectStudent(null)}
+          saved={() => {
+            setQuickCollectStudent(null);
+            refresh();
+          }}
         />
       )}
     </>

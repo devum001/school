@@ -26,7 +26,7 @@ export default function ShareReportDialog({
 }) {
   const state = useSchool();
   const notify = useFeedback();
-  const [scope, setScope] = useState('selected');
+  const [scope, setScope] = useState(() => (selectedExamId === 'all' ? 'all' : 'selected'));
   const [phone, setPhone] = useState(() => {
     const valid = whatsappPhone(row.student.guardian.contact ?? '');
     return valid ? `+${valid}` : '';
@@ -37,7 +37,9 @@ export default function ShareReportDialog({
     : studentReportMessage(
         state,
         row,
-        scope === 'all' ? exams : exams.filter((e) => e.id === selectedExamId),
+        scope === 'all' || selectedExamId === 'all'
+          ? exams
+          : exams.filter((e) => e.id === selectedExamId),
       );
   const invalidPhone = Boolean(phone.trim()) && !whatsappPhone(phone);
   const href = !invalidPhone && message ? whatsappReportUrl(message, phone) : null;

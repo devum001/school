@@ -69,10 +69,7 @@ export function StudentAttendance({ enrollmentId }: { enrollmentId: string }) {
     let status = 'unmarked';
     let label = 'Not marked';
 
-    if (date > today) {
-      status = 'upcoming';
-      label = 'Upcoming';
-    } else if (holidayInfo.isHoliday) {
+    if (holidayInfo.isHoliday) {
       status = 'holiday';
       label = holidayInfo.reason || 'School holiday';
     } else if (isOff) {
@@ -90,6 +87,9 @@ export function StudentAttendance({ enrollmentId }: { enrollmentId: string }) {
               : record.status === 'half-day'
                 ? 'Half day'
                 : 'Not marked';
+    } else if (date > today) {
+      status = 'upcoming';
+      label = 'Upcoming';
     }
 
     return { date, status, label, holidayReason: holidayInfo.reason, dayOfWeek, isOff };

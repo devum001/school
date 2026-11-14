@@ -30,9 +30,28 @@ const THEMES = {
   },
 };
 
+const DISMISSED_KEY = 'schoolwell_dismissed_announcements';
+
+function getDismissedAnnouncements(): Record<string, boolean> {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(DISMISSED_KEY) : null;
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistDismissedAnnouncement(id: string) {
+  try {
+    const current = getDismissedAnnouncements();
+    current[id] = true;
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify(current));
+  } catch {}
+}
+
 export default function GlobalAnnouncementBanner({ schoolId }: Props) {
   const [announcements, setAnnouncements] = useState<ActiveSchoolAnnouncement[]>([]);
-  const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
+  const [dismissed, setDismissed] = useState<Record<string, boolean>>(getDismissedAnnouncements);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +101,10 @@ export default function GlobalAnnouncementBanner({ schoolId }: Props) {
             </div>
             <button
               type="button"
-              onClick={() => setDismissed((prev) => ({ ...prev, [item.id]: true }))}
+              onClick={() => {
+                persistDismissedAnnouncement(item.id);
+                setDismissed((prev) => ({ ...prev, [item.id]: true }));
+              }}
               style={{
                 background: 'transparent',
                 border: 'none',

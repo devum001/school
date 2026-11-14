@@ -62,6 +62,18 @@ const DAY_MAP: Record<string, number> = {
   Sat: 6,
 };
 
+function formatDisplayDate(isoDate?: string | null): string {
+  if (!isoDate) return '—';
+  const cleanDate = isoDate.slice(0, 10);
+  const parts = cleanDate.split('-');
+  if (parts.length < 3) return isoDate;
+  const [year, m, d] = parts;
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthIdx = Number(m) - 1;
+  const monthName = monthNames[monthIdx] || m;
+  return `${d.padStart(2, '0')} ${monthName} ${year}`;
+}
+
 export default function LiveStaffProfile() {
   const { schoolId, access, status, profile } = useLiveSchool(),
     { teacherId, staffId } = useParams();
@@ -333,7 +345,7 @@ export default function LiveStaffProfile() {
                 <div className="ledger-stack" style={{ gap: '20px' }}>
                   {/* Dedicated Configured Salary Structure Panel */}
                   <Panel
-                    title="Staff Salary Structure (वेतन संरचना)"
+                    title="Staff Salary Structure"
                     subtitle={`Configured monthly salary and salary components for ${person.name}`}
                     action={
                       can('payroll.manage') && (
@@ -344,21 +356,21 @@ export default function LiveStaffProfile() {
                     }
                   >
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '16px' }}>
-                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '16px' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           Total Monthly Salary
                         </div>
-                        <div style={{ fontSize: '24px', fontWeight: 800, color: '#14532d', marginTop: '6px' }}>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>
                           {rupees(totalGross)}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#15803d', marginTop: '4px' }}>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
                           ₹{(totalGross / 100).toLocaleString('en-IN')} / month
                         </div>
                       </div>
 
                       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
                         <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          Basic Salary (मूल वेतन)
+                          Basic Salary
                         </div>
                         <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>
                           {rupees(basic)}
@@ -370,7 +382,7 @@ export default function LiveStaffProfile() {
 
                       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
                         <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          Allowances (भत्ते)
+                          Allowances
                         </div>
                         <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>
                           {rupees(allowance)}
@@ -383,7 +395,7 @@ export default function LiveStaffProfile() {
                       {bonus > 0 && (
                         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
                           <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            Bonus (बोनस)
+                            Bonus
                           </div>
                           <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>
                             {rupees(bonus)}
@@ -397,7 +409,7 @@ export default function LiveStaffProfile() {
                       {deduction > 0 && (
                         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '16px' }}>
                           <div style={{ fontSize: '12px', fontWeight: 600, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            Standard Deduction (कटौती)
+                            Standard Deduction
                           </div>
                           <div style={{ fontSize: '20px', fontWeight: 700, color: '#b91c1c', marginTop: '6px' }}>
                             -{rupees(deduction)}
@@ -493,25 +505,51 @@ export default function LiveStaffProfile() {
                       <table>
                         <thead>
                           <tr>
-                            <th>Month</th>
+                            <th>Date</th>
                             <th>Net salary</th>
                             <th>Payment status</th>
                             <th>Statement</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {data.payroll.map((p) => (
-                            <tr key={p.id}>
-                              <td>{p.month}</td>
-                              <td>{rupees(p.net)}</td>
-                              <td>{payrollStatus(p, data)}</td>
-                              <td>
-                                <Button variant="ghost" onClick={() => setSlip(p)}>
-                                  View
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
+                          {data.payroll.map((p) => {
+                            const matchingPayments = (data.payments || []).filter(
+                              (pmt) =>
+                                pmt.payrollId === p.id ||
+                                (pmt.staffId === p.staffId && pmt.date.startsWith(p.month)),
+                            );
+                            const status = payrollStatus(p, data);
+                            let dateDisplay = '';
+                            if (matchingPayments.length > 0) {
+                              const sorted = [...matchingPayments].sort((a, b) => a.date.localeCompare(b.date));
+                              const dates = Array.from(new Set(sorted.map((pmt) => formatDisplayDate(pmt.date))));
+                              dateDisplay = dates.join(', ');
+                            } else if (status === 'Paid' && p.dueDate) {
+                              dateDisplay = formatDisplayDate(p.dueDate);
+                            } else if (p.net === 0) {
+                              dateDisplay = '—';
+                            } else if (p.dueDate) {
+                              dateDisplay = `Due ${formatDisplayDate(p.dueDate)}`;
+                            } else {
+                              dateDisplay = p.month;
+                            }
+
+                            return (
+                              <tr key={p.id}>
+                                <td>
+                                  <div style={{ fontWeight: 600, color: '#0f172a' }}>{dateDisplay}</div>
+                                  <div style={{ fontSize: '11px', color: '#64748b' }}>Salary month: {p.month}</div>
+                                </td>
+                                <td>{rupees(p.net)}</td>
+                                <td>{status}</td>
+                                <td>
+                                  <Button variant="ghost" onClick={() => setSlip(p)}>
+                                    View
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                       {!data.payroll.length && (

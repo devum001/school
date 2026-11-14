@@ -627,8 +627,9 @@ function HrContent({
   );
 
   const getSalaryCategory = useCallback((row: typeof staffSalaryData[0]): 'setup_pending' | 'paid' | 'overdue' | 'pending' => {
-    if (row.netSalary === 0) return 'setup_pending';
-    if (row.pendingAmount === 0 && row.paidAmount > 0) return 'paid';
+    const hasSalarySetup = Boolean(row.salaryConfig && row.configuredGross > 0);
+    if (!hasSalarySetup) return 'setup_pending';
+    if (row.netSalary === 0 || (row.pendingAmount === 0 && row.paidAmount > 0)) return 'paid';
     const dueDate = row.item?.dueDate || `${month}-05`;
     if (row.pendingAmount > 0 && dueDate < data.today) return 'overdue';
     return 'pending';
@@ -1142,13 +1143,17 @@ function HrContent({
                   const paid = row.paidAmount;
                   const pending = row.pendingAmount;
                   const net = row.netSalary;
-                  const isZeroSalary = net === 0;
-                  const isPaid = !isZeroSalary && pending === 0 && paid > 0;
-                  const isPartiallyPaid = paid > 0 && pending > 0;
-                  const isOverdue = !isZeroSalary && Boolean((item?.dueDate || `${month}-05`) < data.today && pending > 0);
+                  const hasSalarySetup = Boolean(salaryConfig && row.configuredGross > 0);
+                  const isNotSetup = !hasSalarySetup;
+                  const isZeroSalary = hasSalarySetup && net === 0;
+                  const isPaid = !isNotSetup && !isZeroSalary && pending === 0 && paid > 0;
+                  const isPartiallyPaid = !isNotSetup && paid > 0 && pending > 0;
+                  const isOverdue = !isNotSetup && !isZeroSalary && Boolean((item?.dueDate || `${month}-05`) < data.today && pending > 0);
                   const attSummary = getStaffAttendanceSummary(p.id, month, data.today, data, item);
 
-                  const statusTone = isZeroSalary
+                  const statusTone = isNotSetup
+                    ? 'gray'
+                    : isZeroSalary
                     ? 'gray'
                     : isPaid
                     ? 'green'
@@ -1157,7 +1162,9 @@ function HrContent({
                     : isOverdue
                     ? 'red'
                     : 'amber';
-                  const statusLabel = isZeroSalary
+                  const statusLabel = isNotSetup
+                    ? 'Setup pending'
+                    : isZeroSalary
                     ? 'No payment due'
                     : isPaid
                     ? 'Paid'
@@ -1218,14 +1225,14 @@ function HrContent({
                       </td>
                       <td style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>
                         {rupees(row.configuredGross > 0 ? row.configuredGross : row.netSalary)}
-                        {item && item.net !== (row.configuredGross > 0 ? row.configuredGross : row.netSalary) && (
-                          <div style={{ fontSize: '11px', fontWeight: 500, color: '#64748b', marginTop: '2px' }}>
-                            Net payout: {rupees(item.net)}
-                          </div>
-                        )}
                       </td>
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
+                          {item && item.net !== (row.configuredGross > 0 ? row.configuredGross : row.netSalary) && (
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>
+                              Net payout: {rupees(item.net)}
+                            </span>
+                          )}
                           <span
                             style={{
                               display: 'inline-block',
@@ -1253,29 +1260,27 @@ function HrContent({
                           >
                             {statusLabel}
                           </span>
-                          <span style={{ fontSize: '12px', color: '#64748b' }}>
-                            {rowDueDate}
-                          </span>
                         </div>
                       </td>
                       <td>
                         <span style={{ fontSize: '13px', color: '#334155' }}>
-                          {rowDueDate}
+                          {isNotSetup || isZeroSalary ? '—' : rowDueDate}
                         </span>
                       </td>
                       <td>
                         <div className="hr-actions-compact">
-                          {isZeroSalary ? (
+                          {isNotSetup ? (
                             can('payroll.manage') ? (
-                              <Link
-                                to="/settings?tab=Staff+%26+Payroll&section=payroll"
+                              <button
+                                type="button"
                                 className="hr-payslip-btn"
-                                style={{ textDecoration: 'none' }}
+                                style={{ minWidth: '96px', width: 'auto', padding: '6px 10px' }}
+                                onClick={() => setAction({ kind: 'employment', staff: p })}
                               >
                                 Setup salary
-                              </Link>
+                              </button>
                             ) : (
-                              <span style={{ color: '#94a3b8', fontSize: '13px', padding: '0 8px' }}>—</span>
+                              <span style={{ color: '#94a3b8', fontSize: '13px', width: '84px', display: 'inline-block', textAlign: 'center' }}>—</span>
                             )
                           ) : pending > 0 && can('payroll.pay') ? (
                             <button
@@ -1285,7 +1290,7 @@ function HrContent({
                             >
                               Pay
                             </button>
-                          ) : paid > 0 ? (
+                          ) : paid > 0 || isZeroSalary ? (
                             <button
                               type="button"
                               className="hr-payslip-btn"
@@ -1294,7 +1299,7 @@ function HrContent({
                               Payslip
                             </button>
                           ) : (
-                            <span style={{ color: '#94a3b8', fontSize: '13px', padding: '0 8px' }}>—</span>
+                            <span style={{ color: '#94a3b8', fontSize: '13px', width: '84px', display: 'inline-block', textAlign: 'center' }}>—</span>
                           )}
 
                           <div style={{ position: 'relative', display: 'inline-block' }}>

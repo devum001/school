@@ -107,6 +107,23 @@
   border-color: #88b5aa;
   box-shadow: inset 3px 0 0 #2c7b69;
 }
+.student-exam-row.overall-exam-row {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+.student-exam-row.overall-exam-row:hover {
+  background: #ccfbf1;
+  border-color: #5eead4;
+}
+.student-exam-row.overall-exam-row.selected {
+  background: #e6fffa;
+  border-color: #0d9488;
+  box-shadow: inset 3px 0 0 #0d9488;
+}
+.student-exam-icon.overall-icon {
+  background: #ccfbf1;
+  color: #0d9488;
+}
 .student-exam-icon {
   display: grid;
   place-items: center;

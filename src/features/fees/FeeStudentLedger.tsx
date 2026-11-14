@@ -7,7 +7,6 @@ import {
   allocateToEarliest,
   feeApi,
   installmentBalance,
-  rollForwardInstallments,
   type FeeAccount,
   type FeeContext,
   type FeeStudentRow,
@@ -183,20 +182,27 @@ export default function FeeStudentLedger({
                         </tr>
                       </thead>
                       <tbody>
-                        {rollForwardInstallments(a.installments).map((i: FeeAccount['installments'][number]) => {
+                        {a.installments.map((i: FeeAccount['installments'][number]) => {
                           const bal = installmentBalance(i);
+                          const paidAmount = (i.openingPaid ?? 0) + (i.paid ?? 0);
+                          const isPartial = paidAmount > 0 && bal > 0;
                           return (
                             <tr key={i.id}>
                               <td>
                                 <div style={{ fontWeight: 500 }}>{formatCalendarDate(i.dueDate)}</div>
-                                {bal > 0 && (
-                                  <div style={{ fontSize: 12, color: '#b45309', fontWeight: 600 }}>
-                                    {money(bal)} due
+                                {bal > 0 && i.dueDate < context.today && (
+                                  <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>
+                                    Overdue
+                                  </div>
+                                )}
+                                {bal > 0 && i.dueDate === context.today && (
+                                  <div style={{ fontSize: 11, color: '#d97706', fontWeight: 600 }}>
+                                    Due today
                                   </div>
                                 )}
                               </td>
                               <td className="currency-cell">{money(i.amount)}</td>
-                              <td className="currency-cell">{money((i.openingPaid ?? 0) + (i.paid ?? 0))}</td>
+                              <td className="currency-cell">{money(paidAmount)}</td>
                               <td
                                 className="currency-cell"
                                 style={{
@@ -204,7 +210,20 @@ export default function FeeStudentLedger({
                                   color: bal > 0 ? '#b45309' : '#059669',
                                 }}
                               >
-                                {bal > 0 ? money(bal) : 'Paid ✓'}
+                                {bal > 0 ? (
+                                  isPartial ? (
+                                    <span>
+                                      {money(bal)}{' '}
+                                      <small style={{ display: 'block', fontSize: 11, color: '#b45309', fontWeight: 500 }}>
+                                        (Partial)
+                                      </small>
+                                    </span>
+                                  ) : (
+                                    money(bal)
+                                  )
+                                ) : (
+                                  'Paid ✓'
+                                )}
                               </td>
                             </tr>
                           );
@@ -309,7 +328,25 @@ export default function FeeStudentLedger({
   );
 }
 
-function CollectPayment({
+function formatDueDate(iso: string): string {
+  if (!iso) return '—';
+  try {
+    const parts = iso.split('-');
+    if (parts.length === 3) {
+      const [y, m, d] = parts.map(Number);
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ];
+      return `${String(d).padStart(2, '0')} ${months[m - 1] ?? ''} ${y}`;
+    }
+    return iso;
+  } catch {
+    return iso;
+  }
+}
+
+export function CollectPayment({
   schoolId,
   context,
   studentId,
@@ -327,13 +364,17 @@ function CollectPayment({
   const pending = accounts
     .flatMap((a) =>
       a.installments
-        .filter((i: FeeAccount['installments'][number]) => installmentBalance(i) > 0)
-        .map((i: FeeAccount['installments'][number]) => ({
+        .map((i: FeeAccount['installments'][number], idx: number) => ({ i, originalIdx: idx + 1 }))
+        .filter(({ i }) => installmentBalance(i) > 0)
+        .map(({ i, originalIdx }) => ({
           accountId: a.id!,
           yearName: a.yearName,
           historical: a.historical || a.academicYearId !== context.yearId,
           installmentId: i.id,
+          installmentIndex: originalIdx,
           dueDate: i.dueDate,
+          amount: i.amount,
+          paid: (i.paid ?? 0) + (i.openingPaid ?? 0),
           balance: installmentBalance(i),
         })),
     )
@@ -341,7 +382,29 @@ function CollectPayment({
 
   const totalPendingPaise = pending.reduce((s, i) => s + i.balance, 0);
 
-  const [amount, setAmount] = useState(totalPendingPaise),
+  // 1. Identify previous partial arrears vs next fresh installment:
+  // An item has a partial arrear if it has already been partially paid (paid > 0)
+  const firstFreshIdx = pending.findIndex((p) => (p.paid ?? 0) === 0);
+  const hasPartialArrears = firstFreshIdx > 0;
+
+  // Arrears from previous partially paid installment(s)
+  const partialArrearsPaise = hasPartialArrears
+    ? pending.slice(0, firstFreshIdx).reduce((s, p) => s + p.balance, 0)
+    : 0;
+
+  // Target item for this payment:
+  // If there are partial arrears, combine them directly with the next installment!
+  const targetItem = hasPartialArrears ? pending[firstFreshIdx] : pending[0];
+
+  // Effective installment due:
+  // Next installment balance + prior partial arrears (e.g. ₹9,750 + ₹750 = ₹10,500)
+  const effectiveDuePaise = hasPartialArrears
+    ? partialArrearsPaise + (targetItem?.balance ?? 0)
+    : (targetItem?.balance ?? 0);
+
+  const [amount, setAmount] = useState(
+    effectiveDuePaise > 0 ? effectiveDuePaise : totalPendingPaise,
+  ),
     [date, setDate] = useState(context.today),
     [method, setMethod] = useState('Cash'),
     [reference, setReference] = useState(''),
@@ -352,12 +415,14 @@ function CollectPayment({
   const allocations = allocateToEarliest(pending, amount);
   const valid = amount > 0 && amount <= totalPendingPaise;
 
-  const lastPendingItem = pending[pending.length - 1];
-  const priorPendingPaise = totalPendingPaise - (lastPendingItem?.balance ?? 0);
-  const remainingPaise = totalPendingPaise - amount;
-  // Trigger remaining balance & due date only when payment leaves an unpaid balance on the final installment
-  const showFinalInstallmentPartialPicker =
-    amount > priorPendingPaise && amount < totalPendingPaise;
+  // Check if any installment was partially paid
+  const partialAllocItem = allocations.find((a) => a.amount > 0 && a.amount < a.balance);
+  const showPartialDatePicker = Boolean(partialAllocItem);
+  const partialRemainingPaise = partialAllocItem ? partialAllocItem.balance - partialAllocItem.amount : 0;
+
+  const isOverdueDue = targetItem
+    ? targetItem.dueDate < context.today || (hasPartialArrears && pending.some((p) => p.dueDate < context.today))
+    : false;
 
   return (
     <Modal
@@ -384,7 +449,7 @@ function CollectPayment({
           setBusy(true);
           setError('');
           try {
-            const effectiveNextDate = showFinalInstallmentPartialPicker
+            const effectiveNextDate = showPartialDatePicker
               ? nextDueDate ||
                 (() => {
                   const d = new Date(`${date || context.today}T12:00:00Z`);
@@ -426,21 +491,70 @@ function CollectPayment({
           </LoadingOverlay>
         )}
 
-        {totalPendingPaise > 0 && (
-          <div className="fee-quick-split-bar" style={{ marginBottom: 8 }}>
-            <span>Quick fill:</span>
-            <button
-              type="button"
-              className="fee-split-pill rebalance"
-              onClick={() => setAmount(totalPendingPaise)}
-            >
-              Pay full remaining lump-sum ({money(totalPendingPaise)})
-            </button>
+        {/* Clean, Single-line Due Summary */}
+        {targetItem && (
+          <div className={`fee-due-pill-banner ${isOverdueDue ? 'is-overdue' : ''}`}>
+            <div className="fee-due-pill-left">
+              <span className="fee-due-dot" />
+              <span>{isOverdueDue ? 'Overdue Installment:' : 'Due Installment:'}</span>
+              <strong>
+                Installment {targetItem.installmentIndex} — {money(effectiveDuePaise)}
+              </strong>
+              {hasPartialArrears && (
+                <span className="fee-due-breakdown-tag">
+                  ({money(targetItem.balance)} + {money(partialArrearsPaise)} prev. balance)
+                </span>
+              )}
+              <span className="fee-due-date-tag">
+                (Due: {formatDueDate(targetItem.dueDate)})
+              </span>
+            </div>
+            {totalPendingPaise > effectiveDuePaise && (
+              <span className="fee-due-total-tag">
+                Total Remaining: <strong>{money(totalPendingPaise)}</strong>
+              </span>
+            )}
           </div>
         )}
 
         <div className="fee-form-grid">
-          <AmountField label="Amount received (₹)" value={amount} onChange={setAmount} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <AmountField label="Amount received (₹)" value={amount} onChange={setAmount} />
+            {totalPendingPaise > 0 && (
+              <div className="fee-quick-amount-row">
+                <button
+                  type="button"
+                  className={`fee-quick-amt-btn ${amount === effectiveDuePaise ? 'active' : ''}`}
+                  onClick={() => setAmount(effectiveDuePaise)}
+                >
+                  {hasPartialArrears
+                    ? `Next Installment (${money(effectiveDuePaise)})`
+                    : `Installment (${money(effectiveDuePaise)})`}
+                </button>
+
+                {hasPartialArrears && (
+                  <button
+                    type="button"
+                    className={`fee-quick-amt-btn ${amount === partialArrearsPaise ? 'active' : ''}`}
+                    onClick={() => setAmount(partialArrearsPaise)}
+                  >
+                    Only Previous Due ({money(partialArrearsPaise)})
+                  </button>
+                )}
+
+                {totalPendingPaise > effectiveDuePaise && (
+                  <button
+                    type="button"
+                    className={`fee-quick-amt-btn ${amount === totalPendingPaise ? 'active' : ''}`}
+                    onClick={() => setAmount(totalPendingPaise)}
+                  >
+                    Full Lump-sum ({money(totalPendingPaise)})
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           <label className="field">
             Payment date
             <CalendarDateInput
@@ -462,47 +576,23 @@ function CollectPayment({
             Reference
             <input
               maxLength={120}
+              placeholder="e.g. UPI / Cheque / Txn ID"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
             />
           </label>
         </div>
 
-        {showFinalInstallmentPartialPicker && (
-          <div
-            style={{
-              background: '#fffbeb',
-              border: '1px solid #fde68a',
-              borderRadius: '8px',
-              padding: '12px 16px',
-              margin: '12px 0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px',
-            }}
-          >
+        {showPartialDatePicker && partialAllocItem && (
+          <div className="fee-partial-box-slim">
             <div>
-              <strong style={{ fontSize: 13, color: '#b45309', display: 'block' }}>
-                Remaining balance: {money(remainingPaise)}
-              </strong>
-              <span style={{ fontSize: 12, color: '#78350f' }}>
-                Select due date for remaining balance (used for reminders & notifications)
+              <span>
+                Remaining on Installment {partialAllocItem.installmentIndex}:{' '}
+                <strong>{money(partialRemainingPaise)}</strong>
               </span>
             </div>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 13,
-                fontWeight: 500,
-                color: '#78350f',
-                margin: 0,
-              }}
-            >
-              Due date:
+            <label className="fee-partial-date-label">
+              Next due date:
               <CalendarDateInput
                 required
                 min={date || context.today}
@@ -520,17 +610,18 @@ function CollectPayment({
           </div>
         )}
 
-        <p className="fee-total">
-          Payment total <strong>{money(amount)}</strong>
-        </p>
         {error && (
           <p className="form-error" role="alert">
             {error}
           </p>
         )}
-        <footer className="modal-actions">
+
+        <footer className="modal-actions" style={{ marginTop: 4 }}>
+          <Button type="button" variant="secondary" onClick={close} disabled={busy}>
+            Cancel
+          </Button>
           <Button disabled={busy || !valid}>
-            {busy ? 'Confirming payment…' : 'Record payment & issue receipt'}
+            {busy ? 'Recording payment…' : `Collect ${valid ? money(amount) : ''} & Issue Receipt`}
           </Button>
         </footer>
       </form>
