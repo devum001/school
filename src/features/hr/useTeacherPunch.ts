@@ -16,6 +16,7 @@ export function useTeacherPunch(schoolId: string) {
   const [clockOffset, setClockOffset] = useState(0);
   const pending = useRef<{ kind: 'in' | 'out'; key: string } | null>(null);
   const mounted = useRef(true);
+  const locationRequest = useRef<AbortController | null>(null);
   const busyRef = useRef(false),
     sequence = useRef(0),
     lastRead = useRef(0);
@@ -60,6 +61,7 @@ export function useTeacherPunch(schoolId: string) {
     const timer = window.setInterval(focus, 60000);
     return () => {
       mounted.current = false;
+      locationRequest.current?.abort();
       controller.abort();
       clearInterval(timer);
       window.removeEventListener('focus', focus);
@@ -70,10 +72,25 @@ export function useTeacherPunch(schoolId: string) {
     busyRef.current = true;
     setBusy(save ? 'punch' : 'location');
     setError('');
+    setReading(undefined);
+    const controller = new AbortController();
+    locationRequest.current = controller;
     let latest: LocationReading | undefined;
     try {
-      const position = await currentPosition();
-      if (!mounted.current) return;
+      const position = await currentPosition({
+        maxAccuracy: data?.locationPolicy.maxAccuracy ?? 50,
+        signal: controller.signal,
+        onProgress: (position) => {
+          if (mounted.current && !controller.signal.aborted)
+            setReading({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+              capturedAt: position.timestamp,
+            });
+        },
+      });
+      if (!mounted.current || controller.signal.aborted) return;
       latest = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -82,6 +99,11 @@ export function useTeacherPunch(schoolId: string) {
       };
       setReading(latest);
       if (save && data) {
+        const feedback = punchLocationFeedback(latest, data.locationPolicy);
+        if (!feedback.ok) {
+          setError(feedback.message);
+          return;
+        }
         const kind = data.state.nextKind;
         if (pending.current?.kind !== kind) pending.current = { kind, key: crypto.randomUUID() };
         await apiService.request(`/schools/${schoolId}/hr/punch`, {
@@ -93,6 +115,7 @@ export function useTeacherPunch(schoolId: string) {
         announcePunch(schoolId);
       }
     } catch (cause) {
+      if (!mounted.current || controller.signal.aborted) return;
       const updated = save ? await refresh() : data;
       const feedback =
         latest && updated ? punchLocationFeedback(latest, updated.locationPolicy) : undefined;
@@ -107,7 +130,7 @@ export function useTeacherPunch(schoolId: string) {
       );
     } finally {
       busyRef.current = false;
-      setBusy(null);
+      if (mounted.current) setBusy(null);
     }
   };
   return { data, busy, error, reading, clockOffset, refresh, act };

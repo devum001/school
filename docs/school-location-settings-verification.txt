@@ -1,0 +1,126 @@
+School Location settings — 14 November 2026
+
+User flow
+School settings > General > School Location, beside School Calendar & Holidays.
+Add/Edit location supports: map click, draggable pin, current device location,
+manual Latitude and Longitude, and a pasted decimal coordinate pair. Radius is
+shown on the map, with slider and presets. Saved campuses can be edited/removed.
+Test current location checks the saved policy only; it never records attendance.
+Existing campus records remain in the existing staff_hr_settings collection.
+No migration, seed, environment change or dependency installation is required.
+Restart/update the backend and refresh the frontend to use the new endpoint.
+
+Phone coordinates
+On your phone at school, open Google Maps, enable precise location, use its
+current-location button, then touch and hold the actual school building to drop
+a pin. Copy its decimal latitude, longitude (latitude first) into the new form.
+Check the pin and radius before saving. The Google Maps help link is on the page:
+https://support.google.com/maps/answer/18539
+Alternatively open this school's settings on the phone and use current location.
+Browser location on a phone needs the app served over HTTPS and location permission;
+a laptop localhost address is not the same server when opened on a phone.
+Manual campus coordinates do not substitute for a teacher's device location.
+A 3333-metre uncertainty reading still cannot establish presence in a 100-metre
+campus; real device accuracy cannot be guaranteed by application code.
+
+Implementation
+Shared SchoolLocations UI with typed demo/live adapters. Demo uses its existing
+local repository; live uses authenticated GET/PUT /schools/:schoolId/hr/locations.
+Read requires school.profile.view. Writes retain the existing payroll.manage
+permission, CSRF and school-scoped transaction/audit enforcement. General settings
+must be visible to the configured role. Owner accounts have these permissions.
+The response includes only schoolId, revision, locations and maxAccuracy.
+Writes preserve payroll, leave and timetable fields, reject stale revisions, and
+validate ranges. Existing Work & Leave location forms moved to the General tab;
+a link remains there so users can find the new location. Map edits participate
+in the existing unsaved-changes confirmation. Errors remain at the form bottom.
+The read performs one location-settings query after the normal authorization checks.
+
+Files added/updated for this request — frontend
+src/features/settings/SchoolLocations.tsx
+src/features/settings/SchoolLocationTest.tsx
+src/features/settings/school-locations.css
+src/features/settings/data/demoSchoolLocations.ts
+src/features/settings/SchoolProfileView.tsx
+src/features/settings/SchoolProfile.tsx
+src/features/settings/LiveSchoolProfile.tsx
+src/features/live/LiveSchoolSettings.tsx
+src/features/live/LiveSettings.tsx
+src/features/setup/SchoolSetup.tsx
+src/features/hr/CampusLocationPicker.tsx
+src/features/hr/campus-location.css
+src/features/hr/HrForms.tsx
+src/features/hr/HrSettingsPanel.tsx
+src/features/hr/punchLocationFeedback.ts
+src/services/schoolLocationService.ts
+src/services/schoolLocationService.test.ts
+src/lib/schoolLocations.ts
+src/lib/schoolLocations.test.ts
+src/lib/settings.ts
+src/lib/demoRepository.ts
+src/types/domain.ts
+playwright.config.ts
+playwright.location.config.ts (existing uncommitted test config reused)
+tests/location-live.e2e.ts
+tests/school-location-demo.e2e.ts
+Other existing uncommitted GPS/punch-screen changes were preserved.
+
+Files added/updated — backend
+src/api/controllers/hr.controller.ts
+src/api/controllers/requests/hr.request.ts
+src/api/services/schoolLocations.service.ts
+src/test/schoolLocations.integration.test.ts
+Applied only after checking original file hashes to avoid overwriting other work.
+
+Checks actually run
+- git status --short and git diff --check in both repositories: inspected; no
+  whitespace errors. No commits or staging performed.
+- npm run build: PASS (TypeScript and Vite). Existing large-chunk and dependency
+  annotation warnings remain.
+- VITE_APP_MODE=demo npm test -- --run: PASS, 351 tests / 62 files.
+- VITE_APP_MODE=live vitest run src/lib/schoolLocations.test.ts
+  src/services/schoolLocationService.test.ts src/services/deviceLocation.test.ts
+  src/features/hr/punchLocationFeedback.test.ts: PASS, 17 tests / 4 files.
+- Focused eslint on new location modules, picker/forms, school profile view/demo,
+  settings helpers and browser tests: PASS.
+- npm run lint: NOT a full pass, existing 50 errors and 11 warnings. Includes
+  existing any/empty-block/unused-variable issues in repository and other modules.
+- Initial npm test with the local live-mode environment: 349 passed, 2 failed in
+  demo-only connectedLedgers / financeBranding tests; all pass when demo mode is
+  explicitly selected. New location tests also pass explicitly in live mode.
+- Backend tsc --noEmit --incremental false in the actual repository: PASS.
+- Backend eslint on all four changed files: PASS.
+- jest --runInBand src/test/schoolLocations.integration.test.ts: PASS, 3 tests
+  in an isolated local replica set; covers policy persistence, preservation of
+  unrelated work rules, audit, stale edits, removal, validation, CSRF, anonymous,
+  foreign-school access and read-only permissions.
+- Broader hr.integration.test.ts: 13 passed, 1 failed (paid/unpaid leave payroll
+  snapshot expects 3100000, receives 3200000). Reproduced the exact failure on an
+  unchanged backend copy. Not repaired as part of location configuration.
+- PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome SCHOOL_BACKEND_TEST_DIR=
+  /tmp/school-location-settings playwright test --config=playwright.location.config.ts:
+  PASS, 1 live browser scenario against isolated backend/database. Confirms coarse
+  readings preserve existing pin, precise readings update it, manual save/reload,
+  radius synchronization, test check makes no punch POST, and teacher geofencing.
+- PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome playwright test
+  tests/school-location-demo.e2e.ts: PASS, 1 scenario; manual/map editing,
+  invalid coordinate feedback, mobile layout, save/reload and removal.
+- Mobile screenshots inspected: /tmp/school-location-manual-mobile.png and
+  /tmp/school-location-tab-mobile.png. Map tiles stubbed in browser tests;
+  Leaflet pin/radius interactions exercised, external tile availability untested.
+
+No school production/Atlas database was accessed. Integration tests used isolated
+local databases, and browser tests simulated location; physical GPS remains a
+manual verification. No credentials or environment values were printed/changed.
+
+Follow-up: faster current-location interaction (14 November 2026)
+Campus setup and Test current location now return the first fresh device reading,
+with a five-second deadline when the device provides none. Campus setup keeps the
+saved pin when accuracy is insufficient and shows the approximate area immediately.
+Improve accuracy explicitly starts the longer refinement; Stop locating cancels it.
+Teacher punching retains the default accuracy-refinement path and server checks.
+No location is prefetched, fabricated or silently reused from an old reading.
+Focused tests: 19 passed; changed-file ESLint passed; demo browser tests: 2 passed.
+The browser regression requires approximate and precise results within three seconds
+of a supplied simulated fix, and verifies cancellation and saved-pin preservation.
+Physical hardware can still be slow or imprecise; these checks simulate browser GPS.

@@ -11,6 +11,7 @@ import type {
 } from './ledger';
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'half-day' | 'unmarked';
 export interface School {
+  locationPolicy?: import('../lib/schoolLocations').SchoolLocations;
   timezone?: string;
   id: string;
   name: string;

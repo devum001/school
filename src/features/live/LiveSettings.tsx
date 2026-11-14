@@ -198,7 +198,11 @@ function SchoolWorkspace({ schoolId }: { schoolId: string }) {
         />
       </nav>
       {active === 'General' ? (
-        <LiveSchoolProfile schoolId={schoolId} canManage={can('school.profile.manage')} />
+        <LiveSchoolProfile
+          schoolId={schoolId}
+          canManage={can('school.profile.manage')}
+          canManageLocations={can('payroll.manage')}
+        />
       ) : active === 'Classes, Sections & Grades' ? (
         <LiveClassStructure key={`${schoolId}:${year}`} access={access} yearId={year} />
       ) : active === 'Academic years' ? (

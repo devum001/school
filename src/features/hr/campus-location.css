@@ -54,3 +54,18 @@
     height: 260px;
   }
 }
+
+.campus-manual-coordinates {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.campus-manual-coordinates h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.campus-manual-coordinates > button {
+  justify-self: start;
+}

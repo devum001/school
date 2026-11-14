@@ -172,6 +172,7 @@ export default function SchoolSetup({
         <LiveSchoolProfile
           schoolId={access.schoolId}
           canManage={can('school.profile.manage')}
+          canManageLocations={can('payroll.manage')}
           onSaved={state.reload}
         />
       ) : target === 'years' ? (

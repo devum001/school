@@ -56,30 +56,7 @@ export async function loadTeacherPunch(schoolId: string, fresh = false, signal?:
     throw new ApiError(0, 'INVALID_RESPONSE', 'Unable to read your punch status.');
   return result.data;
 }
-export function currentPosition(): Promise<GeolocationPosition> {
-  if (!navigator.geolocation)
-    return Promise.reject(
-      new Error(
-        'Location is unavailable. Use an HTTPS connection and a device with location access.',
-      ),
-    );
-  return new Promise((resolve, reject) =>
-    navigator.geolocation.getCurrentPosition(
-      resolve,
-      (error) =>
-        reject(
-          new Error(
-            error.code === 1
-              ? 'Please turn on location on your device to continue.'
-              : error.code === 3
-                ? 'Your device could not locate you in time. Move near a window or try your phone, then check again.'
-                : 'Please turn on location on your device to continue.',
-          ),
-        ),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
-    ),
-  );
-}
+export { currentPosition } from './deviceLocation';
 export function announcePunch(schoolId: string) {
   window.dispatchEvent(new CustomEvent('schoolwell:punch-change', { detail: schoolId }));
 }

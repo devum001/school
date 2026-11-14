@@ -1,0 +1,61 @@
+.school-locations-stack {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.school-location-list {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+.school-location-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.school-location-summary h3 {
+  margin: 0 0 8px;
+}
+.school-location-summary p {
+  margin: 6px 0;
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.school-location-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.school-location-help {
+  padding: 0 24px 0 40px;
+  list-style: decimal;
+  line-height: 1.7;
+}
+.school-location-help li {
+  margin: 10px 0;
+}
+.school-location-test {
+  padding: 16px;
+  margin-top: 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.school-location-test.verified {
+  background: #e7f4ec;
+  color: #205446;
+}
+.school-location-test.uncertain {
+  background: #fff5df;
+  color: #72501e;
+}
+
+.school-location-test-body {
+  padding: 20px;
+}

@@ -12,6 +12,7 @@ export function HrForm({
   submitLabel = 'Save',
   className,
   submitDisabled = false,
+  hasChanges = false,
 }: {
   title: string;
   description: string;
@@ -21,11 +22,12 @@ export function HrForm({
   submitLabel?: string;
   className?: string;
   submitDisabled?: boolean;
+  hasChanges?: boolean;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [dirty, setDirty] = useState(false);
-  const guard = useDraftGuard(dirty && !busy, close);
+  const guard = useDraftGuard((dirty || hasChanges) && !busy, close);
   return (
     <Modal
       open

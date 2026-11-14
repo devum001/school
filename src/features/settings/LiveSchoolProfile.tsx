@@ -1,3 +1,4 @@
+import { LiveSchoolLocations } from './SchoolLocations';
 import { useEffect, useMemo, useState } from 'react';
 import { liveHrAdapter } from '../../services/hrService';
 import type { ProfileSource } from './data/contracts';
@@ -11,10 +12,12 @@ import { useSchoolProfile } from './useSchoolProfile';
 export default function LiveSchoolProfile({
   schoolId,
   canManage = false,
+  canManageLocations = false,
   onSaved,
 }: {
   schoolId: string;
   canManage?: boolean;
+  canManageLocations?: boolean;
   onSaved?: () => void;
 }) {
   const profile = useSchoolProfile(schoolId);
@@ -142,6 +145,9 @@ export default function LiveSchoolProfile({
           return (
             <SchoolProfileView
               key={school.profileRevision}
+              locationContent={
+                <LiveSchoolLocations schoolId={schoolId} canManage={canManageLocations} />
+              }
               school={view}
               academicYear={academicYear}
               hours={(school.hours as SchoolHours | undefined) ?? undefined}

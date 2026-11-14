@@ -3,14 +3,7 @@ import { liveHrAdapter } from '../../services/hrService';
 import { formatCalendarDate } from '../../lib/displayFormat';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  ArrowRight,
-  CalendarDays,
-  CheckCircle2,
-  Clock3,
-  LogOut,
-  RefreshCw,
-} from 'lucide-react';
+import { ArrowRight, CalendarDays, CheckCircle2, Clock3, LogOut, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/Primitives';
 import { useSession } from '../auth/useSession';
 import { useLiveSchool } from '../live/schoolContext';
@@ -200,12 +193,19 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
 
   const feedback =
     reading && data ? punchLocationFeedback(reading, data.locationPolicy, tick) : undefined;
-  const isWithinRange = feedback ? feedback.ok : true;
+  const isWithinRange = feedback?.ok === true;
+  const isOutside = feedback?.state === 'outside';
+  const locationTone = isWithinRange ? 'in-range' : isOutside ? 'out-of-range' : 'unconfirmed';
+  const locationTitle = busy
+    ? 'Finding precise location…'
+    : (feedback?.title ?? 'Location not checked');
+  const pinColor = isWithinRange ? '#5f8275' : isOutside ? '#ef4444' : '#ad7c30';
+  const pinBorder = isWithinRange ? '#1c3b32' : isOutside ? '#991b1b' : '#795720';
 
-  const campusLocation =
+  const campusLocation = feedback?.campus ??
     data?.locationPolicy.locations?.[0] ?? {
       name: schoolName || 'School campus',
-      radius: 200,
+      radius: 0,
     };
 
   return (
@@ -345,7 +345,7 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
 
           {/* School Location Check Card matching user screenshot exactly */}
           <section
-            className={`punch-location-card ${isWithinRange ? 'loc-in-range' : 'loc-out-of-range'}`}
+            className={`punch-location-card ${locationTone}`}
             aria-label="School location check"
           >
             <div className="punch-loc-pin-box" aria-hidden="true">
@@ -359,19 +359,12 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
               >
                 <path
                   d="M23 2C12.5066 2 4 10.5066 4 21C4 32.5 20.5 54.5 22.1 56.6C22.5 57.1 23.5 57.1 23.9 56.6C25.5 54.5 42 32.5 42 21C42 10.5066 33.4934 2 23 2Z"
-                  fill={isWithinRange ? '#5f8275' : '#ef4444'}
-                  stroke={isWithinRange ? '#1c3b32' : '#991b1b'}
+                  fill={pinColor}
+                  stroke={pinBorder}
                   strokeWidth="2.5"
                   strokeLinejoin="round"
                 />
-                <circle
-                  cx="23"
-                  cy="21"
-                  r="7"
-                  fill="#ffffff"
-                  stroke={isWithinRange ? '#1c3b32' : '#991b1b'}
-                  strokeWidth="2.4"
-                />
+                <circle cx="23" cy="21" r="7" fill="#ffffff" stroke={pinBorder} strokeWidth="2.4" />
               </svg>
             </div>
 
@@ -379,9 +372,14 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
               <h3 className="punch-loc-card-title">School location check</h3>
 
               <div className="punch-loc-badge-row">
-                <span className={`punch-loc-pill ${isWithinRange ? 'in-range' : 'out-of-range'}`}>
-                  {isWithinRange ? 'Within range' : 'Outside range'} •{' '}
-                  {campusLocation.name} ({campusLocation.radius}m radius)
+                <span className={`punch-loc-pill ${locationTone}`}>
+                  {locationTitle}
+                  {campusLocation.radius > 0 && (
+                    <>
+                      {' '}
+                      • {campusLocation.name} ({campusLocation.radius}m radius)
+                    </>
+                  )}
                 </span>
 
                 <button
@@ -394,12 +392,18 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
                 </button>
               </div>
 
-              <p className="punch-loc-subtext">
-                {feedback
-                  ? feedback.message
-                  : error && (error.toLowerCase().includes('location') || error.toLowerCase().includes('locate'))
-                    ? 'Please turn on location on your device.'
-                    : 'Check your location before you punch.'}
+              <p className="punch-loc-subtext" role="status">
+                {busy && !isWithinRange
+                  ? reading
+                    ? `Refining your location (currently ±${Math.round(reading.accuracy)} m). Keep this screen open for up to 20 seconds.`
+                    : 'Waiting for a fresh device location. Keep this screen open for up to 20 seconds.'
+                  : feedback
+                    ? feedback.message
+                    : error &&
+                        (error.toLowerCase().includes('location') ||
+                          error.toLowerCase().includes('locate'))
+                      ? error
+                      : 'Check your location before you punch.'}
               </p>
             </div>
           </section>
@@ -482,19 +486,9 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
 
       {error && (
         <div role="alert" className="punch-error">
-          <strong>
-            {error.toLowerCase().includes('location') || error.toLowerCase().includes('locate')
-              ? 'Location is turned off'
-              : 'We couldn’t confirm this action'}
-          </strong>
-          <p>
-            {error.toLowerCase().includes('location') || error.toLowerCase().includes('locate')
-              ? 'Please turn on location on your device to continue.'
-              : error}
-          </p>
-          {!error.toLowerCase().includes('location') && !error.toLowerCase().includes('locate') && (
-            <span>Your attendance has not been confirmed. Check the status above before retrying.</span>
-          )}
+          <strong>{feedback && !feedback.ok ? feedback.title : 'We couldn’t confirm this action'}</strong>
+          <p>{error}</p>
+          <span>Your attendance has not been confirmed. Check the status above before retrying.</span>
         </div>
       )}
     </div>

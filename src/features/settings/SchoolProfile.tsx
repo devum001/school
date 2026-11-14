@@ -1,3 +1,5 @@
+import SchoolLocations from './SchoolLocations';
+import { demoSchoolLocations } from './data/demoSchoolLocations';
 import { useState } from 'react';
 import { useSchool } from '../../app/useSchool';
 import { demoProfileSource } from './data/demoSettings';
@@ -23,6 +25,7 @@ export default function SchoolProfile() {
 
   return (
     <SchoolProfileView
+      locationContent={<SchoolLocations source={demoSchoolLocations} />}
       school={state.school}
       weekStartsOn={state.preferences?.weekStartsOn}
       academicYear={state.academicYear}

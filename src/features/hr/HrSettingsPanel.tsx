@@ -2,11 +2,10 @@ import { SetupSection, Rule } from '../settings/StaffPolicySection';
 import { Link } from 'react-router-dom';
 import '../../styles/staff-structure.css';
 import { formatCalendarDate, parseCalendarDate, titleCase } from '../../lib/displayFormat';
-import { lazy, Suspense, useState } from 'react';
+import { useState } from 'react';
 import { Button, Panel, EmptyState } from '../../components/ui/Primitives';
 import type { HrAdapter, HrSettings, HrStaff } from '../../services/hrService';
 import { HrForm, TextField, SelectField } from './HrForms';
-const CampusLocationPicker = lazy(() => import('./CampusLocationPicker'));
 export default function HrSettingsPanel({
   settings,
   staff = [],
@@ -153,7 +152,7 @@ export default function HrSettingsPanel({
       ) : section === 'work' ? (
         <SetupSection
           title="Work & Leave Rules"
-          subtitle="School timings, leave approval and teacher punch locations."
+          subtitle="School timings and leave approval rules."
           icon="attendance"
           onEdit={edit}
         >
@@ -194,24 +193,12 @@ export default function HrSettingsPanel({
               <div className="settings-policy-card-title">
                 <h3>Teacher Punch Locations</h3>
               </div>
-              {settings.locations.length ? (
-                <dl className="staff-rule-list">
-                  {settings.locations.map((l, i) => (
-                    <Rule key={i} label={titleCase(l.name)}>
-                      {l.radius} m radius
-                    </Rule>
-                  ))}
-                  <Rule label="GPS uncertainty">Up to {settings.maxAccuracy} m</Rule>
-                </dl>
-              ) : (
-                <p className="staff-rule-description">
-                  Add your school campus before enabling teacher punching.
-                </p>
-              )}
               <p className="settings-policy-note">
-                Location is checked only at punch in/out. Browser location cannot prevent GPS
-                spoofing.
+                Manage campus pins, coordinates and radius in General settings.
               </p>
+              <Link className="button secondary" to="/settings?section=location">
+                Open School Location
+              </Link>
             </div>
           </div>
         </SetupSection>
@@ -408,23 +395,16 @@ function SettingsEditor({
               Tracking starts at the first successful punch-in. Missed working days become Absent
               after school closes; pending leave counts only after approval.
             </p>
-            {(['paidLeaveDays', 'maxAccuracy'] as const).map((k) => (
-              <label className="field" key={k}>
-                {
-                  {
-                    paidLeaveDays: 'Annual paid leave days',
-                    maxAccuracy: 'Maximum GPS uncertainty (metres)',
-                  }[k]
-                }
-                <input
-                  required
-                  type="number"
-                  min={k === 'paidLeaveDays' ? 0 : 1}
-                  value={draft[k]}
-                  onChange={(e) => setDraft({ ...draft, [k]: Number(e.target.value) })}
-                />
-              </label>
-            ))}
+            <label className="field">
+              Annual paid leave days
+              <input
+                required
+                type="number"
+                min={0}
+                value={draft.paidLeaveDays}
+                onChange={(e) => setDraft({ ...draft, paidLeaveDays: Number(e.target.value) })}
+              />
+            </label>
           </div>
           <p>
             Only arrival after the half-day cutoff counts as half-day. Working hours are recorded
@@ -459,63 +439,9 @@ function SettingsEditor({
             Holidays — one DD-MM-YYYY date per line
             <textarea value={holidays} onChange={(e) => setHolidays(e.target.value)} rows={3} />
           </label>
-          <h3>Permitted punch locations</h3>
-          {draft.locations.map((location, i) => (
-            <div className="hr-location form-grid" key={i}>
-              <TextField
-                label="Location name"
-                value={location.name}
-                onChange={(name) =>
-                  setDraft({
-                    ...draft,
-                    locations: draft.locations.map((l, j) => (j === i ? { ...l, name } : l)),
-                  })
-                }
-              />
-              <Suspense fallback={<p role="status">Loading campus map…</p>}>
-                <CampusLocationPicker
-                  value={location}
-                  onChange={(next) =>
-                    setDraft((previous) => ({
-                      ...previous,
-                      locations: previous.locations.map((item, index) =>
-                        index === i ? next : item,
-                      ),
-                    }))
-                  }
-                />
-              </Suspense>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() =>
-                  setDraft({ ...draft, locations: draft.locations.filter((_, j) => j !== i) })
-                }
-              >
-                Remove location
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={draft.locations.length >= 10}
-            onClick={() =>
-              setDraft({
-                ...draft,
-                locations: [
-                  ...draft.locations,
-                  { name: 'School campus', latitude: 0, longitude: 0, radius: 100 },
-                ],
-              })
-            }
-          >
-            Add school location
-          </Button>
-          <p>
-            Choose the campus centre on the map. Radius must be 25–1,000 metres; the device’s
-            uncertainty must fit inside it.
-          </p>
+          <Link className="button secondary" to="/settings?section=location">
+            Manage school locations in General
+          </Link>
         </>
       )}
     </HrForm>

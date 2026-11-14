@@ -10,6 +10,21 @@ export function punchLocationFeedback(
   policy: TeacherPunchStatus['locationPolicy'],
   now = Date.now(),
 ) {
+  if (
+    ![reading.latitude, reading.longitude, reading.accuracy, reading.capturedAt].every(
+      Number.isFinite,
+    ) ||
+    Math.abs(reading.latitude) > 90 ||
+    Math.abs(reading.longitude) > 180
+  )
+    return {
+      ok: false,
+      state: 'unavailable' as const,
+      campus: undefined,
+      accuracy: reading.accuracy,
+      title: 'Location unavailable',
+      message: 'The device returned an invalid location. Check again.',
+    };
   const radians = (value: number) => (value * Math.PI) / 180;
   const candidates = policy.locations.map((location) => {
     const a =
@@ -28,13 +43,16 @@ export function punchLocationFeedback(
     return {
       ...result,
       ok: false,
+      state: 'unavailable' as const,
       title: 'School location is not set',
-      message: 'Ask your school administrator to save a campus location in Work & Leave rules.',
+      message:
+        'Ask your school administrator to save a campus location in General → School Location.',
     };
   if (Math.abs(now - reading.capturedAt) > 30000)
     return {
       ...result,
       ok: false,
+      state: 'expired' as const,
       title: 'Location reading has expired',
       message: 'Check your location again. Each punch uses a fresh reading.',
     };
@@ -42,28 +60,32 @@ export function punchLocationFeedback(
     return {
       ...result,
       ok: false,
-      title: 'Your location is not accurate enough',
-      message: `Your device reports ±${Math.round(reading.accuracy)} m accuracy. School requires ±${policy.maxAccuracy} m or better. Try your phone with precise location enabled, or move near a window.`,
+      state: 'inaccurate' as const,
+      title: 'Accuracy too low',
+      message: `Your device reports ±${Math.round(reading.accuracy)} m accuracy. School requires ±${policy.maxAccuracy} m or better. We cannot confirm whether you are inside the campus. Enable precise location and try a GPS-enabled phone near a window. If it still fails, ask the school administrator to record attendance.`,
     };
-  if (campus.distance > campus.radius)
+  if (campus.distance - reading.accuracy > campus.radius)
     return {
       ...result,
       ok: false,
-      title: 'You appear outside the school area',
+      state: 'outside' as const,
+      title: 'Outside school area',
       message: `You are approximately ${Math.round(campus.distance)} m from ${campus.name}; the allowed radius is ${campus.radius} m. If you are at school, ask your administrator to check the saved map pin.`,
     };
   if (campus.margin < 0)
     return {
       ...result,
       ok: false,
-      title: 'Move further inside the school area',
+      state: 'boundary' as const,
+      title: 'School boundary cannot be confirmed',
       message:
         'Your location uncertainty crosses the school boundary. Move closer to the campus centre or get a more accurate reading.',
     };
   return {
     ...result,
     ok: true,
-    title: 'Location is within the school area',
+    state: 'inside' as const,
+    title: 'Within school area',
     message:
       'The server will verify a fresh reading when you punch. Your location is checked only when you request it.',
   };

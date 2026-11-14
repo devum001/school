@@ -120,6 +120,7 @@ export default function LiveSchoolSettings() {
             <LiveSchoolProfile
               schoolId={schoolId}
               canManage={can('school.profile.manage')}
+              canManageLocations={can('payroll.manage')}
               onSaved={reload}
             />
           ) : (

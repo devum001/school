@@ -66,6 +66,7 @@ import {
   schoolProfileSchema,
   attendancePolicySchema,
   saveSchoolProfile,
+  saveSchoolLocations,
   saveAttendancePolicy,
   staffPayrollSchema,
   saveStaffPayroll,
@@ -254,6 +255,7 @@ export interface SchoolRepository {
   deleteSchoolClass: (id: string) => void;
   deleteSchoolSection: (id: string) => void;
   saveSchoolProfile: (input: Omit<School, 'id'>) => void;
+  saveSchoolLocations: (input: import('./schoolLocations').SchoolLocations) => void;
   saveSchoolDetails: (input: Omit<School, 'id'>, hours?: SchoolHours) => void;
   saveAttendancePolicy: (input: AttendancePolicy) => void;
   saveStaffPayroll: (input: StaffPayrollConfig) => void;
@@ -461,6 +463,7 @@ export const repository: SchoolRepository = {
   deleteSchoolClass: (id) => commit(deleteSchoolClass(state, id)),
   deleteSchoolSection: (id) => commit(deleteSchoolSection(state, id)),
   saveSchoolProfile: (input) => commit(saveSchoolProfile(state, input)),
+  saveSchoolLocations: (input) => commit(saveSchoolLocations(state, input)),
   saveSchoolDetails: (input, hours) => {
     const next = saveSchoolProfile(state, input);
     commit(hours ? saveSchoolHours(next, hours) : next);

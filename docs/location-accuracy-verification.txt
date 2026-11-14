@@ -1,0 +1,82 @@
+Location accuracy repair — 14 November 2026
+
+Diagnosis
+The first browser location could have kilometres of uncertainty. The old picker
+immediately used it as the campus centre. The punch card treated every failed
+check as Outside range, assumed Within range before any reading, and replaced
+location errors with Location is turned off. These messages were incorrect.
+
+Changes
+- Shared bounded high-accuracy watch: request only on user action, maximumAge 0,
+  wait up to 20 seconds for the configured accuracy, and stop immediately on a
+  precise fix, permission denial, cancellation or deadline. No background tracking.
+- Keep actual device coordinates, timestamp and reported uncertainty. Ignore stale,
+  non-finite and impossible readings. Never invent accuracy or use the saved campus
+  coordinates as a teacher's device location.
+- Punch flow shows progress, rejects failed local checks before sending a POST,
+  and still uses the existing authoritative server validation for accepted readings.
+- Explicit not-checked, inaccurate, expired, uncertain-boundary, outside and inside
+  states. Preserve real errors rather than claiming location is turned off.
+- Campus current-location action only moves the pin when accuracy is within both
+  school maxAccuracy and half the selected radius. Coarse readings show a dashed
+  uncertainty circle and leave the selected pin unchanged. Manual map placement remains.
+- Keep tile-loading errors separate so they cannot overwrite accuracy warnings.
+- Location badges wrap on small screens.
+
+Verification
+VITE_APP_MODE=demo npm test: 346 passed, 60 files.
+New device-location tests cover improvement from 3333 m to 21 m, best coarse result
+at deadline, stale/invalid readings, temporary provider failures, permission denial,
+abort cleanup and unavailable geolocation. Feedback tests cover exact same campus
+coordinates with 3333 m uncertainty and ambiguous boundaries.
+Focused ESLint: passed for all changed TypeScript application/test files.
+Full npm run lint: 50 errors and 11 warnings in existing, untouched files; not a pass.
+Examples include HrWorkspace, fee onboarding, repository and import components.
+Existing backend geofence integration test: 1 passed, 13 intentionally skipped.
+Used isolated local MongoDB; outside/stale checks and punch idempotency verified.
+No real school database was accessed. Backend source, secrets, dependencies and
+location settings were not changed. No database script is required.
+
+Remaining physical-device check
+Browser/device location quality cannot be guaranteed by application code. If the
+device continues reporting 3333 m uncertainty, it cannot establish presence within
+a 100 m campus. Verify the school pin on the actual building, use a GPS-enabled
+phone with precise location and site permission, and retry inside the campus.
+Existing pins saved from coarse readings are not automatically relocated.
+Browser tests use simulated positions, not a physical GPS device.
+
+Reference
+https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/watchPosition
+https://developer.mozilla.org/en-US/docs/Web/API/GeolocationCoordinates/accuracy
+
+Final browser/build results
+npm run build: passed (TypeScript and Vite). Large-chunk and dependency comment
+annotation warnings remain; no build errors.
+PLAYWRIGHT_CHROME_PATH=/opt/google/chrome/chrome playwright test
+--config=playwright.location.config.ts: 1 passed (55.2s test execution).
+Confirmed coarse setup leaves the pin, precise setup updates it, no initial
+Within range claim, no punch POST for coarse coordinates, success after improvement
+to 21 m, and blocking a precise outside reading. Mobile card screenshots captured.
+Initial browser attempts exposed a test settings-payload error, a map-tile warning
+masking the GPS warning (fixed), and stale simulated location needing a fresh fix.
+Final run passed against the real isolated API and simulated browser geolocation.
+
+Files
+src/services/deviceLocation.ts
+src/services/deviceLocation.test.ts
+src/services/teacherPunchService.ts
+src/features/hr/useTeacherPunch.ts
+src/features/hr/TeacherPunchPage.tsx
+src/features/hr/teacher-punch.css
+src/features/hr/punchLocationFeedback.ts
+src/features/hr/punchLocationFeedback.test.ts
+src/features/hr/CampusLocationPicker.tsx
+src/features/hr/HrSettingsPanel.tsx
+playwright.location.config.ts
+tests/location-live.e2e.ts
+
+Follow-up: manual School Location settings
+The subsequent School Location task adds a dedicated backend read/write endpoint
+and moves campus editing into General. See school-location-settings-verification.txt
+for the current files, test results and instructions. The earlier "backend source
+not changed" statement above describes only the preceding GPS-accuracy repair.

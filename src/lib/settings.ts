@@ -1,3 +1,4 @@
+import { schoolLocationsSchema, type SchoolLocations } from './schoolLocations';
 import { z } from 'zod';
 import { imageDataSchema } from './ledgerSchemas';
 import type { AttendancePolicy, DemoState, School, StaffPayrollConfig } from '../types/domain';
@@ -10,6 +11,7 @@ import {
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter a valid time.');
 const percent = z.number().min(0).max(100);
 export const schoolProfileSchema = z.object({
+  locationPolicy: schoolLocationsSchema.optional(),
   logoDataUrl: imageDataSchema.nullable().optional(),
   name: z.string().trim().min(2, 'Enter the school name.'),
   city: z.string().trim().min(2, 'Enter the school location.'),
@@ -104,7 +106,11 @@ export const defaultAttendancePolicy: AttendancePolicy = {
   enforceEligibility: true,
 };
 export function saveSchoolProfile(state: DemoState, input: Omit<School, 'id'>): DemoState {
-  const school = { id: state.school.id, ...schoolProfileSchema.parse(input) };
+  const school = {
+    id: state.school.id,
+    ...schoolProfileSchema.parse(input),
+    locationPolicy: state.school.locationPolicy,
+  };
   return {
     ...state,
     school,
@@ -267,4 +273,14 @@ export function saveStaffPayroll(state: DemoState, input: StaffPayrollConfig): D
       throw new Error('Reassign staff before removing their department.');
   }
   return { ...state, staffPayroll: config };
+}
+
+export function saveSchoolLocations(state: DemoState, input: SchoolLocations): DemoState {
+  const parsed = schoolLocationsSchema.parse(input);
+  if (parsed.revision !== (state.school.locationPolicy?.revision ?? 0))
+    throw new Error('Locations changed in another window. Reload and try again.');
+  return {
+    ...state,
+    school: { ...state.school, locationPolicy: { ...parsed, revision: parsed.revision + 1 } },
+  };
 }

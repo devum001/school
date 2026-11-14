@@ -1,7 +1,7 @@
 import SchoolCalendarSettings from './SchoolCalendarSettings';
 import SectionNavigation from '../../components/shared/SectionNavigation';
 import { useSettingsSection } from './useSettingsSection';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { MapPin } from 'lucide-react';
 import { useFeedback } from '../../app/useFeedback';
 import { useToday } from '../../app/useToday';
@@ -57,6 +57,7 @@ export interface SchoolProfileViewProps {
   save: (school: ProfileViewValue, hours?: SchoolHours) => Promise<void> | void;
   onSaveAcademicYear?: (yearData: { name: string; start: string; end: string }) => Promise<void> | void;
   holidays?: string[];
+  locationContent?: ReactNode;
   onSaveHolidays?: (holidays: string[]) => Promise<void> | void;
 }
 export default function SchoolProfileView({
@@ -72,11 +73,13 @@ export default function SchoolProfileView({
   save,
   holidays = [],
   onSaveHolidays,
+  locationContent,
 }: SchoolProfileViewProps) {
   const { section, navigation } = useSettingsSection([
     { id: 'profile', label: 'School Profile' },
     { id: 'timing', label: 'School Timing' },
     { id: 'calendar', label: 'School Calendar & Holidays' },
+    ...(locationContent ? [{ id: 'location', label: 'School Location' }] : []),
   ]);
   const today = useToday();
   const notify = useFeedback();
@@ -112,7 +115,9 @@ export default function SchoolProfileView({
   return (
     <>
       <SectionNavigation {...navigation} label="General settings features" />
-      {section === 'calendar' ? (
+      {section === 'location' ? (
+        locationContent
+      ) : section === 'calendar' ? (
         <Panel>
           <SchoolCalendarSettings
             initialHolidays={holidays}

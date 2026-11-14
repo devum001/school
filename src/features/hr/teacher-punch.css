@@ -411,7 +411,8 @@
   border-radius: 9999px;
   display: inline-flex;
   align-items: center;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.5;
   transition: all 0.2s ease;
 }
 
@@ -676,4 +677,10 @@
   .punch-timeline-stem {
     right: 50px;
   }
+}
+
+.punch-loc-pill.unconfirmed {
+  background: #fff4db;
+  color: #795720;
+  border: 1px solid #e6d2a9;
 }
