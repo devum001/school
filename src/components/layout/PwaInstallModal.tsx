@@ -1,11 +1,12 @@
-import { Modal, Button, AppIcon } from '../ui/Primitives';
-import { Share, PlusSquare, MoreVertical, Smartphone, CheckCircle2 } from 'lucide-react';
+import { Modal, Button } from '../ui/Primitives';
+import { AppIcon } from '../ui/AppIcon';
+import { Share, PlusSquare, MoreVertical, CheckCircle2, Download } from 'lucide-react';
 
 interface PwaInstallModalProps {
   open: boolean;
   onClose: () => void;
   isIos: boolean;
-  isAndroid: boolean;
+  isAndroid?: boolean;
   onNativeInstall?: () => void;
   hasNativePrompt?: boolean;
 }
@@ -14,7 +15,6 @@ export default function PwaInstallModal({
   open,
   onClose,
   isIos,
-  isAndroid,
   onNativeInstall,
   hasNativePrompt,
 }: PwaInstallModalProps) {
@@ -25,51 +25,62 @@ export default function PwaInstallModal({
       open={open}
       onClose={onClose}
       title="Install Schoolwell App · ऐप इंस्टॉल करें"
-      description="Install Schoolwell directly on your mobile device or computer for instant access, offline reliability, and full-screen workspace."
+      description="Schoolwell ko apne device ki home screen par add karein taaki instant full-screen access aur faster performance mile."
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', margin: '14px 0' }}>
-        {/* App Banner */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', margin: '12px 0' }}>
+        {/* App Info Card */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
-            padding: '14px',
-            background: 'var(--surface-subtle, #f8fafc)',
-            border: '1px solid var(--border, #e2e8f0)',
+            padding: '12px 14px',
+            background: 'rgba(18, 55, 59, 0.04)',
+            border: '1px solid rgba(18, 55, 59, 0.12)',
             borderRadius: '12px',
           }}
         >
           <div
             style={{
-              width: '52px',
-              height: '52px',
+              width: '54px',
+              height: '54px',
               borderRadius: '12px',
               background: '#12373b',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 2px 6px rgba(18, 55, 59, 0.2)',
+              flexShrink: 0,
+              boxShadow: '0 4px 12px rgba(18, 55, 59, 0.2)',
             }}
           >
             <AppIcon name="graduation-cap" size={32} />
           </div>
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text, #0f172a)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '16px', fontWeight: 700, color: '#12373b', lineHeight: 1.2 }}>
               Schoolwell
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--muted, #64748b)' }}>
+            <div style={{ fontSize: '12px', color: '#52666a', marginTop: '2px' }}>
               School Management System · Web App
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', fontSize: '11px', color: '#16a34a', fontWeight: 600 }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                marginTop: '4px',
+                fontSize: '11px',
+                color: '#0d9488',
+                fontWeight: 600,
+              }}
+            >
               <CheckCircle2 size={13} /> Fast, lightweight & battery efficient
             </div>
           </div>
         </div>
 
-        {/* 1-Click Native Install if available */}
+        {/* 1-Click Native Install Button (Android / Chrome / Edge) */}
         {hasNativePrompt && onNativeInstall && (
-          <div style={{ textAlign: 'center', margin: '4px 0' }}>
+          <div style={{ margin: '4px 0' }}>
             <Button
               onClick={() => {
                 onNativeInstall();
@@ -77,89 +88,237 @@ export default function PwaInstallModal({
               }}
               style={{
                 width: '100%',
-                padding: '12px',
-                fontSize: '14px',
+                padding: '12px 16px',
+                fontSize: '15px',
                 fontWeight: 700,
                 background: '#12373b',
                 color: '#ffffff',
-                borderRadius: '8px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 2px 8px rgba(18, 55, 59, 0.25)',
               }}
             >
-              <Smartphone size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-              1-Click Install App (इंस्टॉल करें)
+              <Download size={18} />
+              Install Now (अभी इंस्टॉल करें)
             </Button>
           </div>
         )}
 
-        {/* iOS Step-by-Step Instructions */}
+        {/* iOS iPhone / iPad Safari Step-by-Step Visual Guide */}
         {isIos && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
-              How to install on iPhone / iPad (Safari):
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              padding: '14px',
+              borderRadius: '12px',
+            }}
+          >
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+              iPhone / iPad (Safari) me install karne ke aasan steps:
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '13px', color: '#334155' }}>
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#334155' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  background: '#0284c7',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  flexShrink: 0,
+                }}
+              >
                 1
               </div>
-              <div>
-                Tap the <strong>Share</strong> button <Share size={14} style={{ verticalAlign: 'middle', margin: '0 2px' }} /> in the Safari toolbar at the bottom of the screen.
+              <div style={{ flex: 1 }}>
+                Neeche Safari toolbar me <strong>Share button</strong>{' '}
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    padding: '2px 6px',
+                    background: '#e0f2fe',
+                    color: '#0369a1',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                  }}
+                >
+                  <Share size={12} /> Share
+                </span>{' '}
+                par tap karein.
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '13px', color: '#334155' }}>
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#334155' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  background: '#0284c7',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  flexShrink: 0,
+                }}
+              >
                 2
               </div>
-              <div>
-                Scroll down and select <strong>Add to Home Screen</strong> <PlusSquare size={14} style={{ verticalAlign: 'middle', margin: '0 2px' }} />.
+              <div style={{ flex: 1 }}>
+                Menu me thoda neeche scroll karke{' '}
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    padding: '2px 6px',
+                    background: '#e0f2fe',
+                    color: '#0369a1',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                  }}
+                >
+                  <PlusSquare size={12} /> Add to Home Screen
+                </span>{' '}
+                chunein.
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '13px', color: '#334155' }}>
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#334155' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  background: '#0284c7',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  flexShrink: 0,
+                }}
+              >
                 3
               </div>
-              <div>
-                Tap <strong>Add</strong> in the top-right corner. Schoolwell will appear on your home screen like a native app!
+              <div style={{ flex: 1 }}>
+                Top-right corner me <strong>Add</strong> par tap karein. Schoolwell aapke phone par native app ban jayega!
               </div>
             </div>
           </div>
         )}
 
-        {/* Android / Chrome Instructions if not iOS or manual */}
-        {(!isIos || isAndroid) && !hasNativePrompt && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
-              How to install on Android / Chrome:
+        {/* Android Manual Guide (if native prompt is deferred) */}
+        {!isIos && !hasNativePrompt && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              background: '#fffbeb',
+              border: '1px solid #fef3c7',
+              padding: '14px',
+              borderRadius: '12px',
+            }}
+          >
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400e' }}>
+              Chrome / Android me install karne ke steps:
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '13px', color: '#334155' }}>
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#78350f' }}>
+              <div
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: '#f59e0b',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  flexShrink: 0,
+                }}
+              >
                 1
               </div>
               <div>
-                Tap the <strong>three dots menu</strong> <MoreVertical size={14} style={{ verticalAlign: 'middle', margin: '0 2px' }} /> in the top right corner of Chrome.
+                Chrome ke top-right corner me <strong>three dots</strong>{' '}
+                <MoreVertical size={13} style={{ verticalAlign: 'middle', display: 'inline' }} /> par tap karein.
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '13px', color: '#334155' }}>
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#78350f' }}>
+              <div
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: '#f59e0b',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  flexShrink: 0,
+                }}
+              >
                 2
               </div>
               <div>
-                Select <strong>Install app</strong> or <strong>Add to Home screen</strong>.
+                Menu me <strong>'Install app'</strong> ya <strong>'Add to Home screen'</strong> par tap karein.
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '13px', color: '#334155' }}>
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#78350f' }}>
+              <div
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: '#f59e0b',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  flexShrink: 0,
+                }}
+              >
                 3
               </div>
               <div>
-                Confirm <strong>Install</strong>. Schoolwell is now installed on your phone with zero app-store download needed!
+                <strong>Install</strong> confirm karein. Schoolwell turant aapke phone me install ho jayega!
               </div>
             </div>
           </div>
         )}
       </div>
 
-      <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-        <Button variant="secondary" onClick={onClose}>
+      <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
+        <Button variant="secondary" onClick={onClose} style={{ minWidth: '100px' }}>
           Got it (समझ गया)
         </Button>
       </div>

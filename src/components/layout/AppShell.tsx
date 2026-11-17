@@ -15,6 +15,7 @@ import {
 
 import { usePwaInstall } from '../../app/usePwaInstall';
 import { useFeedback } from '../../app/useFeedback';
+import PwaInstallModal from './PwaInstallModal';
 
 const hindiLabels: Record<string, string> = {
   Overview: 'अवलोकन',
@@ -111,6 +112,7 @@ export default function AppShell({
   const today = useToday();
   const [mobile, setMobile] = useState(false);
   const [help, setHelp] = useState(false);
+  const [installModalOpen, setInstallModalOpen] = useState(false);
   const [query, setQuery] = useState('');
   const notify = useFeedback();
   const pwa = usePwaInstall();
@@ -262,10 +264,11 @@ export default function AppShell({
                   notify('Schoolwell web app is already installed! (ऐप पहले से इंस्टॉल है)');
                   return;
                 }
-                const shown = await pwa.promptInstall();
-                if (!shown && pwa.isIos) {
-                  notify("iOS Safari: Share (⎋) icon par tap karke 'Add to Home Screen' chunein.");
+                if (pwa.hasNativePrompt) {
+                  const shown = await pwa.promptInstall();
+                  if (shown) return;
                 }
+                setInstallModalOpen(true);
               }}
               title="Install Schoolwell Web App"
             >
@@ -375,6 +378,14 @@ export default function AppShell({
           </Button>
         </div>
       </Modal>
+      <PwaInstallModal
+        open={installModalOpen}
+        onClose={() => setInstallModalOpen(false)}
+        isIos={pwa.isIos}
+        isAndroid={pwa.isAndroid}
+        hasNativePrompt={pwa.hasNativePrompt}
+        onNativeInstall={() => pwa.promptInstall()}
+      />
     </div>
   );
 }
