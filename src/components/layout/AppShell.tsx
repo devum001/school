@@ -258,17 +258,13 @@ export default function AppShell({
               className="nav-link install-app-nav-btn"
               onClick={async () => {
                 setMobile(false);
-                if (pwa.hasNativePrompt) {
-                  await pwa.promptInstall();
-                } else if (pwa.isInstalled) {
+                if (pwa.isInstalled) {
                   notify('Schoolwell web app is already installed! (ऐप पहले से इंस्टॉल है)');
-                } else if (pwa.isIos) {
+                  return;
+                }
+                const shown = await pwa.promptInstall();
+                if (!shown && pwa.isIos) {
                   notify("iOS Safari: Share (⎋) icon par tap karke 'Add to Home Screen' chunein.");
-                } else {
-                  const success = await pwa.promptInstall();
-                  if (!success) {
-                    notify("Browser menu (⋮) me 'Install Schoolwell' par click karein.");
-                  }
                 }
               }}
               title="Install Schoolwell Web App"

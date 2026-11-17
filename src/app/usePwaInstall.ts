@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export function usePwaInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      return (window as any).__deferredPrompt || null;
+    }
+    return null;
+  });
+
   const [isInstalled, setIsInstalled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return (
@@ -11,24 +17,40 @@ export function usePwaInstall() {
   });
 
   useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
+    if (typeof window === 'undefined') return;
+
+    if ((window as any).__deferredPrompt && !deferredPrompt) {
+      setDeferredPrompt((window as any).__deferredPrompt);
+    }
+
+    const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
+      (window as any).__deferredPrompt = e;
       setDeferredPrompt(e);
+    };
+
+    const handlePromptReady = () => {
+      if ((window as any).__deferredPrompt) {
+        setDeferredPrompt((window as any).__deferredPrompt);
+      }
     };
 
     const handleAppInstalled = () => {
       setIsInstalled(true);
+      (window as any).__deferredPrompt = null;
       setDeferredPrompt(null);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('pwa-prompt-ready', handlePromptReady);
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('pwa-prompt-ready', handlePromptReady);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [deferredPrompt]);
 
   const isIos =
     typeof window !== 'undefined' &&
@@ -39,15 +61,19 @@ export function usePwaInstall() {
     typeof window !== 'undefined' && /android/.test(window.navigator.userAgent.toLowerCase());
 
   const promptInstall = useCallback(async (): Promise<boolean> => {
-    if (deferredPrompt) {
+    const promptEvent =
+      deferredPrompt || (typeof window !== 'undefined' ? (window as any).__deferredPrompt : null);
+
+    if (promptEvent) {
       try {
-        await deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
+        await promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        (window as any).__deferredPrompt = null;
+        setDeferredPrompt(null);
         if (choice && choice.outcome === 'accepted') {
-          setDeferredPrompt(null);
           setIsInstalled(true);
-          return true;
         }
+        return true;
       } catch (err) {
         console.error('PWA install error', err);
       }
@@ -55,12 +81,16 @@ export function usePwaInstall() {
     return false;
   }, [deferredPrompt]);
 
+  const hasNativePrompt = Boolean(
+    deferredPrompt || (typeof window !== 'undefined' && (window as any).__deferredPrompt)
+  );
+
   return {
     isInstallable: !isInstalled,
     isInstalled,
     isIos,
     isAndroid,
-    hasNativePrompt: Boolean(deferredPrompt),
+    hasNativePrompt,
     promptInstall,
   };
 }

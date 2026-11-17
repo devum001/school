@@ -15,7 +15,18 @@
     <title>Schoolwell · School management</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/webp/256/graduation-cap.webp" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="manifest" href="/manifest.json" />
+    <script>
+      window.__deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__deferredPrompt = e;
+        window.dispatchEvent(new Event('pwa-prompt-ready'));
+      });
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(function () {});
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
