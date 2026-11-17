@@ -168,8 +168,15 @@ body {
   color: #26494a;
 }
 .topbar {
-  position: relative;
-  height: var(--school-header-height);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: calc(var(--school-header-height) + env(safe-area-inset-top, 0px));
+  min-height: calc(var(--school-header-height) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: calc(34px + env(safe-area-inset-left, 0px));
+  padding-right: calc(34px + env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
   background: var(--school-header);
   border-bottom: 3px solid var(--school-gold-edge);
 }
@@ -226,6 +233,25 @@ body {
 @media (max-width: 800px) {
   :root {
     --school-header-height: 63px;
+  }
+  .topbar {
+    height: calc(var(--school-header-height, 63px) + env(safe-area-inset-top, 0px));
+    min-height: calc(var(--school-header-height, 63px) + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: calc(21px + env(safe-area-inset-left, 0px));
+    padding-right: calc(21px + env(safe-area-inset-right, 0px));
+  }
+}
+@media (max-width: 620px) {
+  :root {
+    --school-header-height: 54px;
+  }
+  .topbar {
+    height: calc(var(--school-header-height, 54px) + env(safe-area-inset-top, 0px));
+    min-height: calc(var(--school-header-height, 54px) + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: calc(12px + env(safe-area-inset-left, 0px));
+    padding-right: calc(12px + env(safe-area-inset-right, 0px));
   }
 }
 .topbar .breadcrumb {
