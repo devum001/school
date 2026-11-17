@@ -335,7 +335,7 @@ export default function AppShell({
             {children ?? <Outlet />}
           </WorkspaceLoadingBoundary>
         </main>
-        <footer>
+        <footer className="app-shell-footer">
           <span>Schoolwell · Thoughtfully connected.</span>
           <span>
             <AppIcon name="security" size={14} /> {school.name}

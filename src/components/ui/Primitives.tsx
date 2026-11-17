@@ -36,17 +36,6 @@ type PickerInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
   type: 'date' | 'month' | 'time' | 'datetime-local';
 };
 
-function openNativePicker(input: HTMLInputElement): boolean {
-  if (input.disabled || input.readOnly || typeof input.showPicker !== 'function') return false;
-  try {
-    input.showPicker();
-    return true;
-  } catch {
-    // Keep native editing available when the browser blocks or lacks a popup picker.
-    return false;
-  }
-}
-
 export function PickerInput({ type, onClick, onKeyDown, ...props }: PickerInputProps) {
   if (type === 'date' || type === 'datetime-local')
     return <CalendarDateInput type={type} {...props} onClick={onClick} onKeyDown={onKeyDown} />;
@@ -56,17 +45,23 @@ export function PickerInput({ type, onClick, onKeyDown, ...props }: PickerInputP
       type={type}
       onClick={(event) => {
         onClick?.(event);
-        if (!event.defaultPrevented && openNativePicker(event.currentTarget))
-          event.preventDefault();
+        if (!event.defaultPrevented && typeof event.currentTarget.showPicker === 'function') {
+          try {
+            event.currentTarget.showPicker();
+          } catch {
+            // iOS Safari restricts programmatic showPicker on date/month, allow native tap
+          }
+        }
       }}
       onKeyDown={(event) => {
         onKeyDown?.(event);
-        if (
-          !event.defaultPrevented &&
-          event.key === 'Enter' &&
-          openNativePicker(event.currentTarget)
-        )
-          event.preventDefault();
+        if (!event.defaultPrevented && event.key === 'Enter') {
+          try {
+            event.currentTarget.showPicker?.();
+          } catch {
+            // Ignore
+          }
+        }
       }}
     />
   );

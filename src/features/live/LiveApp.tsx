@@ -287,7 +287,7 @@ function LiveWorkspace() {
             )}
           </WorkspaceLoadingBoundary>
         </main>
-        <footer>
+        <footer className="app-shell-footer">
           <span>Schoolwell · Live workspace</span>
           <span>{platform ? 'Platform administration' : pageTitle}</span>
         </footer>

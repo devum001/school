@@ -319,7 +319,7 @@
   justify-content: start;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (orientation: landscape) and (max-height: 550px) {
   /* On mobile screens, rail takes full width and arrows are hidden for uninterrupted finger swiping */
   .tab-rail,
   .workspace main .tab-rail,

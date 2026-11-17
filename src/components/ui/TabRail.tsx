@@ -47,11 +47,15 @@ export default function TabRail({
     if (!selected) return;
     const bounds = element.getBoundingClientRect();
     const item = selected.getBoundingClientRect();
-    if (item.left < bounds.left + 16 || item.right > bounds.right - 16) {
-      selected.scrollIntoView({
+    if (item.left < bounds.left + 16) {
+      element.scrollBy({
+        left: item.left - (bounds.left + 16),
         behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-        block: 'nearest',
-        inline: 'center',
+      });
+    } else if (item.right > bounds.right - 16) {
+      element.scrollBy({
+        left: item.right - (bounds.right - 16),
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
       });
     }
   }, []);

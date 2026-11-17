@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { HrAdapter, HrWorkspace } from '../../services/hrService';
 import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
@@ -86,6 +87,7 @@ export default function AttendanceCalendar({
   const date = selected.startsWith(month) ? selected : `${month}-01`;
   const day = data.attendance.find((d) => d.date === date);
   const status = attendanceLabel(date, data.today, day, data.leaves, data.settings);
+  const selectedHoliday = isDateHoliday(date, data.settings?.holidays);
   const requests = data.attendanceRequests ?? [];
   const pending = requests.some((r) => r.date === date && r.status === 'pending');
   const requestDay = data.attendance.find((d) => d.date === requestDate);
@@ -96,6 +98,54 @@ export default function AttendanceCalendar({
     year: 'numeric',
     timeZone: 'UTC',
   }).format(new Date(Date.UTC(year, m - 1, 1)));
+
+  const dateRecord = data.attendance.find((d) => d.date === date);
+  const dateEffectiveDay = dateRecord ?? (
+    ['half-day', 'invalid', 'absent'].includes(status)
+      ? { date, status: status as 'half-day' | 'invalid' | 'absent' }
+      : undefined
+  );
+  const canSubmitArs = Boolean(
+    ars && canRequestArs(dateEffectiveDay, data.today, requests, data.settings?.holidays)
+  );
+
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(() =>
+    typeof document !== 'undefined' ? document.getElementById('hr-self-ars-portal-slot') : null
+  );
+
+  useEffect(() => {
+    if (!portalTarget) {
+      const id = requestAnimationFrame(() => {
+        setPortalTarget(document.getElementById('hr-self-ars-portal-slot'));
+      });
+      return () => cancelAnimationFrame(id);
+    }
+  }, [portalTarget]);
+
+  const renderSubmitArsButton = (isDesktop: boolean) => (
+    <button
+      type="button"
+      className={`hr-submit-ars-btn ${isDesktop ? 'hr-submit-ars-desktop' : 'hr-submit-ars-mobile'} ${
+        canSubmitArs ? 'is-active' : 'is-disabled'
+      }`}
+      onClick={handleOpenArs}
+      disabled={!canSubmitArs}
+      title={
+        canSubmitArs
+          ? `Submit ARS for ${date}`
+          : pending
+          ? 'ARS already pending for this date'
+          : 'Select an absent, half-day, or invalid date to submit ARS'
+      }
+    >
+      Submit ARS
+    </button>
+  );
+
+  const handleOpenArs = () => {
+    if (!canSubmitArs) return;
+    setRequestDate(date);
+  };
 
   const handlePrevMonth = () => {
     const prevDate = new Date(Date.UTC(year, m - 2, 1));
@@ -115,10 +165,10 @@ export default function AttendanceCalendar({
         <div className="hr-calendar-header">
           <div className="hr-calendar-month-heading">
             {!hideMonthNavigation && onMonthChange ? (
-              <div className="hr-month-controls" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="hr-month-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   type="button"
-                  className="button secondary hr-month-nav-btn"
+                  className="button secondary hr-month-nav-btn hr-month-nav-desktop"
                   onClick={handlePrevMonth}
                   aria-label="Previous month"
                   style={{ padding: '6px 8px', height: '36px', minWidth: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -138,16 +188,20 @@ export default function AttendanceCalendar({
                 </label>
                 <button
                   type="button"
-                  className="button secondary hr-month-nav-btn"
+                  className="button secondary hr-month-nav-btn hr-month-nav-desktop"
                   onClick={handleNextMonth}
                   aria-label="Next month"
                   style={{ padding: '6px 8px', height: '36px', minWidth: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <ChevronRight size={16} />
                 </button>
+                {ars && renderSubmitArsButton(false)}
               </div>
             ) : (
-              <h3>{monthFormatted}</h3>
+              <div className="hr-month-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3>{monthFormatted}</h3>
+                {ars && renderSubmitArsButton(false)}
+              </div>
             )}
           </div>
           <div className="hr-calendar-actions">
@@ -181,7 +235,6 @@ export default function AttendanceCalendar({
             const record = data.attendance.find((d) => d.date === value);
             const state = attendanceLabel(value, data.today, record, data.leaves, data.settings);
             const pendingLeave = pendingLeaveOn(value, data.today, data.leaves);
-            const cancellableLeave = cancellableLeaveOn(value, data.today, data.leaves);
             const dayOfWeek = new Date(Date.UTC(year, m - 1, i + 1)).getUTCDay();
             const isSunday = dayOfWeek === 0;
             const holidayInfo = isDateHoliday(value, data.settings?.holidays);
@@ -197,12 +250,6 @@ export default function AttendanceCalendar({
                 aria-current={value === data.today ? 'date' : undefined}
                 onClick={() => {
                   setSelected(value);
-                  if (ars && cancellableLeave) setCancelLeave(cancellableLeave);
-                  else if (
-                    ars &&
-                    canRequestArs(record, data.today, requests, data.settings?.holidays)
-                  )
-                    setRequestDate(value);
                 }}
               >
                 <strong>{i + 1}</strong>
@@ -231,13 +278,24 @@ export default function AttendanceCalendar({
           timezone={data.timezone}
           ars={Boolean(ars)}
           pending={pending}
+          holidayName={selectedHoliday.isHoliday ? selectedHoliday.reason : undefined}
         />
         {ars && activeLeaveOnSelected && (
-          <p className="ars-pending-note" style={{ margin: '12px 0 0' }}>
-            {activeLeaveOnSelected.status === 'approved'
-              ? 'Approved leave · select this date to cancel your leave.'
-              : 'Leave requested · select this date to cancel the pending request.'}
-          </p>
+          <div style={{ margin: '12px 0 0' }}>
+            <p className="ars-pending-note" style={{ margin: '0 0 8px' }}>
+              {activeLeaveOnSelected.status === 'approved'
+                ? 'Approved leave · Click below to cancel your leave.'
+                : 'Leave requested · Click below to cancel the pending request.'}
+            </p>
+            <Button
+              type="button"
+              className="secondary"
+              style={{ width: '100%', fontSize: '12px', minHeight: '32px' }}
+              onClick={() => setCancelLeave(activeLeaveOnSelected)}
+            >
+              Cancel leave
+            </Button>
+          </div>
         )}
       </div>
 
@@ -254,7 +312,14 @@ export default function AttendanceCalendar({
       )}
       {ars && requestDate && (
         <ArsRequestDialog
-          day={requestDay ?? { date: requestDate }}
+          day={
+            requestDay ?? {
+              date: requestDate,
+              status: (status === 'absent' || status === 'half-day' || status === 'invalid'
+                ? status
+                : 'absent') as 'absent' | 'half-day' | 'invalid',
+            }
+          }
           timezone={data.timezone}
           adapter={ars.adapter}
           close={() => setRequestDate(undefined)}
@@ -264,6 +329,7 @@ export default function AttendanceCalendar({
           }}
         />
       )}
+      {ars && portalTarget && createPortal(renderSubmitArsButton(true), portalTarget)}
     </div>
   );
 }

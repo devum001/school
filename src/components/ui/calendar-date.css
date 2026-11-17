@@ -22,16 +22,20 @@
   background: transparent;
   color: inherit;
   cursor: pointer;
+  pointer-events: none;
+  z-index: 1;
 }
 .calendar-date-native {
   position: absolute;
-  bottom: 0;
+  top: 0;
   right: 0;
-  width: 1px !important;
-  height: 1px !important;
+  bottom: 0;
+  width: 38px !important;
+  height: 100% !important;
   min-height: 0 !important;
   padding: 0 !important;
   border: 0 !important;
   opacity: 0;
-  pointer-events: none;
+  cursor: pointer;
+  z-index: 2;
 }

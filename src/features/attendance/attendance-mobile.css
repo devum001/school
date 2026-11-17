@@ -57,9 +57,274 @@
 }
 
 /* =========================================================
-   Mobile View Styles (@media (max-width: 768px))
+   Card-Based Student Attendance Register (Base / Desktop)
    ========================================================= */
-@media (max-width: 768px) {
+.attendance-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 14px 0 16px 0;
+}
+
+.student-attendance-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 10px 16px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 62px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  outline: none;
+  position: relative;
+}
+
+.student-attendance-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.student-attendance-card:focus-visible {
+  border-color: #164e3f;
+  box-shadow: 0 0 0 2px rgba(22, 78, 63, 0.15);
+}
+
+/* Cards always keep a clean white background - color is only on the status pill */
+.student-attendance-card,
+.student-attendance-card.card-collapsed,
+.student-attendance-card.card-expanded {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* Left section: Roll badge and student meta */
+.card-left-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.card-roll-badge {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e293b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.card-student-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.card-student-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.card-student-name:hover {
+  color: #164e3f;
+  text-decoration: underline;
+}
+
+.card-student-roll {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+/* Right section: Collapsed Status Pill Button */
+.card-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: transform 0.1s ease, filter 0.1s ease;
+  user-select: none;
+}
+
+.card-status-pill:hover {
+  filter: brightness(0.96);
+}
+
+.card-status-pill:active {
+  transform: scale(0.98);
+}
+
+.card-status-pill.pill-present {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.card-status-pill.pill-absent {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.card-status-pill.pill-late {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.card-status-pill.pill-half-day {
+  background: #ede9fe;
+  color: #6d28d9;
+  border-color: #ddd6fe;
+}
+
+.card-status-pill.pill-unmarked {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.card-status-pill .pill-icon {
+  flex-shrink: 0;
+}
+
+.card-status-pill .pill-text {
+  line-height: 1;
+}
+
+.card-status-pill .pill-chevron {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* Right section: Expanded 5-Option Buttons Grid */
+.card-options-grid {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.card-option-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 4px 6px;
+  min-width: 42px;
+  height: 44px;
+  box-sizing: border-box;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.card-option-btn .option-letter {
+  font-size: 14.5px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.card-option-btn .option-text {
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.1;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+.card-option-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.95);
+}
+
+.card-option-btn:active {
+  transform: scale(0.96);
+}
+
+.card-option-btn.btn-present {
+  border: 1.5px solid #16a34a;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.card-option-btn.btn-absent {
+  border: 1.5px solid #ef4444;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.card-option-btn.btn-late {
+  border: 1.5px solid #f59e0b;
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.card-option-btn.btn-half-day {
+  border: 1.5px solid #8b5cf6;
+  background: #f5f3ff;
+  color: #7c3aed;
+  min-width: 48px;
+}
+
+.card-option-btn.btn-unmarked {
+  border: 1.5px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  min-width: 50px;
+}
+
+.attendance-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  color: #64748b;
+  text-align: center;
+  font-size: 14px;
+}
+
+.mobile-only {
+  display: none !important;
+}
+
+/* =========================================================
+   Mobile View Styles (@media (max-width: 768px), landscape mobile)
+   ========================================================= */
+@media (max-width: 768px), (orientation: landscape) and (max-height: 550px) {
   /* Toggle desktop/mobile elements */
   .status-label-full,
   .col-header-full,
@@ -70,6 +335,78 @@
   .attendance-register-panel .save-bar,
   .panel-note {
     display: none !important;
+  }
+
+  .mobile-only {
+    display: block !important;
+  }
+  .attendance-cards-list.mobile-only {
+    display: flex !important;
+  }
+  .attendance-mobile-table-bar.mobile-only {
+    display: flex !important;
+  }
+
+  /* Compact Pill-shaped Stats Bar on mobile (Without icons, 5 columns including Total Students) */
+  .attendance-mobile-pill-stats.mobile-only {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+    background: linear-gradient(105deg, #fbfaf5 0%, #fdfbf7 38%, #f5f7fc 75%, #edf3f9 100%) !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 26px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    padding: 8px 2px !important;
+    margin: 0 0 14px 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .mobile-stat-col {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex: 1 !important;
+    text-align: center !important;
+    min-width: 0 !important;
+    padding: 2px 1px !important;
+  }
+  .mobile-stat-label {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    line-height: 1.15 !important;
+    margin-bottom: 2px !important;
+    white-space: normal !important;
+    min-height: 25px !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+  .mobile-stat-value {
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    line-height: 1.2 !important;
+  }
+  .mobile-stat-pct {
+    margin-top: 2px !important;
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    padding: 1px 5px !important;
+    border-radius: 10px !important;
+    display: inline-block !important;
+    line-height: 1.2 !important;
+  }
+  .mobile-stat-divider {
+    width: 1px !important;
+    height: 34px !important;
+    background: #e2e8f0 !important;
+    flex-shrink: 0 !important;
+    align-self: center !important;
   }
 
   .status-label-short {
@@ -170,101 +507,10 @@
     margin: 0 0 14px 0 !important;
   }
 
-  /* 3. Summary Stat Cards (SINGLE COLOR, 5 side-by-side in 1 row, NO hover, NO icons, aligned labels & numbers) */
-  .attendance-summary.stats-grid {
-    display: grid !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 6px !important;
-    margin: 0 0 14px 0 !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-  .attendance-summary.stats-grid .stat-card,
-  .attendance-summary.stats-grid .stat-card.total,
-  .attendance-summary.stats-grid .stat-card.green,
-  .attendance-summary.stats-grid .stat-card.red,
-  .attendance-summary.stats-grid .stat-card.amber,
-  .attendance-summary.stats-grid .stat-card.blue {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    height: 84px !important;
-    min-height: 84px !important;
-    max-height: 84px !important;
-    padding: 8px 3px !important;
-    border-radius: 12px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    text-align: center !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
-    transform: none !important;
-    transition: none !important;
-    box-sizing: border-box !important;
-    cursor: default !important;
-  }
-  .attendance-summary.stats-grid .stat-card:hover {
-    transform: none !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
-  }
-
-  /* Stat Icons hidden on mobile */
-  .attendance-summary.stats-grid .stat-icon {
+  /* 3. Desktop Summary Stat Cards - Hidden on mobile (replaced by .attendance-mobile-pill-stats) */
+  .attendance-summary.stats-grid,
+  .attendance-summary.desktop-only {
     display: none !important;
-  }
-
-  /* Stat top container (Labels aligned in one horizontal straight line) */
-  .attendance-summary.stats-grid .stat-top {
-    height: 26px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  .attendance-summary.stats-grid .stat-card .stat-top span,
-  .attendance-summary.stats-grid .stat-card.total .stat-top span,
-  .attendance-summary.stats-grid .stat-card.green .stat-top span,
-  .attendance-summary.stats-grid .stat-card.red .stat-top span,
-  .attendance-summary.stats-grid .stat-card.amber .stat-top span,
-  .attendance-summary.stats-grid .stat-card.blue .stat-top span {
-    font-size: 10px !important;
-    font-weight: 600 !important;
-    color: #4b5563 !important;
-    line-height: 1.15 !important;
-    text-align: center !important;
-    white-space: normal !important;
-    word-break: normal !important;
-  }
-
-  /* Stat value (Numbers aligned in one horizontal straight line with space above) */
-  .attendance-summary.stats-grid .stat-card .stat-value,
-  .attendance-summary.stats-grid .stat-card.total .stat-value,
-  .attendance-summary.stats-grid .stat-card.green .stat-value,
-  .attendance-summary.stats-grid .stat-card.red .stat-value,
-  .attendance-summary.stats-grid .stat-card.amber .stat-value,
-  .attendance-summary.stats-grid .stat-card.blue .stat-value {
-    font-size: 18px !important;
-    font-weight: 800 !important;
-    color: #111827 !important;
-    line-height: 1 !important;
-    margin: 5px 0 0 0 !important;
-    text-align: center !important;
-  }
-
-  /* Detail subtitle: only show 0% on Present, hidden on others */
-  .attendance-summary.stats-grid .stat-card:not(.green) .stat-detail {
-    display: none !important;
-  }
-  .attendance-summary.stats-grid .stat-card.green .stat-detail {
-    display: block !important;
-    font-size: 9.5px !important;
-    font-weight: 600 !important;
-    color: #16a34a !important;
-    margin-top: 3px !important;
-    text-align: center !important;
-    line-height: 1 !important;
   }
 
   /* 4. Filter Dropdowns (Date, Class, Section - Direct on canvas, no white container box, no labels) */
@@ -351,7 +597,8 @@
     border: 0 !important;
     color: #4b5563 !important;
     cursor: pointer !important;
-    z-index: 2 !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
     padding: 0 !important;
   }
   .attendance-mobile-filters-card .calendar-date-button svg {
@@ -360,26 +607,28 @@
   }
   .attendance-mobile-filters-card .calendar-date-native {
     position: absolute !important;
-    bottom: 0 !important;
+    top: 0 !important;
     right: 0 !important;
-    width: 1px !important;
-    height: 1px !important;
+    bottom: 0 !important;
+    width: 38px !important;
+    height: 100% !important;
     min-height: 0 !important;
     padding: 0 !important;
     border: 0 !important;
     opacity: 0 !important;
-    pointer-events: none !important;
+    pointer-events: auto !important;
     background: transparent !important;
-    z-index: -1 !important;
+    cursor: pointer !important;
+    z-index: 3 !important;
   }
 
-  /* 5. Student Attendance Table Card - Fit 100% width, NO left-right scrolling */
+  /* 5. Student Attendance Cards - Fit 100% width, NO left-right scrolling */
   .attendance-register-wrap .attendance-register-panel {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 14px !important;
-    overflow: hidden !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
@@ -390,9 +639,9 @@
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    padding: 12px 14px !important;
-    background: #ffffff !important;
-    border-bottom: 1px solid #f1f5f9 !important;
+    padding: 2px 2px 10px 2px !important;
+    background: transparent !important;
+    border: none !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
@@ -419,164 +668,72 @@
     color: #4b5563 !important;
   }
 
-  /* Table Container - Strictly NO horizontal scroll */
-  .attendance-register-panel .table-wrap {
-    overflow-x: hidden !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    border: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-sizing: border-box !important;
-  }
-  .attendance-table {
-    width: 100% !important;
-    max-width: 100% !important;
-    table-layout: fixed !important;
-    border-collapse: collapse !important;
-    box-sizing: border-box !important;
-  }
-  .attendance-table thead tr {
-    background: #e4f0ea !important;
-  }
-  .attendance-table th {
-    padding: 10px 4px !important;
-    font-size: 12px !important;
-    font-weight: 700 !important;
-    color: #164e3f !important;
-    border: 0 !important;
-  }
-  .attendance-table th.th-roll {
-    width: 78px !important;
-    min-width: 78px !important;
-    max-width: 78px !important;
-    text-align: left !important;
-    padding-left: 12px !important;
-    padding-right: 4px !important;
-    white-space: nowrap !important;
-  }
-  .attendance-table th.th-student {
-    text-align: left !important;
-    padding-left: 10px !important;
-    padding-right: 6px !important;
-  }
-  .attendance-table th.th-status {
-    text-align: center !important;
-    width: 175px !important;
-    max-width: 175px !important;
-    padding: 10px 4px !important;
+  .attendance-cards-list {
+    gap: 8px !important;
+    margin: 0 0 14px 0 !important;
+    overflow-anchor: none !important;
   }
 
-  .attendance-table td {
-    padding: 10px 4px !important;
-    vertical-align: middle !important;
-    border-top: 1px solid #f1f5f9 !important;
-    box-sizing: border-box !important;
-  }
-  .attendance-table td.td-roll {
-    width: 78px !important;
-    min-width: 78px !important;
-    max-width: 78px !important;
-    padding-left: 12px !important;
-    padding-right: 4px !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    color: #111827 !important;
-    text-align: left !important;
-    white-space: nowrap !important;
-  }
-  .attendance-table td.td-student {
-    min-width: 0 !important;
-    padding-left: 10px !important;
-    padding-right: 6px !important;
-  }
-  .attendance-table td.td-student .person {
-    display: block !important;
-    text-decoration: none !important;
-    min-width: 0 !important;
-    overflow: hidden !important;
-  }
-  /* Remove student avatar icon on mobile (e.g. SM / AS initials circle) */
-  .attendance-table td.td-student .person .avatar,
-  .attendance-table td.td-student .avatar {
-    display: none !important;
-  }
-  .attendance-table td.td-student .person strong {
-    display: block !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    color: #111827 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    line-height: 1.3 !important;
-  }
-  .attendance-table td.td-status {
-    width: 175px !important;
-    max-width: 175px !important;
-    padding: 10px 4px !important;
-    text-align: center !important;
+  .student-attendance-card {
+    padding: 8px 10px !important;
+    border-radius: 14px !important;
+    min-height: 60px !important;
+    gap: 8px !important;
+    overflow-anchor: none !important;
   }
 
-  /* Segmented buttons P, A, L, H, NM */
-  .attendance-table .status-options {
-    display: inline-flex !important;
-    width: auto !important;
-    border: 1px solid #d1d5db !important;
-    border-radius: 8px !important;
-    background: #ffffff !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-    gap: 0 !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  .card-roll-badge {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    font-size: 14px !important;
   }
-  .attendance-table .status-options button {
-    border: 0 !important;
-    border-right: 1px solid #e5e7eb !important;
-    border-radius: 0 !important;
-    width: 30px !important;
-    min-width: 30px !important;
-    height: 31px !important;
+
+  .card-student-name {
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+  }
+
+  .card-student-roll {
     font-size: 11px !important;
-    font-weight: 700 !important;
-    background: #ffffff !important;
-    color: #374151 !important;
-    padding: 0 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    cursor: pointer !important;
-    min-height: auto !important;
   }
-  .attendance-table .status-options button:last-child {
-    border-right: 0 !important;
-    width: 35px !important;
+
+  .card-status-pill {
+    padding: 7px 12px !important;
+    font-size: 13px !important;
+    gap: 5px !important;
+  }
+
+  .card-status-pill .pill-icon {
+    width: 15px !important;
+    height: 15px !important;
+  }
+
+  .card-options-grid {
+    gap: 4px !important;
+  }
+
+  .card-option-btn {
+    padding: 3px 4px !important;
     min-width: 35px !important;
+    height: 40px !important;
+    border-radius: 8px !important;
   }
-  .attendance-table .status-options button.selected.present {
-    background: #86efac !important;
-    color: #14532d !important;
-    font-weight: 700 !important;
+
+  .card-option-btn .option-letter {
+    font-size: 13.5px !important;
   }
-  .attendance-table .status-options button.selected.absent {
-    background: #fca5a5 !important;
-    color: #7f1d1d !important;
-    font-weight: 700 !important;
+
+  .card-option-btn .option-text {
+    font-size: 8.5px !important;
   }
-  .attendance-table .status-options button.selected.late {
-    background: #fde68a !important;
-    color: #78350f !important;
-    font-weight: 700 !important;
+
+  .card-option-btn.btn-half-day {
+    min-width: 41px !important;
   }
-  .attendance-table .status-options button.selected.half-day {
-    background: #fde68a !important;
-    color: #78350f !important;
-    font-weight: 700 !important;
-  }
-  .attendance-table .status-options button.selected.unmarked {
-    background: #bae6fd !important;
-    color: #0369a1 !important;
-    font-weight: 700 !important;
+
+  .card-option-btn.btn-unmarked {
+    min-width: 43px !important;
   }
 
   /* 6. Save Attendance Full-Width Button */

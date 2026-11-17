@@ -795,19 +795,23 @@ function HrContent({
         action={
           tab === 'self' ? (
             selfView === 'attendance' ? (
-              <Button
-                style={{
-                  background: '#15803d',
-                  color: '#ffffff',
-                  borderColor: '#15803d',
-                  fontWeight: 600,
-                  borderRadius: '6px',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-                }}
-                onClick={() => setAction({ kind: 'leave' })}
-              >
-                Request leave
-              </Button>
+              <div className="hr-self-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div id="hr-self-ars-portal-slot" style={{ display: 'flex', alignItems: 'center' }} />
+                <Button
+                  className="hr-self-request-leave-btn"
+                  style={{
+                    background: '#15803d',
+                    color: '#ffffff',
+                    borderColor: '#15803d',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                  }}
+                  onClick={() => setAction({ kind: 'leave' })}
+                >
+                  Request leave
+                </Button>
+              </div>
             ) : selfView === 'requests' ? (
               <Button variant="secondary" onClick={reload}>
                 Refresh requests

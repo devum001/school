@@ -70,7 +70,7 @@ export function attendanceLabel(
 }
 
 export function canRequestArs(
-  day: Day | undefined,
+  day: { date: string; status: string; inProgress?: boolean } | undefined,
   today: string,
   requests: AttendanceRequest[],
   holidays?: string[],

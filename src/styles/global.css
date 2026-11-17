@@ -788,7 +788,7 @@ footer button {
     border-top: 1px solid #c7d6d0;
   }
 }
-@media (max-width: 620px) {
+@media (max-width: 620px), (orientation: landscape) and (max-height: 550px) {
   .dashboard-stats .stat-card {
     padding: 18px 16px;
   }
@@ -2834,7 +2834,11 @@ tfoot td {
     display: none;
   }
 }
-@media (max-width: 800px) {
+@media (max-width: 800px), (orientation: landscape) and (max-height: 550px) {
+  .workspace > footer,
+  .app-shell-footer {
+    display: none !important;
+  }
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.2s;
@@ -2942,7 +2946,7 @@ tfoot td {
     font-size: 13px;
   }
 }
-@media (max-width: 620px) {
+@media (max-width: 620px), (orientation: landscape) and (max-height: 550px) {
   .workspace main {
     padding: 10px 12px;
     width: 100%;
@@ -3397,17 +3401,9 @@ tfoot td {
     line-height: 1.7;
     max-width: calc(100vw - 28px);
   }
-  footer {
-    padding: 18px 15px;
-    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-    padding-left: calc(15px + env(safe-area-inset-left, 0px));
-    padding-right: calc(15px + env(safe-area-inset-right, 0px));
-    flex-wrap: wrap;
-    font-size: 10px;
-    gap: 10px;
-  }
-  footer button {
-    font-size: 10px;
+  .workspace > footer,
+  .app-shell-footer {
+    display: none !important;
   }
   .pagination {
     font-size: 10px;

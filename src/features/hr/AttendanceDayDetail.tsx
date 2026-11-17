@@ -1,6 +1,7 @@
 import { Clock3, LogIn, LogOut } from 'lucide-react';
 import { formatCalendarDate, titleCase } from '../../lib/displayFormat';
 import type { HrWorkspace } from '../../services/hrService';
+import { isDateHoliday } from '../../lib/indianHolidays';
 
 export type AttendanceDay = Partial<HrWorkspace['attendance'][number]> & { date: string };
 
@@ -20,8 +21,8 @@ export default function AttendanceDayDetail({
   day,
   status,
   timezone,
-  ars = true,
   pending,
+  holidayName,
 }: {
   date: string;
   day?: Partial<HrWorkspace['attendance'][number]> | undefined;
@@ -29,7 +30,15 @@ export default function AttendanceDayDetail({
   timezone?: string;
   ars?: boolean;
   pending?: boolean;
+  holidayName?: string;
 }) {
+  const holidayInfo = isDateHoliday(date);
+  const resolvedHolidayTitle =
+    holidayName || (holidayInfo.isHoliday ? holidayInfo.reason : undefined);
+  const isHoliday =
+    status === 'holiday' ||
+    Boolean(resolvedHolidayTitle && status !== 'present' && status !== 'late');
+
   const minutes =
     day?.workingMinutes ??
     (day?.punchIn && day.punchOut
@@ -37,7 +46,7 @@ export default function AttendanceDayDetail({
       : null);
 
   const displayStatus =
-    status === 'holiday'
+    isHoliday
       ? 'Holiday'
       : status === 'off'
         ? 'Weekly holiday'
@@ -57,39 +66,53 @@ export default function AttendanceDayDetail({
         </span>
       </div>
 
-      <div className="attendance-day-timeline">
-        <div className="attendance-timeline-item">
-          <div className="attendance-timeline-point">
-            <LogIn size={15} />
-          </div>
-          <div className="attendance-timeline-content">
-            <span className="attendance-timeline-label">Punch In</span>
-            <strong>{attendanceTime(day?.punchIn, timezone)}</strong>
-          </div>
-        </div>
-        <div className="attendance-timeline-line" />
-        <div className="attendance-timeline-item">
-          <div className="attendance-timeline-point">
-            <LogOut size={15} />
-          </div>
-          <div className="attendance-timeline-content">
-            <span className="attendance-timeline-label">Punch Out</span>
-            <strong>{attendanceTime(day?.punchOut, timezone)}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div className="attendance-day-duration">
-        <Clock3 size={20} />
-        <div>
-          <span>{day?.attendanceSource ? 'Approved working hours' : 'Working hours'}</span>
-          <strong>
-            {minutes === null ? 'Not available' : `${Math.floor(minutes / 60)}h ${minutes % 60}m`}
+      {isHoliday ? (
+        <div className="attendance-day-holiday-box">
+          <strong className="attendance-day-holiday-title">
+            {resolvedHolidayTitle || 'School Holiday'}
           </strong>
         </div>
-      </div>
+      ) : status === 'off' && !day?.punchIn ? (
+        <div className="attendance-day-holiday-box weekly-off-box">
+          <strong className="attendance-day-holiday-title">Weekly Off</strong>
+        </div>
+      ) : (
+        <>
+          <div className="attendance-day-timeline">
+            <div className="attendance-timeline-item">
+              <div className="attendance-timeline-point">
+                <LogIn size={15} />
+              </div>
+              <div className="attendance-timeline-content">
+                <span className="attendance-timeline-label">Punch In</span>
+                <strong>{attendanceTime(day?.punchIn, timezone)}</strong>
+              </div>
+            </div>
+            <div className="attendance-timeline-line" />
+            <div className="attendance-timeline-item">
+              <div className="attendance-timeline-point">
+                <LogOut size={15} />
+              </div>
+              <div className="attendance-timeline-content">
+                <span className="attendance-timeline-label">Punch Out</span>
+                <strong>{attendanceTime(day?.punchOut, timezone)}</strong>
+              </div>
+            </div>
+          </div>
 
-      {day?.attendanceSource && (
+          <div className="attendance-day-duration">
+            <Clock3 size={18} />
+            <div>
+              <span>{day?.attendanceSource ? 'Approved working hours' : 'Working hours'}</span>
+              <strong>
+                {minutes === null ? 'Not available' : `${Math.floor(minutes / 60)}h ${minutes % 60}m`}
+              </strong>
+            </div>
+          </div>
+        </>
+      )}
+
+      {day?.attendanceSource && !isHoliday && status !== 'off' && (
         <p className="attendance-day-source">
           {day.attendanceSource === 'ars'
             ? 'Updated through an approved ARS.'
@@ -98,12 +121,6 @@ export default function AttendanceDayDetail({
       )}
       {pending && (
         <p className="ars-pending-note">ARS pending · awaiting administrator approval</p>
-      )}
-
-      {ars && (
-        <p className="attendance-calendar-hint">
-          Tap an absent, half-day or invalid date to request a correction.
-        </p>
       )}
     </section>
   );

@@ -237,7 +237,7 @@ body {
     display: none;
   }
 }
-@media (max-width: 800px) {
+@media (max-width: 800px), (orientation: landscape) and (max-height: 550px) {
   :root {
     --school-header-height: 63px;
   }
@@ -249,7 +249,7 @@ body {
     padding-right: calc(21px + env(safe-area-inset-right, 0px));
   }
 }
-@media (max-width: 620px) {
+@media (max-width: 620px), (orientation: landscape) and (max-height: 550px) {
   :root {
     --school-header-height: 54px;
   }

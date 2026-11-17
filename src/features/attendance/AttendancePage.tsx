@@ -12,6 +12,7 @@ import {
   Hourglass,
   UserCheck,
   Save,
+  ChevronRight,
 } from 'lucide-react';
 import StudentRecordLink from '../../components/shared/StudentRecordLink';
 import { useSchool } from '../../app/useSchool';
@@ -44,13 +45,7 @@ import '../../styles/student-timings.css';
 import './attendance-mobile.css';
 
 const statuses = Object.keys(STATUS_LABELS) as AttendanceStatus[];
-const STATUS_SHORT_LABELS: Record<AttendanceStatus, string> = {
-  present: 'P',
-  absent: 'A',
-  late: 'L',
-  'half-day': 'H',
-  unmarked: 'NM',
-};
+
 export default function AttendancePage() {
   const [params] = useSearchParams();
   return <AttendanceRegister key={params.toString()} />;
@@ -62,6 +57,9 @@ function AttendanceRegister() {
     data = feature ?? repository,
     isTeacherOnLeave = Boolean(feature?.attendanceGate?.onLeave),
     canManage = (feature?.canManage ?? true) && !isTeacherOnLeave;
+  const isPunchGateLocked = Boolean(
+    feature?.attendanceGate?.required && !feature?.attendanceGate?.active && !isTeacherOnLeave,
+  );
   const [saving, setSaving] = useState(false);
   const today = useToday();
   const notify = useFeedback();
@@ -92,9 +90,12 @@ function AttendanceRegister() {
     requestedDate >= state.academicYear.start
       ? requestedDate
       : today;
-  const rows = roster(state).filter(
-    (r) => r.enrollment.classId === classId && r.enrollment.sectionId === sectionId,
-  );
+  const rows = roster(state)
+    .filter((r) => r.enrollment.classId === classId && r.enrollment.sectionId === sectionId)
+    .sort(
+      (a, b) =>
+        (Number(a.enrollment.rollNumber) || 0) - (Number(b.enrollment.rollNumber) || 0),
+    );
   const timing = schoolHoursForDate(state, date);
   const hasAssignedTiming = !!configuredSchoolHours(state);
   const [, setHolidayRevision] = useState(0);
@@ -109,7 +110,154 @@ function AttendanceRegister() {
   const isDateLocked = holidayInfo.isHoliday || isNonWorkingDay;
   const [draft, setDraft] = useState<Record<string, AttendanceStatus>>({});
   const [error, setError] = useState('');
-  const handleAttendanceKeyDown = (
+  const [openCardIds, setOpenCardIds] = useState<Set<string>>(() => new Set());
+  const [closedCardIds, setClosedCardIds] = useState<Set<string>>(() => new Set());
+  const [prevFilterKey, setPrevFilterKey] = useState(() => `${date}-${classId}-${sectionId}`);
+
+  if (prevFilterKey !== `${date}-${classId}-${sectionId}`) {
+    setPrevFilterKey(`${date}-${classId}-${sectionId}`);
+    setOpenCardIds(new Set());
+    setClosedCardIds(new Set());
+  }
+
+  const isCardExpanded = (enrollmentId: string, status: AttendanceStatus) => {
+    if (openCardIds.has(enrollmentId)) return true;
+    if (closedCardIds.has(enrollmentId)) return false;
+    return status === 'unmarked';
+  };
+
+  const checkManagePermission = () => {
+    if (isPunchGateLocked) {
+      notify('Student attendance marking is locked: Please punch in under "Punch in & out" first.');
+      return false;
+    }
+    if (isDateLocked) {
+      notify(
+        holidayInfo.isHoliday
+          ? `Cannot record attendance on school holiday (${holidayInfo.reason}).`
+          : 'Cannot record attendance on a non-working day.',
+      );
+      return false;
+    }
+    if (isTeacherOnLeave) {
+      notify('Attendance marking is disabled while on approved leave.');
+      return false;
+    }
+    return canManage && !saving;
+  };
+
+  const handleSelectStatus = (
+    enrollmentId: string,
+    status: AttendanceStatus,
+    clickedElement?: HTMLElement | null,
+  ) => {
+    if (!checkManagePermission()) return;
+
+    // 1. Capture exact card position and scroll position before state update
+    const cardEl = clickedElement?.closest<HTMLElement>('.student-attendance-card');
+    const initialCardTop = cardEl ? cardEl.getBoundingClientRect().top : null;
+    const scrollContainer = document.scrollingElement || document.documentElement || document.body;
+    const initialScrollY = window.pageYOffset || scrollContainer.scrollTop || window.scrollY || 0;
+
+    // 2. Update state
+    setDraft((prev) => ({ ...prev, [enrollmentId]: status }));
+    setOpenCardIds((prev) => {
+      const next = new Set(prev);
+      next.delete(enrollmentId);
+      return next;
+    });
+    setClosedCardIds((prev) => new Set(prev).add(enrollmentId));
+
+    // 3. Multi-frame position lock to pin card and prevent any scroll-to-top jump on mobile
+    const lockScroll = () => {
+      if (cardEl && initialCardTop !== null) {
+        const currentCardTop = cardEl.getBoundingClientRect().top;
+        const delta = currentCardTop - initialCardTop;
+        if (Math.abs(delta) > 1) {
+          window.scrollBy({ top: delta, behavior: 'instant' });
+        }
+      } else {
+        const currentScroll = window.pageYOffset || scrollContainer.scrollTop || window.scrollY || 0;
+        if (Math.abs(currentScroll - initialScrollY) > 2) {
+          window.scrollTo({ top: initialScrollY, behavior: 'instant' });
+        }
+      }
+    };
+
+    requestAnimationFrame(lockScroll);
+    setTimeout(lockScroll, 20);
+    setTimeout(lockScroll, 60);
+    setTimeout(lockScroll, 120);
+    setTimeout(lockScroll, 250);
+  };
+
+  const toggleCardExpanded = (
+    enrollmentId: string,
+    currentlyExpanded: boolean,
+    clickedElement?: HTMLElement | null,
+  ) => {
+    if (!checkManagePermission()) return;
+
+    const cardEl = clickedElement?.closest<HTMLElement>('.student-attendance-card');
+    const initialCardTop = cardEl ? cardEl.getBoundingClientRect().top : null;
+    const scrollContainer = document.scrollingElement || document.documentElement || document.body;
+    const initialScrollY = window.pageYOffset || scrollContainer.scrollTop || window.scrollY || 0;
+
+    if (currentlyExpanded) {
+      setOpenCardIds((prev) => {
+        const next = new Set(prev);
+        next.delete(enrollmentId);
+        return next;
+      });
+      setClosedCardIds((prev) => new Set(prev).add(enrollmentId));
+    } else {
+      setClosedCardIds((prev) => {
+        const next = new Set(prev);
+        next.delete(enrollmentId);
+        return next;
+      });
+      setOpenCardIds((prev) => new Set(prev).add(enrollmentId));
+    }
+
+    const lockScroll = () => {
+      if (cardEl && initialCardTop !== null) {
+        const currentCardTop = cardEl.getBoundingClientRect().top;
+        const delta = currentCardTop - initialCardTop;
+        if (Math.abs(delta) > 1) {
+          window.scrollBy({ top: delta, behavior: 'instant' });
+        }
+      } else {
+        const currentScroll = window.pageYOffset || scrollContainer.scrollTop || window.scrollY || 0;
+        if (Math.abs(currentScroll - initialScrollY) > 2) {
+          window.scrollTo({ top: initialScrollY, behavior: 'instant' });
+        }
+      }
+    };
+
+    requestAnimationFrame(lockScroll);
+    setTimeout(lockScroll, 20);
+    setTimeout(lockScroll, 60);
+    setTimeout(lockScroll, 120);
+    setTimeout(lockScroll, 250);
+  };
+
+  const handleMarkAllPresent = () => {
+    if (!checkManagePermission() || !rows.length) return;
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    const currentScrollY = window.scrollY;
+    setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])));
+    setOpenCardIds(new Set());
+    setClosedCardIds(new Set(rows.map((r) => r.enrollment.id)));
+    requestAnimationFrame(() => {
+      if (Math.abs(window.scrollY - currentScrollY) > 5) {
+        window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      }
+    });
+  };
+
+  const handleDesktopTableKeyDown = (
     e: React.KeyboardEvent<HTMLButtonElement>,
     rowIndex: number,
     statusIndex: number,
@@ -160,10 +308,61 @@ function AttendanceRegister() {
       e.preventDefault();
       setDraft((prev) => ({ ...prev, [enrollmentId]: 'half-day' }));
       focusButton(rowIndex + 1, statuses.indexOf('half-day'));
-    } else if (key === 'u') {
+    } else if (key === 'u' || key === 'n') {
       e.preventDefault();
       setDraft((prev) => ({ ...prev, [enrollmentId]: 'unmarked' }));
       focusButton(rowIndex + 1, statuses.indexOf('unmarked'));
+    }
+  };
+
+  const handleAttendanceKeyDown = (
+    e: React.KeyboardEvent<HTMLElement>,
+    rowIndex: number,
+    enrollmentId: string,
+  ) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || isTeacherOnLeave || !canManage || isDateLocked) return;
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.student-attendance-card'));
+    const focusCard = (idx: number) => {
+      const target = cards[idx];
+      if (target) {
+        target.focus();
+        target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    };
+
+    const key = e.key.toLowerCase();
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusCard(rowIndex + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusCard(rowIndex - 1);
+    } else if (key === 'p') {
+      e.preventDefault();
+      handleSelectStatus(enrollmentId, 'present');
+      focusCard(rowIndex + 1);
+    } else if (key === 'a') {
+      e.preventDefault();
+      handleSelectStatus(enrollmentId, 'absent');
+      focusCard(rowIndex + 1);
+    } else if (key === 'l') {
+      e.preventDefault();
+      handleSelectStatus(enrollmentId, 'late');
+      focusCard(rowIndex + 1);
+    } else if (key === 'h') {
+      e.preventDefault();
+      handleSelectStatus(enrollmentId, 'half-day');
+      focusCard(rowIndex + 1);
+    } else if (key === 'u' || key === 'n') {
+      e.preventDefault();
+      handleSelectStatus(enrollmentId, 'unmarked');
+      focusCard(rowIndex + 1);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      if ((e.target as HTMLElement).tagName !== 'BUTTON') {
+        e.preventDefault();
+        const status = draft[enrollmentId] ?? statusFor(state, enrollmentId, date);
+        toggleCardExpanded(enrollmentId, isCardExpanded(enrollmentId, status));
+      }
     }
   };
 
@@ -414,8 +613,42 @@ function AttendanceRegister() {
                   </span>
                 </div>
               </div>
+            ) : isPunchGateLocked ? (
+              <div
+                className="attendance-lock-banner punch-lock"
+                role="alert"
+                style={{
+                  background: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: '#92400e',
+                  margin: '12px 0 16px 0',
+                }}
+              >
+                <Clock size={20} style={{ color: '#d97706', flexShrink: 0 }} />
+                <div>
+                  <strong style={{ display: 'block', fontSize: '15px' }}>
+                    Duty Punch Required
+                  </strong>
+                  <span style={{ fontSize: '13px', color: '#b45309' }}>
+                    Student attendance can only be marked while on active duty. Please punch in under{' '}
+                    <Link
+                      to="/attendance?register=self"
+                      style={{ fontWeight: 700, color: '#92400e', textDecoration: 'underline' }}
+                    >
+                      Punch in & out
+                    </Link>{' '}
+                    to enable attendance recording.
+                  </span>
+                </div>
+              </div>
             ) : null}
-            <div className="attendance-summary stats-grid">
+            {/* Desktop Stats Grid */}
+            <div className="attendance-summary stats-grid desktop-only">
               <StatCard
                 label="Total Students"
                 value={summary.total}
@@ -455,6 +688,37 @@ function AttendanceRegister() {
                 icon={<Hourglass size={18} />}
                 tone="blue"
               />
+            </div>
+
+            {/* Mobile Stats Pill Bar (matches Photo 1 with Total Students, without icons) */}
+            <div className="attendance-mobile-pill-stats mobile-only" aria-label="Attendance summary">
+              <div className="mobile-stat-col">
+                <span className="mobile-stat-label">Total<br />Students</span>
+                <strong className="mobile-stat-value">{summary.total}</strong>
+              </div>
+              <div className="mobile-stat-divider" />
+              <div className="mobile-stat-col">
+                <span className="mobile-stat-label">Present</span>
+                <strong className="mobile-stat-value">{summary.present}</strong>
+                <span className="mobile-stat-pct">
+                  {summary.total ? `${Math.round((summary.present / summary.total) * 100)}%` : '0%'}
+                </span>
+              </div>
+              <div className="mobile-stat-divider" />
+              <div className="mobile-stat-col">
+                <span className="mobile-stat-label">Absent</span>
+                <strong className="mobile-stat-value">{summary.absent}</strong>
+              </div>
+              <div className="mobile-stat-divider" />
+              <div className="mobile-stat-col">
+                <span className="mobile-stat-label">Late /<br />Half day</span>
+                <strong className="mobile-stat-value">{summary.late} / {summary['half-day']}</strong>
+              </div>
+              <div className="mobile-stat-divider" />
+              <div className="mobile-stat-col">
+                <span className="mobile-stat-label">Not Marked</span>
+                <strong className="mobile-stat-value">{summary.unmarked}</strong>
+              </div>
             </div>
 
             {/* Mobile Filter Card */}
@@ -510,9 +774,7 @@ function AttendanceRegister() {
                   <Button
                     variant="secondary"
                     disabled={!canManage || saving || !rows.length || isDateLocked}
-                    onClick={() =>
-                      setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])))
-                    }
+                    onClick={handleMarkAllPresent}
                   >
                     <AppIcon name="user-check" size={16} />
                     Mark all present
@@ -520,15 +782,92 @@ function AttendanceRegister() {
                 </div>
               }
             >
+              {/* Desktop Table View */}
+              <div
+                className="table-wrap desktop-only"
+                role="region"
+                aria-label="Student attendance register"
+                tabIndex={0}
+              >
+                <table className="attendance-table">
+                  <thead>
+                    <tr>
+                      <th className="th-roll">Roll no.</th>
+                      <th className="th-student">Student</th>
+                      <th className="th-admission">Admission number</th>
+                      <th className="th-status">Attendance status</th>
+                      <th className="th-record">Record</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="text-center muted" style={{ padding: '32px 16px' }}>
+                          No active students enrolled in this section.
+                        </td>
+                      </tr>
+                    ) : (
+                      rows.map((r, rowIndex) => {
+                        const status =
+                          draft[r.enrollment.id] ?? statusFor(state, r.enrollment.id, date);
+                        return (
+                          <tr key={r.enrollment.id}>
+                            <td className="td-roll mono">{r.enrollment.rollNumber}</td>
+                            <td className="td-student">
+                              <StudentRecordLink className="person" to={`/students/${r.student.id}`}>
+                                <Avatar name={r.student.name} />
+                                <strong>{r.student.name}</strong>
+                              </StudentRecordLink>
+                            </td>
+                            <td className="td-admission mono muted">{r.student.admissionNumber}</td>
+                            <td className="td-status">
+                              <div
+                                className="status-options"
+                                role="group"
+                                aria-label={`${r.student.name} attendance`}
+                              >
+                                {statuses.map((s, statusIndex) => (
+                                  <button
+                                    key={s}
+                                    type="button"
+                                    disabled={!canManage || saving || isDateLocked}
+                                    aria-pressed={status === s}
+                                    className={status === s ? `selected ${s}` : ''}
+                                    onClick={() =>
+                                      setDraft((prev) => ({ ...prev, [r.enrollment.id]: s }))
+                                    }
+                                    onKeyDown={(e) =>
+                                      handleDesktopTableKeyDown(
+                                        e,
+                                        rowIndex,
+                                        statusIndex,
+                                        r.enrollment.id,
+                                      )
+                                    }
+                                  >
+                                    {STATUS_LABELS[s]}
+                                  </button>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="td-record">
+                              <Badge tone={status}>{STATUS_LABELS[status]}</Badge>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
               {/* Mobile Table Top Bar */}
-              <div className="attendance-mobile-table-bar">
+              <div className="attendance-mobile-table-bar mobile-only">
                 <button
                   type="button"
                   className="mobile-mark-all-btn"
                   disabled={!canManage || saving || !rows.length || isDateLocked}
-                  onClick={() =>
-                    setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])))
-                  }
+                  onClick={handleMarkAllPresent}
                 >
                   <UserCheck size={16} />
                   Mark all present
@@ -538,76 +877,151 @@ function AttendanceRegister() {
                 </span>
               </div>
 
-              <div className="table-wrap">
-                <table className="attendance-table">
-                  <thead>
-                    <tr>
-                      <th className="th-roll">
-                        <span className="col-header-full">Roll no.</span>
-                        <span className="col-header-mobile">Roll No.</span>
-                      </th>
-                      <th className="th-student">Student</th>
-                      <th className="th-admission desktop-only">Admission number</th>
-                      <th className="th-status">
-                        <span className="col-header-full">Attendance status</span>
-                        <span className="col-header-mobile">Attendance</span>
-                      </th>
-                      <th className="th-record desktop-only">Record</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((r, rowIndex) => {
-                      const status =
-                        draft[r.enrollment.id] ?? statusFor(state, r.enrollment.id, date);
-                      return (
-                        <tr key={r.enrollment.id}>
-                          <td className="td-roll mono">{r.enrollment.rollNumber}</td>
-                          <td className="td-student">
-                            <StudentRecordLink className="person" to={`/students/${r.student.id}`}>
-                              <Avatar name={r.student.name} />
-                              <strong>{r.student.name}</strong>
-                            </StudentRecordLink>
-                          </td>
-                          <td className="td-admission mono muted desktop-only">{r.student.admissionNumber}</td>
-                          <td className="td-status">
-                            <div
-                              className="status-options"
-                              role="group"
-                              aria-label={`${r.student.name} attendance`}
+              {/* Mobile Attendance Student Cards List */}
+              <div className="attendance-cards-list mobile-only">
+                {rows.length === 0 ? (
+                  <div className="attendance-empty-state">
+                    <Users size={32} />
+                    <p>No active students enrolled in this section.</p>
+                  </div>
+                ) : (
+                  rows.map((r, rowIndex) => {
+                    const status =
+                      draft[r.enrollment.id] ?? statusFor(state, r.enrollment.id, date);
+                    const isExpanded = isCardExpanded(r.enrollment.id, status);
+                    return (
+                      <div
+                        key={r.enrollment.id}
+                        className={`student-attendance-card status-${status} ${isExpanded ? 'card-expanded' : 'card-collapsed'}`}
+                        role="region"
+                        aria-label={`Attendance for ${r.student.name}, Roll ${r.enrollment.rollNumber}`}
+                        onKeyDown={(e) => handleAttendanceKeyDown(e, rowIndex, r.enrollment.id)}
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest('.card-options-grid, .card-status-pill, a')) {
+                            return;
+                          }
+                          toggleCardExpanded(r.enrollment.id, isExpanded, e.currentTarget);
+                        }}
+                      >
+                        <div className="card-left-section">
+                          <div className={`card-roll-badge badge-${status}`}>
+                            {r.enrollment.rollNumber}
+                          </div>
+                          <div className="card-student-meta">
+                            <StudentRecordLink
+                              className="card-student-name"
+                              to={`/students/${r.student.id}`}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              {statuses.map((s, statusIndex) => (
-                                <button
-                                  key={s}
-                                  type="button"
-                                  disabled={!canManage || saving || isDateLocked}
-                                  aria-pressed={status === s}
-                                  className={status === s ? `selected ${s}` : ''}
-                                  onClick={() =>
-                                    setDraft((prev) => ({ ...prev, [r.enrollment.id]: s }))
-                                  }
-                                  onKeyDown={(e) =>
-                                    handleAttendanceKeyDown(
-                                      e,
-                                      rowIndex,
-                                      statusIndex,
-                                      r.enrollment.id,
-                                    )
-                                  }
-                                >
-                                  <span className="status-label-full">{STATUS_LABELS[s]}</span>
-                                  <span className="status-label-short">{STATUS_SHORT_LABELS[s]}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="td-record desktop-only">
-                            <Badge tone={status}>{STATUS_LABELS[status]}</Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                              {r.student.name}
+                            </StudentRecordLink>
+                            <span className="card-student-roll">
+                              Roll No. {r.enrollment.rollNumber}
+                            </span>
+                          </div>
+                        </div>
+
+                        {isExpanded ? (
+                          <div
+                            className="card-options-grid"
+                            role="group"
+                            aria-label={`${r.student.name} attendance options`}
+                          >
+                            <button
+                              type="button"
+                              disabled={!canManage || saving || isDateLocked}
+                              className="card-option-btn btn-present"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleSelectStatus(r.enrollment.id, 'present', e.currentTarget);
+                              }}
+                              title="Mark Present"
+                            >
+                              <span className="option-letter">P</span>
+                              <span className="option-text">Present</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={!canManage || saving || isDateLocked}
+                              className="card-option-btn btn-absent"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleSelectStatus(r.enrollment.id, 'absent', e.currentTarget);
+                              }}
+                              title="Mark Absent"
+                            >
+                              <span className="option-letter">A</span>
+                              <span className="option-text">Absent</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={!canManage || saving || isDateLocked}
+                              className="card-option-btn btn-late"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleSelectStatus(r.enrollment.id, 'late', e.currentTarget);
+                              }}
+                              title="Mark Late"
+                            >
+                              <span className="option-letter">L</span>
+                              <span className="option-text">Late</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={!canManage || saving || isDateLocked}
+                              className="card-option-btn btn-half-day"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleSelectStatus(r.enrollment.id, 'half-day', e.currentTarget);
+                              }}
+                              title="Mark Half Day"
+                            >
+                              <span className="option-letter">H</span>
+                              <span className="option-text">Half Day</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={!canManage || saving || isDateLocked}
+                              className="card-option-btn btn-unmarked"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleSelectStatus(r.enrollment.id, 'unmarked', e.currentTarget);
+                              }}
+                              title="Mark Not Marked"
+                            >
+                              <span className="option-letter">NM</span>
+                              <span className="option-text">Not Marked</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={!canManage || saving || isDateLocked}
+                            className={`card-status-pill pill-${status}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleCardExpanded(r.enrollment.id, isExpanded, e.currentTarget);
+                            }}
+                            title="Click to change attendance status"
+                          >
+                            <span className="pill-text">{STATUS_LABELS[status]}</span>
+                            <ChevronRight size={15} className="pill-chevron" strokeWidth={2.4} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
               <div className="save-bar">
                 <div>

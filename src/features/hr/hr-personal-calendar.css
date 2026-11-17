@@ -288,20 +288,25 @@
   align-items: center;
   justify-content: flex-start;
   gap: 14px;
-  background: #edf5f2;
-  color: #285e60;
-  border-radius: 12px;
-  padding: 14px 18px;
+  background: none;
+  color: #1e293b;
+  border: none;
+  border-radius: 0;
+  padding: 8px 0;
 }
 .attendance-day-duration div {
   display: grid;
   gap: 4px;
 }
 .attendance-day-duration span {
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
 }
 .attendance-day-duration strong {
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
 }
 .attendance-day-source,
 .ars-form-note,
@@ -552,4 +557,329 @@
   height: 22px;
   background: #d4deda;
   margin: 4px 0 4px 11px;
+}
+
+/* Holiday & Weekly Off Detail Box in Attendance Details */
+.attendance-day-holiday-box {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 12px 0 4px;
+}
+
+.attendance-day-holiday-box.weekly-off-box {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.attendance-day-holiday-title {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #92400e;
+  line-height: 1.35;
+}
+
+.weekly-off-box .attendance-day-holiday-title {
+  color: #475569;
+}
+
+/* Submit ARS Button (Base / Desktop) */
+.hr-submit-ars-btn {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  margin-left: 6px;
+}
+
+.hr-submit-ars-btn.is-disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.hr-submit-ars-btn.is-active {
+  background: #164e3f;
+  color: #ffffff;
+  border: 1px solid #164e3f;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(22, 78, 63, 0.25);
+}
+
+.hr-submit-ars-btn.is-active:hover {
+  background: #195847;
+}
+
+.hr-submit-ars-btn.is-active:active {
+  background: #11382e;
+  transform: scale(0.98);
+}
+
+/* PC View Submit ARS in Top Action Bar */
+.hr-submit-ars-desktop {
+  display: inline-flex !important;
+  height: 35px;
+  min-height: 35px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  margin-left: 0;
+  box-sizing: border-box;
+}
+
+.hr-submit-ars-desktop.is-disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  border: 1px solid #cbd5e1;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.hr-submit-ars-desktop.is-active {
+  background: #164e3f;
+  color: #ffffff;
+  border: 1px solid #164e3f;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(22, 78, 63, 0.2);
+}
+
+.hr-submit-ars-desktop.is-active:hover {
+  background: #195847;
+  border-color: #195847;
+}
+
+.hr-submit-ars-desktop.is-active:active {
+  background: #11382e;
+  transform: scale(0.98);
+}
+
+/* Hide mobile inline button on desktop */
+.hr-submit-ars-mobile {
+  display: none !important;
+}
+
+/* Mobile View specific optimizations (Keeps Desktop intact) */
+@media (max-width: 768px), (orientation: landscape) and (max-height: 550px) {
+  /* Month controls & Submit ARS header row on mobile */
+  .hr-calendar-header {
+    margin-bottom: 14px !important;
+    gap: 8px !important;
+  }
+
+  .hr-calendar-month-heading {
+    width: 100% !important;
+  }
+
+  .hr-month-controls {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  /* Hide left/right month arrow buttons on mobile */
+  .hr-month-nav-btn {
+    display: none !important;
+  }
+
+  /* Compact Month Picker on mobile */
+  .hr-month-corner {
+    flex: 1 !important;
+    max-width: 175px !important;
+    margin: 0 !important;
+  }
+
+  .hr-month-corner input[type='month'] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 4px 10px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    border: 1px solid #d4deda !important;
+    background: #ffffff !important;
+    color: #12373b !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Compact Submit ARS Button on mobile */
+  .hr-submit-ars-btn {
+    flex: 1 !important;
+    max-width: 145px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    margin-left: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .hr-submit-ars-desktop {
+    display: none !important;
+  }
+
+  .hr-submit-ars-mobile {
+    display: inline-flex !important;
+  }
+
+  /* Hide redundant "My attendance" sub-header and "Request leave" on mobile */
+  .attendance-register-wrap .panel > .panel-heading,
+  .attendance-register-wrap .hr-content > .panel-heading,
+  .hr-content .panel-heading,
+  .hr-self-request-leave-btn,
+  .hr-request-leave-btn {
+    display: none !important;
+  }
+
+  .attendance-register-wrap .panel.hr-content {
+    border-top: none !important;
+    padding-top: 4px !important;
+  }
+
+  /* Compact Attendance Details Card on Mobile */
+  .attendance-day-card {
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
+    margin-top: 12px !important;
+  }
+
+  .attendance-day-card-heading {
+    gap: 8px !important;
+  }
+
+  .attendance-day-card-heading h3 {
+    font-size: 14.5px !important;
+    margin: 2px 0 0 !important;
+  }
+
+  .attendance-day-card-subtitle {
+    font-size: 10.5px !important;
+    margin-bottom: 0 !important;
+  }
+
+  .attendance-day-pill {
+    padding: 4px 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* Compact 2-column horizontal timeline for mobile */
+  .attendance-day-timeline {
+    margin: 10px 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 10px !important;
+  }
+
+  .attendance-timeline-line {
+    display: none !important;
+  }
+
+  .attendance-timeline-item {
+    gap: 6px !important;
+    align-items: center !important;
+  }
+
+  .attendance-timeline-point {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .attendance-timeline-point svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .attendance-timeline-content {
+    gap: 0 !important;
+  }
+
+  .attendance-timeline-label {
+    font-size: 10.5px !important;
+  }
+
+  .attendance-timeline-content strong {
+    font-size: 13px !important;
+  }
+
+  /* Unboxed working hours for mobile with bolder typography */
+  .attendance-day-duration {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin-top: 8px !important;
+    padding: 4px 2px !important;
+    gap: 8px !important;
+    color: #1e293b !important;
+  }
+
+  .attendance-day-duration svg {
+    width: 16px !important;
+    height: 16px !important;
+    color: #164e3f !important;
+    flex-shrink: 0 !important;
+  }
+
+  .attendance-day-duration div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .attendance-day-duration div span {
+    font-size: 12px !important;
+    font-weight: 650 !important;
+    color: #475569 !important;
+  }
+
+  .attendance-day-duration div strong {
+    font-size: 13.5px !important;
+    font-weight: 750 !important;
+    color: #0f172a !important;
+  }
+
+  .attendance-day-holiday-box {
+    padding: 8px 12px !important;
+    border-radius: 9px !important;
+    margin: 8px 0 2px !important;
+  }
+
+  .attendance-day-holiday-title {
+    font-size: 13.5px !important;
+  }
+
+  .attendance-calendar-hint,
+  .attendance-day-source,
+  .ars-pending-note {
+    font-size: 10.5px !important;
+    margin-top: 6px !important;
+  }
 }

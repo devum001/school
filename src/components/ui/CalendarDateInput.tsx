@@ -76,12 +76,11 @@ export default function CalendarDateInput({
         onChange={change}
         onClick={(event) => {
           props.onClick?.(event);
-          if (!event.defaultPrevented && openCalendar()) event.preventDefault();
+          if (!event.defaultPrevented) openCalendar();
         }}
         onKeyDown={(event) => {
           props.onKeyDown?.(event);
-          if (!event.defaultPrevented && event.key === 'Enter' && openCalendar())
-            event.preventDefault();
+          if (!event.defaultPrevented && event.key === 'Enter') openCalendar();
         }}
       />
       <button
