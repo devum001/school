@@ -9,6 +9,15 @@ import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import './styles/global.css';
 import './styles/school-theme.css';
+
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.log('SW registration note:', err);
+    });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <FeedbackProvider>

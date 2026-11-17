@@ -384,17 +384,15 @@ export function CollectPayment({
 
   // 1. Identify previous partial arrears vs next fresh installment:
   // An item has a partial arrear if it has already been partially paid (paid > 0)
+  const hasPartialArrears = pending.length > 1 && (pending[0].paid ?? 0) > 0;
   const firstFreshIdx = pending.findIndex((p) => (p.paid ?? 0) === 0);
-  const hasPartialArrears = firstFreshIdx > 0;
+  const targetIdx = hasPartialArrears ? (firstFreshIdx > 0 ? firstFreshIdx : 1) : 0;
+  const targetItem = pending[targetIdx];
 
   // Arrears from previous partially paid installment(s)
   const partialArrearsPaise = hasPartialArrears
-    ? pending.slice(0, firstFreshIdx).reduce((s, p) => s + p.balance, 0)
+    ? pending.slice(0, targetIdx).reduce((s, p) => s + p.balance, 0)
     : 0;
-
-  // Target item for this payment:
-  // If there are partial arrears, combine them directly with the next installment!
-  const targetItem = hasPartialArrears ? pending[firstFreshIdx] : pending[0];
 
   // Effective installment due:
   // Next installment balance + prior partial arrears (e.g. ₹9,750 + ₹750 = ₹10,500)

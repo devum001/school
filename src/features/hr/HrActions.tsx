@@ -262,11 +262,41 @@ export function LeaveDialog({
               value={review.status}
               onChange={(status) => setReview({ ...review, status })}
             />
+            {(() => {
+              const staffUsage = data.leaveUsage?.find((u) => u.staffId === leave.staffId);
+              const remaining =
+                staffUsage?.balanceDays ??
+                Math.max(
+                  0,
+                  (staffUsage?.accruedDays ?? data.settings.paidLeaveDays) -
+                    (staffUsage?.used ?? 0),
+                );
+              return (
+                <div
+                  style={{
+                    background: remaining > 0 ? '#f0fdf4' : '#fffbeb',
+                    border: `1px solid ${remaining > 0 ? '#bbf7d0' : '#fef3c7'}`,
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    color: remaining > 0 ? '#166534' : '#92400e',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <strong>Available Paid Leave Balance:</strong> {remaining} day(s) remaining.
+                  {remaining <= 0 && (
+                    <div style={{ fontSize: '12px', marginTop: '2px' }}>
+                      Staff has exhausted their free leave quota. Selecting "Paid" may exceed their allowance unless approved as Unpaid (LWP).
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <SelectField
               label="Salary treatment"
-              options={['Paid', 'Unpaid']}
-              value={review.paid ? 'Paid' : 'Unpaid'}
-              onChange={(v) => setReview({ ...review, paid: v === 'Paid' })}
+              options={['Paid (Use free leave quota)', 'Unpaid (Loss of pay)']}
+              value={review.paid ? 'Paid (Use free leave quota)' : 'Unpaid (Loss of pay)'}
+              onChange={(v) => setReview({ ...review, paid: v.startsWith('Paid') })}
             />
             <TextField
               label="Review reason (optional)"

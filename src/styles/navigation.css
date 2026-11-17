@@ -391,3 +391,24 @@
     transition: none;
   }
 }
+
+/* Install Web App Sidebar Button */
+.install-app-nav-btn {
+  background: transparent;
+  border: none;
+  font: inherit;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: var(--school-gold, #e2c58a) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+}
+
+.install-app-nav-btn:hover {
+  background: rgba(226, 197, 138, 0.12) !important;
+  color: #ffffff !important;
+}

@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { GraduationCap, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button, Panel } from '../../components/ui/Primitives';
 import { sessionStore } from './sessionStore';
 import { useSession } from './useSession';
 export default function LoginScreen() {
   const auth = useSession();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
@@ -43,6 +46,9 @@ export default function LoginScreen() {
             setBusy(true);
             setError('');
             try {
+              if (location.pathname === '/staff/punch' || location.pathname === '/staff/self') {
+                navigate('/', { replace: true });
+              }
               await sessionStore.login(email, password);
             } catch (cause) {
               setError(cause instanceof Error ? cause.message : 'Unable to sign in.');

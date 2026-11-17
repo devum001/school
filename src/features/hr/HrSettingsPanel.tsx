@@ -168,16 +168,26 @@ export default function HrSettingsPanel({
                 <Rule label="Working days">
                   {settings.workingDays.map((d) => days[d]).join(', ')}
                 </Rule>
-                <Rule label="Late after">{settings.lateAfter}</Rule>
+                <Rule label="Late after">{settings.lateAfter || 'Not configured'}</Rule>
                 <Rule label="Half day after">{settings.halfDayAfter || 'Not enabled'}</Rule>
               </dl>
+              <div style={{ marginTop: '0.75rem' }}>
+                <Link className="button secondary" to="/settings?section=timing">
+                  Configure School Timings
+                </Link>
+              </div>
             </div>
             <div className="settings-policy-card">
               <div className="settings-policy-card-title">
                 <h3>Leave & Salary Decisions</h3>
               </div>
               <dl className="staff-rule-list">
-                <Rule label="Paid leave">{settings.paidLeaveDays} days / calendar year</Rule>
+                <Rule label="Paid leave">
+                  {settings.monthlyPaidLeaveDays ?? Math.max(1, Math.round(settings.paidLeaveDays / 12))} day(s) / month
+                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--muted, #64748b)', marginTop: '2px' }}>
+                    Accumulative month-to-month (up to {settings.paidLeaveDays} days / year)
+                  </span>
+                </Rule>
                 <Rule label="Absence reduces leave">
                   {settings.absenceReducesLeave ? 'Yes · one day per absence' : 'No'}
                 </Rule>
@@ -185,7 +195,7 @@ export default function HrSettingsPanel({
                 <Rule label="Holidays">{settings.holidays.length} configured</Rule>
               </dl>
               <p className="settings-policy-note">
-                The administrator decides paid or unpaid leave. Missing punches need review before
+                The administrator decides paid or unpaid leave. Unused monthly leaves roll over and accumulate month-to-month. Missing punches need review before
                 salary approval.
               </p>
             </div>
@@ -357,23 +367,22 @@ function SettingsEditor({
         </div>
       ) : (
         <>
+          <div
+            className="panel-note"
+            style={{
+              marginBottom: '1rem',
+              padding: '0.75rem 1rem',
+              background: 'var(--surface-sunken, #f8fafc)',
+              borderRadius: '6px',
+              border: '1px solid var(--border-color, #e2e8f0)',
+            }}
+          >
+            <p style={{ margin: 0 }}>
+              <strong>School Timings & Attendance Cutoffs:</strong> Opening ({draft.start}), closing ({draft.end}), late arrival cutoff ({draft.lateAfter || 'Not set'}), and half-day cutoff ({draft.halfDayAfter || 'Not set'}) are configured centrally in{' '}
+              <Link to="/settings?section=timing">General → School Timing</Link>.
+            </p>
+          </div>
           <div className="form-grid">
-            {(['start', 'end', 'lateAfter'] as const).map((k) => (
-              <TextField
-                key={k}
-                label={{ start: 'Start time', end: 'End time', lateAfter: 'Late after' }[k]}
-                type="time"
-                value={draft[k]}
-                onChange={(v) => setDraft({ ...draft, [k]: v })}
-              />
-            ))}
-            <TextField
-              label="Half day after (optional)"
-              type="time"
-              required={false}
-              value={draft.halfDayAfter ?? ''}
-              onChange={(halfDayAfter) => setDraft({ ...draft, halfDayAfter })}
-            />
             <label className="field">
               Absence reduces leave balance
               <select
@@ -396,21 +405,30 @@ function SettingsEditor({
               after school closes; pending leave counts only after approval.
             </p>
             <label className="field">
-              Annual paid leave days
+              Monthly paid leave allowance (days / month)
               <input
                 required
                 type="number"
                 min={0}
-                value={draft.paidLeaveDays}
-                onChange={(e) => setDraft({ ...draft, paidLeaveDays: Number(e.target.value) })}
+                max={31}
+                value={
+                  draft.monthlyPaidLeaveDays ??
+                  (draft.paidLeaveDays ? Math.max(1, Math.round(draft.paidLeaveDays / 12)) : 1)
+                }
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setDraft({
+                    ...draft,
+                    monthlyPaidLeaveDays: val,
+                    paidLeaveDays: val * 12,
+                  });
+                }}
               />
+              <small>
+                Leaves accumulate monthly. Unused leaves carry over to subsequent months (e.g., 1 day in Month 1 becomes 2 in Month 2 if unused).
+              </small>
             </label>
           </div>
-          <p>
-            Only arrival after the half-day cutoff counts as half-day. Working hours are recorded
-            but do not change the status. Leave the cutoff empty to disable automatic half-day
-            classification. Changes apply to new punches.
-          </p>
           <fieldset className="hr-workdays">
             <legend>Working days</legend>
             <div className="toolbar">

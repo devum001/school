@@ -2,7 +2,6 @@ import ArsRequestDialog from './ArsRequestDialog';
 import { liveHrAdapter } from '../../services/hrService';
 import { formatCalendarDate } from '../../lib/displayFormat';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarDays, CheckCircle2, Clock3, LogOut, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/Primitives';
 import { useSession } from '../auth/useSession';
@@ -212,25 +211,21 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
     <div className="punch-page" aria-label="My school punch" role="region">
       {/* Header section matching Image 1: serif heading & clean subtitle */}
       <div className="punch-page-header">
-        <div>
-          <h1 className="punch-page-title">Punch in & out</h1>
+        <div className="punch-header-text">
+          <div className="punch-title-row">
+            <h1 className="punch-page-title">Punch in & out</h1>
+            <button
+              type="button"
+              className="punch-header-refresh"
+              disabled={!!busy}
+              onClick={() => void refresh()}
+              title="Refresh status"
+              aria-label="Refresh status"
+            >
+              <RefreshCw size={15} className={busy ? 'punch-spin' : ''} />
+            </button>
+          </div>
           <p className="punch-page-desc">Record your work hours here.</p>
-        </div>
-        <div className="punch-header-nav">
-          <Link to="/staff/self" className="punch-header-link" title="Open Salary & Leaves">
-            <CalendarDays size={14} />
-            Salary & Leaves
-            <ArrowRight size={13} />
-          </Link>
-          <button
-            type="button"
-            className="punch-header-refresh"
-            disabled={!!busy}
-            onClick={() => void refresh()}
-            title="Refresh status"
-          >
-            <RefreshCw size={13} className={busy ? 'punch-spin' : ''} />
-          </button>
         </div>
       </div>
 
@@ -255,7 +250,7 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
 
             <div className="punch-main-card-body">
               <div className="punch-main-col-left">
-                <p className="punch-main-date">{formatDateLong(now)}</p>
+                <p className="punch-main-date"><CalendarDays size={15} className="punch-date-icon" />{formatDateLong(now)}</p>
                 <div className="punch-main-clock" aria-label="Current school time">
                   {formatTimeStr(now)}
                 </div>
@@ -282,59 +277,177 @@ function PunchPage({ schoolId, schoolName }: { schoolId: string; schoolName: str
                 </div>
 
                 {/* Large headline message */}
-                <h2 className="punch-main-headline">
-                  {data?.state.code === 'HR_ON_LEAVE'
-                    ? 'On approved leave today'
-                    : data?.attendanceClosed
-                      ? data.attendanceSource === 'admin'
-                        ? 'Attendance recorded by admin'
-                        : 'Attendance correction'
-                      : data?.punchOut
-                        ? "You're all set for today"
+                {/* Desktop Headline & Action (hidden on mobile) */}
+                <div className="punch-desktop-content">
+                  <h2 className="punch-main-headline">
+                    {data?.state.code === 'HR_ON_LEAVE'
+                      ? 'On approved leave today'
+                      : data?.attendanceClosed
+                        ? data.attendanceSource === 'admin'
+                          ? 'Attendance recorded by admin'
+                          : 'Attendance correction'
+                        : data?.punchOut
+                          ? "You're all set for today"
+                          : data?.active
+                            ? 'Finish your school day'
+                            : "Let's start your school day"}
+                  </h2>
+
+                  {/* Desktop Action Button */}
+                  {data?.state.code === 'HR_ON_LEAVE' ? (
+                    <button className="punch-action-btn completed" disabled type="button">
+                      On leave today
+                    </button>
+                  ) : data?.punchOut ? (
+                    <button className="punch-action-btn completed" disabled type="button">
+                      Punch out <ArrowRight size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="punch-action-btn active"
+                      disabled={!!busy || !data?.state.allowed}
+                      onClick={() => void act(true)}
+                    >
+                      {busy === 'punch'
+                        ? 'Verifying your location…'
                         : data?.active
-                          ? 'Finish your school day'
-                          : "Let's start your school day"}
-                </h2>
+                          ? 'Punch out'
+                          : 'Punch in'}
+                      <ArrowRight size={16} />
+                    </button>
+                  )}
 
-                {/* Action Button */}
-                {data?.state.code === 'HR_ON_LEAVE' ? (
-                  <button className="punch-action-btn completed" disabled type="button">
-                    On leave today
-                  </button>
-                ) : data?.punchOut ? (
-                  <button className="punch-action-btn completed" disabled type="button">
-                    Punch out <ArrowRight size={16} />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="punch-action-btn active"
-                    disabled={!!busy || !data?.state.allowed}
-                    onClick={() => void act(true)}
-                  >
-                    {busy === 'punch'
-                      ? 'Verifying your location…'
-                      : data?.active
-                        ? 'Punch out'
-                        : 'Punch in'}
-                    <ArrowRight size={16} />
-                  </button>
-                )}
+                  <p className="punch-action-subtext">
+                    {data?.state.code === 'HR_ON_LEAVE'
+                      ? 'Your leave is approved for today. Punch in and punch out are disabled while on leave.'
+                      : data?.punchOut
+                        ? "Today's punch-in and punch-out are already recorded."
+                        : data?.active
+                          ? 'Punch out when you leave. Your recorded times will appear on the right.'
+                          : "We'll check your location and record your arrival securely."}
+                  </p>
 
-                {/* Subtext note below button */}
-                <p className="punch-action-subtext">
-                  {data?.state.code === 'HR_ON_LEAVE'
-                    ? 'Your leave is approved for today. Punch in and punch out are disabled while on leave.'
-                    : data?.punchOut
-                      ? "Today's punch-in and punch-out are already recorded."
-                      : data?.active
-                        ? 'Punch out when you leave. Your recorded times will appear on the right.'
-                        : "We'll check your location and record your arrival securely."}
-                </p>
+                  {data?.state.code !== 'HR_ON_LEAVE' &&
+                    !data?.missedPunches?.length &&
+                    data?.state.code !== 'HR_MISSED_PUNCH' &&
+                    data?.state.reason &&
+                    !data?.punchOut && (
+                      <p className="punch-rule-warning">{data.state.reason}</p>
+                    )}
+                </div>
 
-                {data?.state.code !== 'HR_ON_LEAVE' && data?.state.reason && !data?.punchOut && (
-                  <p className="punch-rule-warning">{data.state.reason}</p>
-                )}
+                {/* Mobile View Layout (matching user screenshot exactly, hidden on desktop) */}
+                <div className="punch-mobile-content">
+                  {/* Today's Timeline Box */}
+                  <div className="punch-mobile-timeline-card">
+                    <div className="punch-mobile-timeline-header">
+                      <Clock3 size={16} />
+                      <span>Today's Timeline</span>
+                    </div>
+
+                    <div className="punch-mobile-timeline-inner">
+                      {/* Punch In */}
+                      <div className="punch-mobile-timeline-item">
+                        <div className="punch-mobile-timeline-info">
+                          <span className="punch-mobile-timeline-label">Punch In</span>
+                          <strong className="punch-mobile-timeline-time">
+                            {data?.punchIn ? formatTimeStr(data.punchIn) : '—'}
+                          </strong>
+                        </div>
+                        <div className="punch-mobile-connector-wrap">
+                          <div className="punch-mobile-stepper-col">
+                            <span
+                              className={`punch-mobile-timeline-dot ${data?.punchIn ? 'filled' : ''}`}
+                              aria-hidden="true"
+                            />
+                            <span
+                              className={`punch-mobile-stepper-line ${data?.punchIn && data?.punchOut ? 'filled' : ''}`}
+                              aria-hidden="true"
+                            />
+                          </div>
+                          <div className="punch-mobile-icon-box" title="Punch In recorded">
+                            <Clock3 size={17} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Punch Out */}
+                      <div className="punch-mobile-timeline-item">
+                        <div className="punch-mobile-timeline-info">
+                          <span className="punch-mobile-timeline-label">Punch Out</span>
+                          <strong className="punch-mobile-timeline-time">
+                            {data?.punchOut ? formatTimeStr(data.punchOut) : '—'}
+                          </strong>
+                        </div>
+                        <div className="punch-mobile-connector-wrap">
+                          <div className="punch-mobile-stepper-col">
+                            <span
+                              className={`punch-mobile-timeline-dot ${data?.punchOut ? 'filled' : ''}`}
+                              aria-hidden="true"
+                            />
+                          </div>
+                          <div className="punch-mobile-icon-box" title="Punch Out recorded">
+                            <LogOut size={17} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Approved Duration */}
+                  <div className="punch-mobile-duration-wrap">
+                    <div className="punch-mobile-duration-label">Approved Duration</div>
+                    <div className="punch-mobile-duration-val">
+                      {data?.attendanceClosed && !data.punchOut
+                        ? 'Not confirmed'
+                        : formatDurationHMS(seconds)}
+                    </div>
+                  </div>
+
+                  {/* Mobile Action Button */}
+                  {data?.state.code === 'HR_ON_LEAVE' ? (
+                    <button className="punch-action-btn completed" disabled type="button">
+                      On leave today
+                    </button>
+                  ) : data?.punchOut ? (
+                    <button className="punch-action-btn completed" disabled type="button">
+                      Punch out <ArrowRight size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="punch-action-btn active"
+                      disabled={!!busy || !data?.state.allowed}
+                      onClick={() => void act(true)}
+                    >
+                      {busy === 'punch'
+                        ? 'Verifying your location…'
+                        : data?.active
+                          ? 'Punch out'
+                          : 'Punch in'}
+                      <ArrowRight size={16} />
+                    </button>
+                  )}
+
+                  <p className="punch-action-subtext">
+                    {data?.state.code === 'HR_ON_LEAVE'
+                      ? 'Your leave is approved for today. Punch in and punch out are disabled while on leave.'
+                      : data?.punchOut
+                        ? "Today's punch-in and punch-out are already recorded."
+                        : data?.active
+                          ? 'Punch out when you leave. Your recorded times will appear on the right.'
+                          : "We'll check your location and record your arrival securely."}
+                  </p>
+
+                  {data?.state.code !== 'HR_ON_LEAVE' &&
+                    !data?.missedPunches?.length &&
+                    data?.state.code !== 'HR_MISSED_PUNCH' &&
+                    data?.state.reason &&
+                    !data?.punchOut && (
+                      <p className="punch-rule-warning">{data.state.reason}</p>
+                    )}
+                </div>
               </div>
 
               <div className="punch-main-col-right">

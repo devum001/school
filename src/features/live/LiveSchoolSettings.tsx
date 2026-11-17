@@ -120,7 +120,11 @@ export default function LiveSchoolSettings() {
             <LiveSchoolProfile
               schoolId={schoolId}
               canManage={can('school.profile.manage')}
-              canManageLocations={can('payroll.manage')}
+              canManageLocations={
+                !isTeacherScoped &&
+                (can('school.profile.manage') || can('attendance.manage') || can('payroll.manage'))
+              }
+              isTeacherScoped={isTeacherScoped}
               onSaved={reload}
             />
           ) : (

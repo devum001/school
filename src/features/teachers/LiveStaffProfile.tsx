@@ -92,10 +92,12 @@ export default function LiveStaffProfile() {
   const [action, setAction] = useState(''),
     [leave, setLeave] = useState<HrWorkspace['leaves'][number]>(),
     [slip, setSlip] = useState<HrWorkspace['payroll'][number]>(),
-    [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
+    [isGeneratingDraft, setIsGeneratingDraft] = useState(false),
+    [isRequestingLeave, setIsRequestingLeave] = useState(false);
   const close = () => {
       setAction('');
       setLeave(undefined);
+      setIsRequestingLeave(false);
       setSlip(undefined);
     },
     saved = () => {
@@ -280,49 +282,376 @@ export default function LiveStaffProfile() {
                 staffId={person.id}
               />
             )}
-            {tab === 'Leave' && data && (
-              <Panel
-                title="Leave requests"
-                subtitle={`Annual paid allowance: ${data.settings.paidLeaveDays} days · Used: ${data.leaveUsage?.find((l) => l.staffId === person.id)?.used || 0} days · Absence days included: ${data.leaveUsage?.find((l) => l.staffId === person.id)?.absenceDays || 0}`}
-              >
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Dates</th>
-                        <th>Reason</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.leaves.map((l) => (
-                        <tr key={l.id}>
-                          <td>
-                            {formatCalendarDate(l.start)} – {formatCalendarDate(l.end)}
-                          </td>
-                          <td>{l.reason}</td>
-                          <td>{titleCase(l.status)}</td>
-                          <td>
-                            {l.status === 'pending' &&
-                              (can('leave.approve') ||
-                                can('leave.reject') ||
-                                can('attendance.manage')) && (
-                                <Button variant="secondary" onClick={() => setLeave(l)}>
-                                  Review
-                                </Button>
-                              )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {!data.leaves.length && (
-                    <p className="panel-note">No leave requests in this period.</p>
-                  )}
+            {tab === 'Leave' && data && (() => {
+              const usage = data.leaveUsage?.find((l) => l.staffId === person.id);
+              const monthlyAllowance =
+                usage?.monthlyAllowance ??
+                data.settings.monthlyPaidLeaveDays ??
+                (data.settings.paidLeaveDays ? Math.max(1, Math.round(data.settings.paidLeaveDays / 12)) : 1);
+              const accruedDays = usage?.accruedDays ?? (monthlyAllowance * 12);
+              const usedPaidDays = usage?.approvedLeaveDays ?? usage?.used ?? 0;
+              const absenceDays = usage?.absenceDays ?? 0;
+              const balanceDays = usage?.balanceDays ?? Math.max(0, accruedDays - (usage?.used ?? 0));
+              const activeMonths = usage?.activeMonths ?? 0;
+
+              const staffLeaves = data.leaves.filter((l) => l.staffId === person.id);
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* Leave Balance Overview Cards */}
+                  <Panel
+                    title="Leave Balance & Accrual"
+                    subtitle="Monthly quota carries forward and accumulates automatically each month."
+                    action={
+                      (can('leave.approve') || can('attendance.manage') || can('attendance.self')) ? (
+                        <Button
+                          variant="secondary"
+                          onClick={() => setIsRequestingLeave(true)}
+                        >
+                          + Request Leave
+                        </Button>
+                      ) : undefined
+                    }
+                  >
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '16px',
+                      }}
+                    >
+                      {/* 1. Monthly Allowance */}
+                      <div
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '10px',
+                          padding: '16px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: '#475569',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          Monthly Quota
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '22px',
+                            fontWeight: 700,
+                            color: '#0f172a',
+                            marginTop: '6px',
+                          }}
+                        >
+                          {monthlyAllowance} {monthlyAllowance === 1 ? 'day' : 'days'}{' '}
+                          <span style={{ fontSize: '13px', fontWeight: 500, color: '#64748b' }}>
+                            / month
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                          Accumulative every month
+                        </div>
+                      </div>
+
+                      {/* 2. Total Accrued */}
+                      <div
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '10px',
+                          padding: '16px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: '#475569',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          Total Accrued (Earned)
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '22px',
+                            fontWeight: 700,
+                            color: '#0f172a',
+                            marginTop: '6px',
+                          }}
+                        >
+                          {accruedDays} {accruedDays === 1 ? 'day' : 'days'}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                          {activeMonths > 0
+                            ? `${activeMonths} active months in year`
+                            : 'Accrued to date'}
+                        </div>
+                      </div>
+
+                      {/* 3. Paid Leaves Consumed */}
+                      <div
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '10px',
+                          padding: '16px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: '#475569',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          Paid Leaves Used
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '22px',
+                            fontWeight: 700,
+                            color: '#0f172a',
+                            marginTop: '6px',
+                          }}
+                        >
+                          {usedPaidDays} {usedPaidDays === 1 ? 'day' : 'days'}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                          {absenceDays > 0
+                            ? `+${absenceDays} absence days included`
+                            : 'Free quota consumed'}
+                        </div>
+                      </div>
+
+                      {/* 4. Available Balance (Highlighted Green) */}
+                      <div
+                        style={{
+                          background: '#f0fdf4',
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '10px',
+                          padding: '16px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: '#166534',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          Available Leave Balance
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '22px',
+                            fontWeight: 700,
+                            color: '#15803d',
+                            marginTop: '6px',
+                          }}
+                        >
+                          {balanceDays} {balanceDays === 1 ? 'day' : 'days'}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#166534', marginTop: '4px' }}>
+                          Remaining free paid leaves
+                        </div>
+                      </div>
+                    </div>
+                  </Panel>
+
+                  {/* Leave History Table */}
+                  <Panel
+                    title="Leave Requests & Dates Breakdown"
+                    subtitle={`Total records: ${staffLeaves.length} · Free paid leaves: ${staffLeaves.filter((l) => l.status === 'approved' && l.paid).length} · Unpaid / LWP: ${staffLeaves.filter((l) => l.status === 'approved' && !l.paid).length}`}
+                  >
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Dates Requested</th>
+                            <th>Salary & Quota Treatment</th>
+                            <th>Reason & Category</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {staffLeaves.map((l) => {
+                            const isApproved = l.status === 'approved';
+                            const isPaid = l.paid;
+                            return (
+                              <tr key={l.id}>
+                                <td>
+                                  <div style={{ fontWeight: 600, color: 'var(--foreground, #0f172a)' }}>
+                                    {formatCalendarDate(l.start)}
+                                    {l.start !== l.end && ` – ${formatCalendarDate(l.end)}`}
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                                    {l.units === 1 ? 'Full day' : 'Half day'}
+                                    {l.approvedDates && l.approvedDates.length > 0 && (
+                                      <span> · {l.approvedDates.length} approved day(s)</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td>
+                                  {isApproved ? (
+                                    isPaid ? (
+                                      <div>
+                                        <span
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            padding: '2px 8px',
+                                            borderRadius: '9999px',
+                                            background: '#dcfce7',
+                                            color: '#15803d',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          ✓ Free Leave (Paid Quota Used)
+                                        </span>
+                                        <div style={{ fontSize: '11.5px', color: '#166534', marginTop: '3px' }}>
+                                          No salary deduction · Paid by school
+                                        </div>
+                                        {l.approvedDates && l.approvedDates.length > 0 && (
+                                          <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>
+                                            <strong>Free leave dates:</strong> {l.approvedDates.map(formatCalendarDate).join(', ')}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <span
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            padding: '2px 8px',
+                                            borderRadius: '9999px',
+                                            background: '#fef3c7',
+                                            color: '#b45309',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          ⚠ Unpaid Leave (Loss of Pay)
+                                        </span>
+                                        <div style={{ fontSize: '11.5px', color: '#b45309', marginTop: '3px' }}>
+                                          Salary deducted in payroll (LWP)
+                                        </div>
+                                        {l.approvedDates && l.approvedDates.length > 0 && (
+                                          <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>
+                                            <strong>Unpaid dates:</strong> {l.approvedDates.map(formatCalendarDate).join(', ')}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  ) : l.status === 'pending' ? (
+                                    <div>
+                                      <span
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          padding: '2px 8px',
+                                          borderRadius: '9999px',
+                                          background: '#f1f5f9',
+                                          color: '#475569',
+                                          fontSize: '12px',
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        ⏳ Pending Review
+                                      </span>
+                                      <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '3px' }}>
+                                        Awaiting administrator decision
+                                      </div>
+                                    </div>
+                                  ) : l.status === 'rejected' ? (
+                                    <span
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '2px 8px',
+                                        borderRadius: '9999px',
+                                        background: '#fee2e2',
+                                        color: '#b91c1c',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      ✕ Rejected
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                                      {titleCase(l.status)}
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div style={{ textTransform: 'capitalize', fontWeight: 600, fontSize: '12.5px', color: '#334155' }}>
+                                    {l.kind || 'Casual'}
+                                  </div>
+                                  <div style={{ fontSize: '13px', color: '#0f172a', marginTop: '2px' }}>
+                                    {l.reason || '—'}
+                                  </div>
+                                  {l.reviewNote && (
+                                    <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '3px' }}>
+                                      <em>Note: {l.reviewNote}</em>
+                                    </div>
+                                  )}
+                                </td>
+                                <td>
+                                  <Badge
+                                    tone={
+                                      isApproved
+                                        ? (isPaid ? 'green' : 'amber')
+                                        : l.status === 'rejected'
+                                          ? 'red'
+                                          : 'neutral'
+                                    }
+                                  >
+                                    {titleCase(l.status)}
+                                  </Badge>
+                                </td>
+                                <td>
+                                  {l.status === 'pending' &&
+                                    (can('leave.approve') ||
+                                      can('leave.reject') ||
+                                      can('attendance.manage')) && (
+                                      <Button variant="secondary" onClick={() => setLeave(l)}>
+                                        Review
+                                      </Button>
+                                    )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      {!staffLeaves.length && (
+                        <p className="panel-note" style={{ padding: '16px 0', textAlign: 'center' }}>
+                          No leave requests found for this staff member in this calendar year.
+                        </p>
+                      )}
+                    </div>
+                  </Panel>
                 </div>
-              </Panel>
-            )}
+              );
+            })()}
             {tab === 'Salary' && data && (() => {
               const emp = data.employment?.find((e) => e.staffId === person.id) ?? data.employment?.[0];
               const sal = emp?.salaries?.filter((s) => s.effectiveMonth <= month)?.at(-1) ?? emp?.salaries?.slice(-1)[0];
@@ -1054,6 +1383,14 @@ export default function LiveStaffProfile() {
                 schoolId={schoolId}
                 person={personSchema.parse(person)}
                 teaching={person.teaching}
+                close={close}
+                saved={saved}
+              />
+            )}
+            {isRequestingLeave && data && (
+              <LeaveDialog
+                adapter={adapter}
+                data={data}
                 close={close}
                 saved={saved}
               />

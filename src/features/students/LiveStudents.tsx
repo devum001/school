@@ -104,7 +104,7 @@ function StudentWorkspace({
   const [params, setParams] = useSearchParams(),
     location = useLocation(),
     navigate = useNavigate();
-  const selectedClass = classId ?? params.get('classId') ?? '';
+  const selectedClass = (params.get('classId') || classId) ?? '';
   const section =
       params.get('studentSection') === 'none' ? '' : (params.get('studentSection') ?? ''),
     search = params.get('studentSearch') ?? '';
@@ -140,9 +140,12 @@ function StudentWorkspace({
       const next = new URLSearchParams(previous);
       if (value) next.set(key, value);
       else next.delete(key);
-      if (key === 'classId') next.delete('studentSection');
+      if (key === 'classId') {
+        next.delete('studentSection');
+        next.delete('import');
+      }
       return next;
-    });
+    }, { flushSync: true });
   const firstPage = list.first;
   const [searchDraft, setSearchDraft] = useState(search);
   const [previousSearch, setPreviousSearch] = useState(search);
@@ -171,7 +174,7 @@ function StudentWorkspace({
       const next = new URLSearchParams(previous);
       next.delete('import');
       return next;
-    });
+    }, { flushSync: true });
     setInlineImport(false);
     if (onChanged) onChanged();
     else list.reload();
@@ -238,23 +241,21 @@ function StudentWorkspace({
           action={
             <div className="panel-header-actions staff-header-toolbar">
               <div className="staff-filters-row">
-                {!classId && (
-                  <select
-                    className="staff-select-filter"
-                    aria-label="Filter by class"
-                    value={selectedClass}
-                    onChange={(e) => update('classId', e.target.value)}
-                  >
-                    <option value="">All classes</option>
-                    {snapshot.classes
-                      .filter((c) => c.status === 'active')
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                  </select>
-                )}
+                <select
+                  className="staff-select-filter"
+                  aria-label="Filter by class"
+                  value={selectedClass}
+                  onChange={(e) => update('classId', e.target.value)}
+                >
+                  {!classId && <option value="">All classes</option>}
+                  {snapshot.classes
+                    .filter((c) => c.status === 'active' || c.id === selectedClass)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
                 {mode === 'directory' && (
                   <select
                     className="staff-select-filter"
@@ -330,7 +331,11 @@ function StudentWorkspace({
               ) : (
                 <StudentRosterTable
                   studentHref={(id) => `/students/${id}?year=${yearId}`}
-                  rows={(list.data?.items ?? []).map((r) => ({
+                  rows={[...(list.data?.items ?? [])]
+                    .sort((a, b) =>
+                      a.student.name.localeCompare(b.student.name, undefined, { sensitivity: 'base' }),
+                    )
+                    .map((r) => ({
                     id: r.id,
                     studentId: r.student.id,
                     name: r.student.name,

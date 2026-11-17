@@ -31,7 +31,7 @@ export interface StructureViewProps {
   setupAction?: ReactNode;
   toolbar?: ReactNode;
   emptyHelper?: ReactNode;
-  renderSubjects: (classId: string) => ReactNode;
+  renderSubjects: (classId: string, classSelector?: ReactNode) => ReactNode;
   renderStudents: (classId: string) => ReactNode;
   renderEditor: (value: {
     kind: 'class' | 'section';
@@ -246,7 +246,26 @@ export default function ClassStructureView({
           )}
         </Panel>
       )}
-      {section === 'subjects' && renderSubjects(current.id)}
+      {section === 'subjects' &&
+        renderSubjects(
+          current.id,
+          <div className="hr-header-filters">
+            <label className="field hr-inline-filter" style={{ minWidth: '160px' }}>
+              <span>Class</span>
+              <select
+                aria-label="Setup class"
+                value={current.id}
+                onChange={(e) => setSelected(e.target.value)}
+              >
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>,
+        )}
       {section === 'students' && (
         <div key={current.id}>{renderStudents(current.id)}</div>
       )}

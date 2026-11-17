@@ -17,11 +17,31 @@ export const schoolHoursSchema = z
       .array(z.enum(SCHOOL_WEEKDAYS))
       .min(1, 'Select at least one working day.')
       .refine((days) => new Set(days).size === days.length, 'Remove duplicate days.'),
+    lateAfter: clock.optional().or(z.literal('')),
+    halfDayAfter: clock.optional().or(z.literal('')),
   })
   .refine((hours) => hours.end > hours.start, {
     path: ['end'],
     message: 'Closing time must be after opening time.',
-  });
+  })
+  .refine(
+    (hours) =>
+      !hours.lateAfter || (hours.lateAfter >= hours.start && hours.lateAfter < hours.end),
+    {
+      path: ['lateAfter'],
+      message: 'Late cutoff must fall between opening and closing time.',
+    },
+  )
+  .refine(
+    (hours) =>
+      !hours.halfDayAfter ||
+      ((!hours.lateAfter || hours.halfDayAfter >= hours.lateAfter) &&
+        hours.halfDayAfter < hours.end),
+    {
+      path: ['halfDayAfter'],
+      message: 'Half day cutoff must fall between late cutoff and closing time.',
+    },
+  );
 
 /** Existing class-specific hours supply an initial school-wide value without deleting old schedules. */
 export function configuredSchoolHours(state: DemoState): SchoolHours | undefined {

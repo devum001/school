@@ -24,7 +24,9 @@ export function FloatingStickyTableHeader({
   const headerContentRef = useRef<HTMLDivElement>(null);
   const outerRef = useRef<HTMLDivElement>(null);
   const isStickyRef = useRef(false);
-  isStickyRef.current = isSticky;
+  useEffect(() => {
+    isStickyRef.current = isSticky;
+  }, [isSticky]);
   const touchStartX = useRef<number | null>(null);
 
   const measureLayout = useCallback(() => {

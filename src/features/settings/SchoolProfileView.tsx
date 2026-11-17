@@ -107,6 +107,11 @@ export default function SchoolProfileView({
     ...(showOperationalFields ? operationalFields.map(([key, label]) => [label, school[key]]) : []),
     ['School opening time', hours ? formatSchoolTime(hours.start) : 'Not configured'],
     ['School closing time', hours ? formatSchoolTime(hours.end) : 'Not configured'],
+    ['Late arrival after', hours?.lateAfter ? formatSchoolTime(hours.lateAfter) : 'Not configured'],
+    [
+      'Half-day cutoff after',
+      hours?.halfDayAfter ? formatSchoolTime(hours.halfDayAfter) : 'Not configured',
+    ],
     [
       'Working days',
       hours ? hours.days.map((day) => day.slice(0, 3)).join(', ') : 'Not configured',
@@ -179,7 +184,7 @@ export default function SchoolProfileView({
         <dl id="school-hours" tabIndex={-1} className="detail-list settings-profile-details">
           {rows
             .filter((_, index) =>
-              section === 'timing' ? index >= rows.length - 3 : index < rows.length - 3,
+              section === 'timing' ? index >= rows.length - 5 : index < rows.length - 5,
             )
             .map(([label, value]) => (
               <div key={label}>
@@ -338,15 +343,18 @@ export default function SchoolProfileView({
                       use this timing.
                     </p>
                     <div className="settings-form-grid">
-                      {(['start', 'end'] as const).map((key) => (
+                      {([
+                        { key: 'start', label: 'School opening time' },
+                        { key: 'end', label: 'School closing time' },
+                        { key: 'lateAfter', label: 'Late arrival after (optional)' },
+                        { key: 'halfDayAfter', label: 'Half-day cutoff after (optional)' },
+                      ] as const).map(({ key, label }) => (
                         <label className="settings-field" key={key}>
-                          {key === 'start' ? 'School opening time' : 'School closing time'}
+                          {label}
                           <PickerInput
-                            aria-label={
-                              key === 'start' ? 'School opening time' : 'School closing time'
-                            }
+                            aria-label={label}
                             type="time"
-                            value={draftHours[key]}
+                            value={draftHours[key] ?? ''}
                             onChange={(e) =>
                               setDraftHours({ ...draftHours, [key]: e.target.value })
                             }

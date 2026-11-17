@@ -124,6 +124,12 @@ export function SchoolForm({
   const [slug, setSlug] = useState(school?.slug ?? '');
   const [timezone, setTimezone] = useState(school?.timezone ?? 'Asia/Kolkata');
   const [code, setCode] = useState('');
+  const [phone, setPhone] = useState('');
+  const [schoolEmail, setSchoolEmail] = useState('');
+  const [principalName, setPrincipalName] = useState('');
+  const [board, setBoard] = useState('');
+  const [city, setCity] = useState('');
+  const [address, setAddress] = useState('');
   const [ownerMode, setOwnerMode] = useState('new');
   const [owner, setOwner] = useState<NewAccount>({ name: '', email: '', password: '' });
   const [repeat, setRepeat] = useState('');
@@ -175,6 +181,12 @@ export function SchoolForm({
                 slug: slug.trim().toLowerCase(),
                 timezone: timezone.trim(),
                 ...(code.trim() ? { code: code.trim().toUpperCase() } : {}),
+                ...(schoolEmail.trim() ? { email: schoolEmail.trim().toLowerCase() } : {}),
+                ...(phone.trim() ? { phone: phone.trim() } : {}),
+                ...(principalName.trim() ? { principalName: principalName.trim() } : {}),
+                ...(board.trim() ? { board: board.trim() } : {}),
+                ...(city.trim() ? { city: city.trim() } : {}),
+                ...(address.trim() ? { address: address.trim() } : {}),
                 ...(ownerMode === 'new'
                   ? {
                       owner: {
@@ -243,6 +255,74 @@ export function SchoolForm({
                 onChange={(event) => setCode(event.target.value.toUpperCase())}
               />
             </label>
+            <details style={{ margin: '8px 0 14px', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', background: '#f8fafc' }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', color: '#1e293b' }}>
+                Additional school profile details (Optional)
+              </summary>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginTop: '10px' }}>
+                <label>
+                  Principal / Head name
+                  <input
+                    maxLength={120}
+                    disabled={busy}
+                    placeholder="e.g. Dr. R. K. Sharma"
+                    value={principalName}
+                    onChange={(e) => setPrincipalName(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Official school phone
+                  <input
+                    maxLength={32}
+                    disabled={busy}
+                    placeholder="e.g. +91 9876543210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Official school email
+                  <input
+                    type="email"
+                    maxLength={254}
+                    disabled={busy}
+                    placeholder="e.g. info@school.edu.in"
+                    value={schoolEmail}
+                    onChange={(e) => setSchoolEmail(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Board / Affiliation
+                  <input
+                    maxLength={120}
+                    disabled={busy}
+                    placeholder="e.g. CBSE, ICSE, RBSE"
+                    value={board}
+                    onChange={(e) => setBoard(e.target.value)}
+                  />
+                </label>
+                <label>
+                  City
+                  <input
+                    maxLength={100}
+                    disabled={busy}
+                    placeholder="e.g. Jaipur"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Address
+                  <input
+                    maxLength={240}
+                    disabled={busy}
+                    placeholder="e.g. Sector 5, Vidyadhar Nagar"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </label>
+              </div>
+            </details>
             <label>
               School owner
               <select

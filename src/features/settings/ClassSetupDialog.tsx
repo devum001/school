@@ -45,7 +45,7 @@ export default function ClassSetupDialog({
     }
     setRows((old) => [
       ...old.filter((r) => r.name || r.sections),
-      ...presetNames.map((name) => ({ name, sections: pattern || 'A' })),
+      ...presetNames.map((name) => ({ name, sections: pattern || '' })),
     ]);
     setError('');
   };
@@ -67,7 +67,7 @@ export default function ClassSetupDialog({
     }
     setRows((old) => [
       ...old.filter((r) => r.name || r.sections),
-      ...presetNames.map((name) => ({ name, sections: pattern || 'A' })),
+      ...presetNames.map((name) => ({ name, sections: pattern || '' })),
     ]);
     setError('');
   };

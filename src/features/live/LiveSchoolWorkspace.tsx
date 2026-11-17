@@ -86,19 +86,11 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
   const isTeacherScoped = !access.owner && Boolean(status.selfTeaching || status.selfLinked);
 
   const isRouteAllowed = (path: string): boolean => {
-    if (path === '/staff/punch') {
-      return Boolean(
-        access.owner ||
-          (access.permissions.includes('attendance.self') && status.selfTeaching) ||
-          access.permissions.includes('staff.view'),
-      );
+    if (path === '/staff/punch' || path === '/staff/self') {
+      return isTeacherScoped;
     }
-    if (path === '/staff/self') {
-      return Boolean(
-        access.owner ||
-          (access.permissions.includes('attendance.self') && status.selfLinked) ||
-          access.permissions.includes('staff.view'),
-      );
+    if (path === '/calendar') {
+      return true;
     }
     return Boolean(navigation.allowed(path));
   };
@@ -107,6 +99,9 @@ function VerifiedSchool({ schoolId }: { schoolId: string }) {
     // Punch in & out and Salary & Leaves are personal teacher/staff features,
     // they should never appear in the School Workspace (admin/owner view) sidebar.
     if (path === '/staff/punch' || path === '/staff/self') {
+      return isTeacherScoped;
+    }
+    if (path === '/calendar') {
       return isTeacherScoped;
     }
     return Boolean(navigation.allowed(path));
@@ -212,9 +207,12 @@ function SchoolPicker({ name, logo, schoolId }: { name: string; logo?: string; s
               const params = new URLSearchParams(location.search);
               for (const key of [...params.keys()])
                 if (!['tab', 'section'].includes(key)) params.delete(key);
-              const pathname = /^\/(students|teachers)\//.test(location.pathname)
-                ? location.pathname.split('/').slice(0, 2).join('/')
-                : location.pathname;
+              const pathname =
+                /^\/(students|teachers)\//.test(location.pathname) ||
+                location.pathname === '/staff/punch' ||
+                location.pathname === '/staff/self'
+                  ? '/'
+                  : location.pathname;
               flushSync(() => sessionStore.selectSchool(next));
               navigate({ pathname, search: params.toString() }, { replace: true });
             }}
@@ -232,6 +230,7 @@ function SchoolPicker({ name, logo, schoolId }: { name: string; logo?: string; s
 }
 
 function SessionControls({ context }: { context: SchoolContextValue }) {
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   return (
@@ -261,6 +260,7 @@ function SessionControls({ context }: { context: SchoolContextValue }) {
           setBusy(true);
           setError('');
           try {
+            navigate('/', { replace: true });
             await sessionStore.logout();
           } catch (e) {
             setError(e instanceof Error ? e.message : 'Unable to sign out.');

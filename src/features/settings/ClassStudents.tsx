@@ -86,6 +86,20 @@ export default function ClassStudents({ classId }: { classId: string }) {
         }
       >
         <div className="panel-padding class-students-filters">
+          <label className="field">
+            Class
+            <select
+              aria-label="Class students class"
+              value={classId}
+              onChange={(event) => update('classId', event.target.value)}
+            >
+              {state.classes.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <SearchInput
             value={query}
             onChange={(value) => update('studentSearch', value)}

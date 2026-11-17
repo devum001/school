@@ -236,6 +236,7 @@ function LiveWorkspace() {
               setBusy(true);
               setError('');
               try {
+                navigate('/', { replace: true });
                 await sessionStore.logout();
               } catch (cause) {
                 setError(cause instanceof Error ? cause.message : 'Unable to sign out.');

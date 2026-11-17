@@ -6,6 +6,7 @@ export const iconNames = [
   'teacher',
   'staff',
   'attendance',
+  'calendar',
   'fees',
   'academics',
   'notifications',

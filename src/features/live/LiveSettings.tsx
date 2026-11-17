@@ -201,7 +201,9 @@ function SchoolWorkspace({ schoolId }: { schoolId: string }) {
         <LiveSchoolProfile
           schoolId={schoolId}
           canManage={can('school.profile.manage')}
-          canManageLocations={can('payroll.manage')}
+          canManageLocations={
+            can('school.profile.manage') || can('attendance.manage') || can('payroll.manage')
+          }
         />
       ) : active === 'Classes, Sections & Grades' ? (
         <LiveClassStructure key={`${schoolId}:${year}`} access={access} yearId={year} />

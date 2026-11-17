@@ -4,6 +4,7 @@ const LiveFinanceWorkspace = lazy(() => import('../features/fees/LiveFinanceWork
 const LiveNotificationsWorkspace = lazy(
   () => import('../features/notifications/LiveNotificationsWorkspace'),
 );
+const LiveCalendarWorkspace = lazy(() => import('../features/calendar/LiveCalendarWorkspace'));
 import LiveLearning from '../features/live/LiveLearning';
 import TeacherPunchPage from '../features/hr/TeacherPunchPage';
 import LiveHrWorkspace from '../features/hr/HrWorkspace';
@@ -47,6 +48,14 @@ export const liveRouter = createBrowserRouter([
       },
       { path: 'staff/punch', element: <TeacherPunchPage /> },
       { path: 'staff/self', element: <LiveHrWorkspace section="self" /> },
+      {
+        path: 'calendar',
+        element: (
+          <Suspense fallback={<p role="status">Loading calendar…</p>}>
+            <LiveCalendarWorkspace />
+          </Suspense>
+        ),
+      },
       {
         path: 'notifications',
         element: (

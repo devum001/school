@@ -19,6 +19,7 @@ export const hrSettingsSchema = z.object({
   deductionBasis: z.enum(['basic', 'gross']),
   divisor: z.enum(['calendar', 'working', '30']),
   paidLeaveDays: z.number(),
+  monthlyPaidLeaveDays: z.number().optional(),
   absenceReducesLeave: z.boolean().optional(),
   maxAccuracy: z.number(),
   locations: z.array(
@@ -93,6 +94,7 @@ const leave = z.object({
   paid: z.boolean(),
   reviewNote: z.string(),
   approvedDates: z.array(z.string()).optional(),
+  chargedDays: z.number().optional(),
 });
 const payroll = z.object({
   ...base,
@@ -155,6 +157,10 @@ const workspace = z.object({
         used: z.number(),
         absenceDays: z.number().optional(),
         approvedLeaveDays: z.number().optional(),
+        monthlyAllowance: z.number().optional(),
+        accruedDays: z.number().optional(),
+        balanceDays: z.number().optional(),
+        activeMonths: z.number().optional(),
       }),
     )
     .optional(),

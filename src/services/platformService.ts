@@ -72,6 +72,15 @@ export type NewSchool = {
   code?: string;
   email?: string;
   phone?: string;
+  principalName?: string;
+  board?: string;
+  affiliationNumber?: string;
+  address?: string;
+  city?: string;
+  region?: string;
+  country?: string;
+  postalCode?: string;
+  website?: string;
 } & ({ owner: NewAccount; ownerUserId?: never } | { ownerUserId: string; owner?: never });
 
 export type PlatformPage<T> = { items: T[]; nextCursor: string | null };

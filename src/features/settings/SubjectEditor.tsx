@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useFeedback } from '../../app/useFeedback';
 import { AppIcon, Button, Modal, Panel } from '../../components/ui/Primitives';
@@ -21,6 +21,7 @@ export default function SubjectEditor({
   showOptional = false,
   onDirtyChange,
   initiallyUnsaved = false,
+  classSelector,
 }: {
   initiallyUnsaved?: boolean;
   name: string;
@@ -29,6 +30,7 @@ export default function SubjectEditor({
   canManage?: boolean;
   showOptional?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
+  classSelector?: ReactNode;
 }) {
   const notify = useFeedback();
   const [busy, setBusy] = useState(false);
@@ -89,7 +91,7 @@ export default function SubjectEditor({
   }
 
   return (
-    <Panel title={`Subjects — ${name}`}>
+    <Panel title={`Subjects — ${name}`} action={classSelector}>
       <fieldset
         data-unsaved={JSON.stringify(subjects) !== initial}
         disabled={busy || !canManage}

@@ -13,6 +13,9 @@ import {
   type IconName,
 } from '../ui/Primitives';
 
+import { usePwaInstall } from '../../app/usePwaInstall';
+import { useFeedback } from '../../app/useFeedback';
+
 const hindiLabels: Record<string, string> = {
   Overview: 'अवलोकन',
   Students: 'विद्यार्थी',
@@ -21,6 +24,10 @@ const hindiLabels: Record<string, string> = {
   Attendance: 'उपस्थिति',
   'Punch in & out': 'पंच इन / आउट',
   'Salary & Leaves': 'वेतन और अवकाश',
+  'Calendar & Holidays': 'कैलेंडर और अवकाश',
+  'School Calendar & Holidays': 'स्कूल कैलेंडर और अवकाश',
+  'School Calendar': 'स्कूल कैलेंडर',
+  'Install Web App': 'ऐप इंस्टॉल करें',
   Finance: 'वित्त',
   'Test and Result': 'परीक्षा और परिणाम',
   Notifications: 'सूचनाएँ',
@@ -35,6 +42,7 @@ const navigation: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/attendance', label: 'Attendance', icon: 'attendance' },
   { to: '/staff/punch', label: 'Punch in & out', icon: 'user-check' },
   { to: '/staff/self', label: 'Salary & Leaves', icon: 'wallet' },
+  { to: '/calendar', label: 'Calendar & Holidays', icon: 'calendar' },
   { to: '/fees', label: 'Finance', icon: 'fees' },
   { to: '/academics', label: 'Test and Result', icon: 'document' },
 ];
@@ -50,6 +58,7 @@ function loadingMessageForRoute(pathname: string, search: string): string {
   if (pathname.startsWith('/teachers')) return 'Loading teachers…';
   if (pathname === '/staff/punch') return 'Loading punch in & out…';
   if (pathname === '/staff/self') return 'Loading salary & leaves…';
+  if (pathname.startsWith('/calendar')) return 'Loading calendar & holidays…';
   if (pathname.startsWith('/staff')) return 'Loading staff & HR…';
   if (pathname.startsWith('/attendance')) return 'Loading attendance…';
   if (pathname.startsWith('/fees')) return 'Loading finance & fees…';
@@ -103,6 +112,8 @@ export default function AppShell({
   const [mobile, setMobile] = useState(false);
   const [help, setHelp] = useState(false);
   const [query, setQuery] = useState('');
+  const notify = useFeedback();
+  const pwa = usePwaInstall();
   const navigate = useNavigate();
   const location = useLocation();
   const routeParams = new URLSearchParams(location.search);
@@ -241,6 +252,31 @@ export default function AppShell({
             <AppIcon name="settings" size={20} />
             <span>{label('School settings')}</span>
           </NavLink>
+          {pwa.isInstallable && (
+            <button
+              type="button"
+              className="nav-link install-app-nav-btn"
+              onClick={async () => {
+                setMobile(false);
+                if (pwa.hasNativePrompt) {
+                  await pwa.promptInstall();
+                } else if (pwa.isInstalled) {
+                  notify('Schoolwell web app is already installed! (ऐप पहले से इंस्टॉल है)');
+                } else if (pwa.isIos) {
+                  notify("iOS Safari: Share (⎋) icon par tap karke 'Add to Home Screen' chunein.");
+                } else {
+                  const success = await pwa.promptInstall();
+                  if (!success) {
+                    notify("Browser menu (⋮) me 'Install Schoolwell' par click karein.");
+                  }
+                }
+              }}
+              title="Install Schoolwell Web App"
+            >
+              <AppIcon name="download" size={20} />
+              <span>{label('Install Web App')}</span>
+            </button>
+          )}
           {extraNavigation}
         </nav>
         <div className="sidebar-bottom">

@@ -88,13 +88,19 @@ export default function ImportJob({
   }, [schoolId, job?.academicYearId]);
 
 
+  const jobRef = useRef(job);
+  useEffect(() => {
+    jobRef.current = job;
+  }, [job]);
+
   const commitCellEdit = useCallback(
     async (rowNum: number, colIdx: number, nextValue: string) => {
-      if (!job) return;
-      const row = job.rows.find((r) => r.number === rowNum);
+      const currentJob = jobRef.current;
+      if (!currentJob) return;
+      const row = currentJob.rows.find((r) => r.number === rowNum);
       if (!row) return;
 
-      const colName = job.columns[colIdx]?.trim().toLowerCase() ?? '';
+      const colName = currentJob.columns[colIdx]?.trim().toLowerCase() ?? '';
       let cleanVal = nextValue.trim();
 
       // Normalize date if date column
@@ -108,11 +114,20 @@ export default function ImportJob({
       const updatedCells = [...row.cells];
       updatedCells[colIdx] = cleanVal;
       row.cells = updatedCells;
-      setJob({ ...job });
+      setJob({ ...currentJob });
 
       try {
         setSavingCell(true);
-        await onboardingApi.correct(schoolId, job, row.number, updatedCells);
+        const summary = await onboardingApi.correct(schoolId, currentJob, row.number, updatedCells);
+        setJob((prev) =>
+          prev
+            ? {
+                ...prev,
+                revision: summary.revision ?? prev.revision + 1,
+                status: summary.status ?? prev.status,
+              }
+            : prev,
+        );
         reload();
       } catch (err) {
         console.error('Cell auto-save failed:', err);
@@ -120,7 +135,7 @@ export default function ImportJob({
         setSavingCell(false);
       }
     },
-    [job, schoolId, reload],
+    [schoolId, reload],
   );
 
   
@@ -677,7 +692,7 @@ export default function ImportJob({
                                       title="Click to edit (navigate with ↑ ↓ ← → or Tab / Enter)"
                                       onClick={() => {
                                         if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
-                                        if (job.status === 'draft') {
+                                        if (['draft', 'validating'].includes(job.status)) {
                                           if (
                                             activeCell &&
                                             (activeCell.rowNum !== row.number ||

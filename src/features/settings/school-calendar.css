@@ -1,8 +1,416 @@
+/* ==========================================================================
+   Schoolwell Calendar Styles — Desktop Monthly & Mobile Weekly Views
+   ========================================================================== */
+
 .school-calendar-settings {
   display: flex;
   flex-direction: column;
   gap: 16px;
   width: 100%;
+}
+
+/* Responsive View Separation: Desktop shows Monthly Grid, Mobile shows Weekly Agenda */
+.calendar-desktop-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.calendar-mobile-view {
+  display: none;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .calendar-desktop-view {
+    display: none !important;
+  }
+  .calendar-mobile-view {
+    display: block !important;
+  }
+}
+
+/* ==========================================================================
+   1. WEEKLY AGENDA LAYOUT (Exact match to user reference image)
+   ========================================================================== */
+
+.weekly-calendar-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 24px 20px 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.035);
+  position: relative;
+  width: 100%;
+  max-width: 660px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Weekly Top Toolbar */
+.weekly-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-bottom: 22px;
+  position: relative;
+}
+
+.weekly-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.weekly-arrow-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+}
+
+.weekly-arrow-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.weekly-month-selector-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.weekly-month-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+}
+
+.weekly-month-pill:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.weekly-month-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.weekly-today-btn {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.weekly-today-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Month Dropdown */
+.weekly-month-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+  width: 220px;
+}
+
+.dropdown-year-header {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dropdown-months-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.dropdown-month-btn {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.1s ease;
+}
+
+.dropdown-month-btn:hover {
+  background: #f1f5f9;
+}
+
+.dropdown-month-btn.active {
+  background: #12373b;
+  color: #ffffff;
+}
+
+/* Top Right Artwork */
+.weekly-artwork {
+  position: absolute;
+  right: 0;
+  top: -12px;
+  pointer-events: none;
+}
+
+.weekly-artwork-inner {
+  position: relative;
+  width: 68px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.artwork-leaves {
+  position: absolute;
+  width: 58px;
+  height: 48px;
+  top: -2px;
+  right: -2px;
+}
+
+.artwork-calendar-icon {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  z-index: 2;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+}
+
+/* Weekly Agenda Rows */
+.weekly-agenda-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.weekly-agenda-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+/* Left Column: Day Name & Date */
+.weekly-day-col {
+  width: 76px;
+  flex-shrink: 0;
+  text-align: left;
+  padding: 4px 6px;
+  box-sizing: border-box;
+}
+
+.weekly-day-name {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.weekly-day-date {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+/* Sunday Light Grey Highlight */
+.weekly-day-col.sunday-col {
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 6px 10px;
+  margin-left: -4px;
+  width: 76px;
+}
+
+.sunday-text {
+  color: #ef4444 !important;
+  font-weight: 700 !important;
+}
+
+/* Right Card: Content Container */
+.weekly-day-card {
+  flex: 1;
+  min-height: 48px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.weekly-day-card:hover {
+  border-color: #cbd5e1;
+  background: #fbfcfd;
+}
+
+.weekly-day-card.today-card {
+  border-color: #86efac;
+  box-shadow: 0 0 0 1px #86efac;
+}
+
+.weekly-badges-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Badges */
+.badge-today {
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(22, 163, 74, 0.2);
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.badge-weekly-off {
+  background: #ede9fe;
+  color: #5b21b6;
+  border: 1px solid #ddd6fe;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 10px;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.badge-holiday,
+.badge-festival {
+  background: #fef3c7;
+  color: #78350f;
+  border: 1px solid #fde68a;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.badge-icon {
+  font-size: 14px;
+  line-height: 1;
+  display: inline-block;
+}
+
+/* Bottom Horizontal Legend */
+.weekly-legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-top: 24px;
+  padding-top: 16px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.weekly-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.legend-box-weekly-off {
+  background: #ede9fe;
+  border: 1px solid #ddd6fe;
+}
+
+.legend-box-holiday {
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+}
+
+.legend-box-today {
+  background: #dcfce7;
+  border: 1.5px solid #16a34a;
+}
+
+/* ==========================================================================
+   2. MONTHLY GRID VIEW (Secondary Toggle View)
+   ========================================================================== */
+
+.monthly-calendar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.school-calendar-grid-wrap {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--border, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .calendar-day-cell:hover {
@@ -11,4 +419,69 @@
 
 .calendar-nav-btn:hover {
   background: var(--surface-hover, #e2e8f0) !important;
+}
+
+/* Mobile Responsiveness for Weekly Layout */
+@media (max-width: 480px) {
+  .weekly-calendar-card {
+    padding: 16px 12px 14px;
+    border-radius: 18px;
+  }
+
+  .weekly-toolbar {
+    margin-bottom: 16px;
+  }
+
+  .weekly-month-pill {
+    padding: 6px 12px;
+  }
+
+  .weekly-month-title {
+    font-size: 14px;
+  }
+
+  .weekly-arrow-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .weekly-artwork {
+    display: none;
+  }
+
+  .weekly-day-col {
+    width: 66px;
+    padding: 2px 4px;
+  }
+
+  .weekly-day-col.sunday-col {
+    width: 66px;
+    padding: 4px 6px;
+  }
+
+  .weekly-day-name {
+    font-size: 14px;
+  }
+
+  .weekly-day-date {
+    font-size: 12px;
+  }
+
+  .weekly-day-card {
+    padding: 6px 10px;
+    min-height: 44px;
+  }
+
+  .badge-today,
+  .badge-weekly-off,
+  .badge-holiday,
+  .badge-festival {
+    font-size: 11.5px;
+    padding: 4px 10px;
+  }
+
+  .weekly-legend {
+    gap: 14px;
+    font-size: 12px;
+  }
 }

@@ -111,11 +111,31 @@
 }
 .hr-content .panel-heading {
   gap: 12px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 .hr-content .panel-heading > div:first-child {
-  flex-shrink: 0;
-  min-width: 140px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .hr-content .panel-heading {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    padding: 14px 16px !important;
+  }
+  .hr-content .panel-heading > div:first-child {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .hr-content .panel-heading > .button,
+  .hr-content .panel-heading > button,
+  .hr-content .panel-heading > .page-actions,
+  .hr-content .panel-heading > div:last-child:not(:first-child) {
+    margin-top: 2px;
+    align-self: flex-start;
+  }
 }
 .hr-header-filters {
   display: flex;

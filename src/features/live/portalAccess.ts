@@ -15,6 +15,7 @@ export function portalAccess(
     if (path === '/classes') return can('classes.view') || own('teaching.self');
     if (path === '/academics') return can('academics.view') || own('academics.assigned.view');
     if (path === '/attendance') return can('student-attendance.view') || own('teaching.self');
+    if (path === '/calendar') return true;
     if (path === '/staff/self' || path === '/staff/punch') return own('attendance.self');
     if (path.startsWith('/students')) return can('students.view');
     if (path.startsWith('/teachers') || path === '/staff' || path.startsWith('/staff/'))

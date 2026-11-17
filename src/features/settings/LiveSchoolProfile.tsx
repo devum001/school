@@ -13,11 +13,13 @@ export default function LiveSchoolProfile({
   schoolId,
   canManage = false,
   canManageLocations = false,
+  isTeacherScoped = false,
   onSaved,
 }: {
   schoolId: string;
   canManage?: boolean;
   canManageLocations?: boolean;
+  isTeacherScoped?: boolean;
   onSaved?: () => void;
 }) {
   const profile = useSchoolProfile(schoolId);
@@ -146,7 +148,9 @@ export default function LiveSchoolProfile({
             <SchoolProfileView
               key={school.profileRevision}
               locationContent={
-                <LiveSchoolLocations schoolId={schoolId} canManage={canManageLocations} />
+                !isTeacherScoped ? (
+                  <LiveSchoolLocations schoolId={schoolId} canManage={canManageLocations} />
+                ) : undefined
               }
               school={view}
               academicYear={academicYear}

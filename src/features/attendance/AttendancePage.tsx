@@ -1,7 +1,18 @@
 import { useToday } from '../../app/useToday';
 import { useEffect, useState } from 'react';
 import { Link, useBlocker, useSearchParams, useNavigate } from 'react-router-dom';
-import { AlertCircle, CalendarX2, CircleAlert, Clock } from 'lucide-react';
+import {
+  AlertCircle,
+  CalendarX2,
+  CircleAlert,
+  Clock,
+  Users,
+  CheckCircle2,
+  XCircle,
+  Hourglass,
+  UserCheck,
+  Save,
+} from 'lucide-react';
 import StudentRecordLink from '../../components/shared/StudentRecordLink';
 import { useSchool } from '../../app/useSchool';
 import { useFeedback } from '../../app/useFeedback';
@@ -30,7 +41,16 @@ import AttendanceTabs from '../../components/shared/AttendanceTabs';
 import LiveHrWorkspace from '../hr/HrWorkspace';
 import StaffAttendancePage from './StaffAttendancePage';
 import '../../styles/student-timings.css';
+import './attendance-mobile.css';
+
 const statuses = Object.keys(STATUS_LABELS) as AttendanceStatus[];
+const STATUS_SHORT_LABELS: Record<AttendanceStatus, string> = {
+  present: 'P',
+  absent: 'A',
+  late: 'L',
+  'half-day': 'H',
+  unmarked: 'NM',
+};
 export default function AttendancePage() {
   const [params] = useSearchParams();
   return <AttendanceRegister key={params.toString()} />;
@@ -202,7 +222,7 @@ function AttendanceRegister() {
     }
   };
   return (
-    <>
+    <div className="attendance-register-wrap">
       <PageHeading
         title="Attendance register"
         actions={
@@ -253,6 +273,30 @@ function AttendanceRegister() {
           </div>
         }
       />
+      {timing ? (
+        <div className="attendance-mobile-timing-card" aria-label="School hours and timing">
+          <div className="mobile-timing-col">
+            <div className="mobile-timing-info">
+              <span className="mobile-timing-label">School Hours</span>
+              <strong className="mobile-timing-val">
+                {formatSchoolTime(timing.start)} – {formatSchoolTime(timing.end)}
+              </strong>
+            </div>
+          </div>
+          <div className="mobile-timing-divider" />
+          <div className="mobile-timing-col">
+            <div className="mobile-timing-info">
+              <span className="mobile-timing-label">Late Cutoff</span>
+              <strong className="mobile-timing-val cutoff">
+                {studentLateCutoff(
+                  timing,
+                  (state.attendancePolicy ?? defaultAttendancePolicy).graceMinutes,
+                )}
+              </strong>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <AttendanceTabs
         date={date}
         value={register}
@@ -376,37 +420,67 @@ function AttendanceRegister() {
                 label="Total Students"
                 value={summary.total}
                 detail="Enrolled in section"
-                tone="blue"
+                icon={<Users size={18} />}
+                tone="total"
               />
               <StatCard
                 label="Present"
                 value={summary.present}
                 detail={
                   summary.total
-                    ? `${Math.round((summary.present / summary.total) * 100)}% present`
+                    ? `${Math.round((summary.present / summary.total) * 100)}%`
                     : '0%'
                 }
+                icon={<CheckCircle2 size={18} />}
                 tone="green"
               />
               <StatCard
                 label="Absent"
                 value={summary.absent}
                 detail={summary.absent > 0 ? `${summary.absent} absent` : 'No absentees'}
+                icon={<XCircle size={18} />}
                 tone="red"
               />
               <StatCard
                 label="Late / Half day"
                 value={`${summary.late} / ${summary['half-day']}`}
                 detail={`${summary.late} late · ${summary['half-day']} half-day`}
+                icon={<Clock size={18} />}
                 tone="amber"
               />
               <StatCard
                 label="Not Marked"
                 value={summary.unmarked}
                 detail={summary.unmarked > 0 ? 'Pending recording' : 'All recorded'}
-                tone="neutral"
+                icon={<Hourglass size={18} />}
+                tone="blue"
               />
             </div>
+
+            {/* Mobile Filter Card */}
+            <div className="attendance-mobile-filters-card">
+              <label className="filter-label">
+                <span className="filter-label-title">Date</span>
+                <PickerInput
+                  aria-label="Attendance date"
+                  type="date"
+                  value={date}
+                  min={state.academicYear.start}
+                  max={today}
+                  onChange={(e) => {
+                    if (e.target.value) update('date', e.target.value);
+                  }}
+                />
+              </label>
+              <ClassFilters
+                classId={classId}
+                sectionId={sectionId}
+                onClassChange={(v) => update('class', v)}
+                onSectionChange={(v) => update('section', v)}
+                allowAll={false}
+              />
+            </div>
+
             <Panel
               className="attendance-register-panel"
               title={`${state.classes.find((c) => c.id === classId)?.name ?? 'Class'}${sectionId ? ` · Section ${sections.find((s) => s.id === sectionId)?.name}` : ' · Whole class'}`}
@@ -446,15 +520,39 @@ function AttendanceRegister() {
                 </div>
               }
             >
+              {/* Mobile Table Top Bar */}
+              <div className="attendance-mobile-table-bar">
+                <button
+                  type="button"
+                  className="mobile-mark-all-btn"
+                  disabled={!canManage || saving || !rows.length || isDateLocked}
+                  onClick={() =>
+                    setDraft(Object.fromEntries(rows.map((r) => [r.enrollment.id, 'present'])))
+                  }
+                >
+                  <UserCheck size={16} />
+                  Mark all present
+                </button>
+                <span className="mobile-attending-count">
+                  {summary.attended} attending / {summary.total} total
+                </span>
+              </div>
+
               <div className="table-wrap">
                 <table className="attendance-table">
                   <thead>
                     <tr>
-                      <th>Roll no.</th>
-                      <th>Student</th>
-                      <th>Admission number</th>
-                      <th>Attendance status</th>
-                      <th>Record</th>
+                      <th className="th-roll">
+                        <span className="col-header-full">Roll no.</span>
+                        <span className="col-header-mobile">Roll No.</span>
+                      </th>
+                      <th className="th-student">Student</th>
+                      <th className="th-admission desktop-only">Admission number</th>
+                      <th className="th-status">
+                        <span className="col-header-full">Attendance status</span>
+                        <span className="col-header-mobile">Attendance</span>
+                      </th>
+                      <th className="th-record desktop-only">Record</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -463,15 +561,15 @@ function AttendanceRegister() {
                         draft[r.enrollment.id] ?? statusFor(state, r.enrollment.id, date);
                       return (
                         <tr key={r.enrollment.id}>
-                          <td className="mono">{r.enrollment.rollNumber}</td>
-                          <td>
+                          <td className="td-roll mono">{r.enrollment.rollNumber}</td>
+                          <td className="td-student">
                             <StudentRecordLink className="person" to={`/students/${r.student.id}`}>
                               <Avatar name={r.student.name} />
                               <strong>{r.student.name}</strong>
                             </StudentRecordLink>
                           </td>
-                          <td className="mono muted">{r.student.admissionNumber}</td>
-                          <td>
+                          <td className="td-admission mono muted desktop-only">{r.student.admissionNumber}</td>
+                          <td className="td-status">
                             <div
                               className="status-options"
                               role="group"
@@ -496,12 +594,13 @@ function AttendanceRegister() {
                                     )
                                   }
                                 >
-                                  {STATUS_LABELS[s]}
+                                  <span className="status-label-full">{STATUS_LABELS[s]}</span>
+                                  <span className="status-label-short">{STATUS_SHORT_LABELS[s]}</span>
                                 </button>
                               ))}
                             </div>
                           </td>
-                          <td>
+                          <td className="td-record desktop-only">
                             <Badge tone={status}>{STATUS_LABELS[status]}</Badge>
                           </td>
                         </tr>
@@ -533,6 +632,25 @@ function AttendanceRegister() {
                 </p>
               )}
             </Panel>
+
+            {/* Mobile Save Attendance Button */}
+            <div className="attendance-mobile-save-wrap">
+              {error && (
+                <p className="form-error" role="alert" style={{ marginBottom: 10 }}>
+                  {error}
+                </p>
+              )}
+              <button
+                type="button"
+                className="attendance-mobile-save-btn"
+                disabled={!canManage || saving || !classId || !rows.length || isDateLocked}
+                onClick={() => void save()}
+              >
+                <Save size={18} />
+                {saving ? 'Saving attendance…' : 'Save Attendance'}
+              </button>
+            </div>
+
             <div className="panel-note">
               Choose a date to review attendance. Save changes to update student profiles and the
               dashboard.
@@ -561,6 +679,6 @@ function AttendanceRegister() {
           </Modal>
         </>
       )}
-    </>
+    </div>
   );
 }

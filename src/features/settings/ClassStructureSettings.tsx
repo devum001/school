@@ -72,7 +72,7 @@ export default function ClassStructureSettings({
             <Panel>Student access is not included in your role.</Panel>
           )
         }
-        renderSubjects={(id) =>
+        renderSubjects={(id, classSelector) =>
           can('subjects.view') ? (
             <ClassSubjects
               key={id}
@@ -80,6 +80,7 @@ export default function ClassStructureSettings({
               classId={id}
               name={data.classes.find((c) => c.id === id)!.name}
               canManage={data.writable && can('subjects.manage')}
+              classSelector={classSelector}
             />
           ) : (
             <Panel>Subject access is not included in your role.</Panel>
@@ -135,11 +136,13 @@ function ClassSubjects({
   classId,
   name,
   canManage,
+  classSelector,
 }: {
   source: ClassSettingsSource;
   classId: string;
   name: string;
   canManage: boolean;
+  classSelector?: ReactNode;
 }) {
   const load = useCallback(
     (signal: AbortSignal) => source.subjects(classId, signal),
@@ -167,9 +170,10 @@ function ClassSubjects({
           configured={state.data}
           canManage={canManage}
           save={(subjects) => source.saveSubjects(classId, subjects)}
+          classSelector={classSelector}
         />
       ) : (
-        <Panel title={`${name} subjects`}>
+        <Panel title={`${name} subjects`} action={classSelector}>
           <p>Configure subjects for {name}.</p>
         </Panel>
       )}

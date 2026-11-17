@@ -71,6 +71,8 @@ export interface SchoolHours {
   start: string;
   end: string;
   days: SchoolWeekday[];
+  lateAfter?: string;
+  halfDayAfter?: string;
 }
 export interface TimetableSlot {
   id: string;
@@ -181,6 +183,7 @@ export interface ClassSubject {
   name: string;
   aliases?: string[];
   archived?: boolean;
+  optional?: boolean;
 }
 export interface Section {
   studentCount?: number;

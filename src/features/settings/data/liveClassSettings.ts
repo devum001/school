@@ -137,17 +137,27 @@ export function liveClassSource(access: SchoolAccess, yearId: string): ClassSett
         throw new Error('Reload this class before saving subjects.');
       const configured = snapshot.children.filter((c) => c.classId === classId);
       const rows: StructureRow[] = subjects.map((s) => {
-        const old = configured.find((c) => c.id === s.id);
+        const old = configured.find(
+          (c) =>
+            c.id === s.id ||
+            c.name.trim().toLowerCase() === s.name.trim().toLowerCase(),
+        );
         return {
-          name: s.name,
+          name: s.name.trim(),
           classId,
           status: 'active',
-          optional: old?.optional ?? false,
+          optional: s.optional ?? old?.optional ?? false,
           ...(old ? { id: old.id, revision: old.revision } : {}),
         };
       });
       for (const old of configured.filter(
-        (c) => c.status === 'active' && !subjects.some((s) => s.id === c.id),
+        (c) =>
+          c.status === 'active' &&
+          !subjects.some(
+            (s) =>
+              s.id === c.id ||
+              s.name.trim().toLowerCase() === c.name.trim().toLowerCase(),
+          ),
       ))
         rows.push({
           id: old.id,
@@ -162,7 +172,7 @@ export function liveClassSource(access: SchoolAccess, yearId: string): ClassSett
       subjectSnapshots.set(classId, saved);
       return saved.children
         .filter((c) => c.classId === classId && c.status === 'active')
-        .map((c) => ({ id: c.id, name: c.name }));
+        .map((c) => ({ id: c.id, name: c.name, optional: c.optional }));
     },
   };
 }

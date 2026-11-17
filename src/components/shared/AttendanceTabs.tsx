@@ -46,7 +46,7 @@ export default function AttendanceTabs({
           {
             id: 'student' as const,
             label: 'Student Attendance',
-            icon: 'student' as const,
+            icon: 'users' as const,
             to: onChange ? undefined : `/attendance?date=${date}`,
           },
         ]
@@ -56,7 +56,7 @@ export default function AttendanceTabs({
           {
             id: 'staff' as const,
             label: 'Staff Attendance',
-            icon: 'staff' as const,
+            icon: 'user-check' as const,
             to: onChange ? undefined : `/attendance/staff?date=${date}`,
           },
         ]
