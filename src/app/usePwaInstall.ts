@@ -52,13 +52,32 @@ export function usePwaInstall() {
     };
   }, [deferredPrompt]);
 
+  const ua = typeof window !== 'undefined' ? window.navigator.userAgent.toLowerCase() : '';
+  const platform = typeof window !== 'undefined' ? (window.navigator.platform || '') : '';
+
+  // iOS (iPhone, iPad, iPod, or iPadOS with desktop Safari UA)
   const isIos =
     typeof window !== 'undefined' &&
-    (/iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()) ||
-      (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1));
+    (/iphone|ipad|ipod/.test(ua) ||
+      (platform === 'MacIntel' && window.navigator.maxTouchPoints > 1));
 
-  const isAndroid =
-    typeof window !== 'undefined' && /android/.test(window.navigator.userAgent.toLowerCase());
+  const isIosChrome = isIos && /crios/.test(ua);
+  const isIosFirefox = isIos && /fxios/.test(ua);
+  const isIosEdge = isIos && /edgios/.test(ua);
+  const isIosSafari = isIos && !isIosChrome && !isIosFirefox && !isIosEdge;
+
+  // macOS (Apple PC) - desktop Mac, excluding iPads with touch
+  const isMac =
+    typeof window !== 'undefined' &&
+    !isIos &&
+    (/macintosh|mac os x/.test(ua) || platform.toLowerCase().includes('mac'));
+
+  const isMacSafari =
+    isMac && /safari/.test(ua) && !/chrome|chromium|edg|firefox/.test(ua);
+  const isMacChrome = isMac && (/chrome|chromium/.test(ua) || /edg/.test(ua));
+
+  const isAndroid = typeof window !== 'undefined' && /android/.test(ua);
+  const isWindows = typeof window !== 'undefined' && /windows|win32/.test(ua);
 
   const promptInstall = useCallback(async (): Promise<boolean> => {
     const promptEvent =
@@ -89,7 +108,13 @@ export function usePwaInstall() {
     isInstallable: !isInstalled,
     isInstalled,
     isIos,
+    isIosChrome,
+    isIosSafari,
+    isMac,
+    isMacSafari,
+    isMacChrome,
     isAndroid,
+    isWindows,
     hasNativePrompt,
     promptInstall,
   };

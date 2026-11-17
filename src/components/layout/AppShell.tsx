@@ -382,6 +382,11 @@ export default function AppShell({
         open={installModalOpen}
         onClose={() => setInstallModalOpen(false)}
         isIos={pwa.isIos}
+        isIosChrome={pwa.isIosChrome}
+        isIosSafari={pwa.isIosSafari}
+        isMac={pwa.isMac}
+        isMacSafari={pwa.isMacSafari}
+        isMacChrome={pwa.isMacChrome}
         isAndroid={pwa.isAndroid}
         hasNativePrompt={pwa.hasNativePrompt}
         onNativeInstall={() => pwa.promptInstall()}
